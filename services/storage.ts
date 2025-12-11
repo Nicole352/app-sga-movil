@@ -59,3 +59,13 @@ export const storage = {
     }
   }
 };
+
+// Funciones auxiliares para token y usuario
+export const getToken = async (): Promise<string | null> => {
+  return await storage.getItem('auth_token');
+};
+
+export const getUserData = async (): Promise<any | null> => {
+  const userData = await storage.getItem('user_data');
+  return userData ? JSON.parse(userData) : null;
+};

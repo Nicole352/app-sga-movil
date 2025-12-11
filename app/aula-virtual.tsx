@@ -87,7 +87,7 @@ export default function AulaVirtual() {
       } else if (data.user.rol === 'docente') {
         Alert.alert('Éxito', 'Panel de docente próximamente');
       } else if (data.user.rol === 'estudiante') {
-        Alert.alert('Éxito', 'Panel de estudiante próximamente');
+        router.replace('/roles/estudiante-movil/miaula');
       } else {
         Alert.alert('Éxito', `Bienvenido como ${data.user.rol}`);
       }
