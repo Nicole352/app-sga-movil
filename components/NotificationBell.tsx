@@ -74,16 +74,18 @@ export default function NotificationBell({
     text: '#fff',
     textSecondary: 'rgba(255,255,255,0.7)',
     textMuted: 'rgba(255,255,255,0.5)',
-    border: 'rgba(251, 191, 36, 0.2)',
-    accent: '#fbbf24',
+    border: 'rgba(59, 130, 246, 0.2)',
+    accent: '#3b82f6',
+    bellColor: '#d1d5db',
   } : {
     bg: '#ffffff',
     card: 'rgba(255, 255, 255, 0.95)',
     text: '#1e293b',
     textSecondary: 'rgba(30,41,59,0.7)',
     textMuted: 'rgba(30,41,59,0.5)',
-    border: 'rgba(251, 191, 36, 0.2)',
-    accent: '#f59e0b',
+    border: 'rgba(59, 130, 246, 0.2)',
+    accent: '#3b82f6',
+    bellColor: '#6b7280',
   };
 
   return (
@@ -92,7 +94,7 @@ export default function NotificationBell({
         style={styles.bellButton}
         onPress={() => setShowModal(true)}
       >
-        <Ionicons name="notifications" size={24} color={theme.accent} />
+        <Ionicons name="notifications" size={24} color={theme.bellColor} />
         {noLeidas > 0 && (
           <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
             <Text style={styles.badgeText}>{noLeidas > 99 ? '99+' : noLeidas}</Text>
@@ -119,7 +121,7 @@ export default function NotificationBell({
             {/* Header */}
             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <View style={styles.headerLeft}>
-                <Ionicons name="notifications" size={24} color={theme.accent} />
+                <Ionicons name="notifications" size={24} color={theme.bellColor} />
                 <Text style={[styles.modalTitle, { color: theme.text }]}>
                   Notificaciones
                 </Text>

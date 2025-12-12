@@ -65,7 +65,28 @@ export const getToken = async (): Promise<string | null> => {
   return await storage.getItem('auth_token');
 };
 
+export const setToken = async (token: string): Promise<void> => {
+  await storage.setItem('auth_token', token);
+};
+
 export const getUserData = async (): Promise<any | null> => {
   const userData = await storage.getItem('user_data');
   return userData ? JSON.parse(userData) : null;
+};
+
+export const setUserData = async (data: any): Promise<void> => {
+  await storage.setItem('user_data', JSON.stringify(data));
+};
+
+export const getDarkMode = async (): Promise<boolean> => {
+  const mode = await storage.getItem('dark_mode');
+  return mode === 'true';
+};
+
+export const setDarkMode = async (isDark: boolean): Promise<void> => {
+  await storage.setItem('dark_mode', isDark.toString());
+};
+
+export const clearAll = async (): Promise<void> => {
+  await storage.clear();
 };

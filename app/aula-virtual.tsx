@@ -71,6 +71,7 @@ export default function AulaVirtual() {
 
       const data = await res.json();
       console.log('✅ Login exitoso:', { user: data.user?.username, rol: data.user?.rol });
+      console.log('📋 Datos completos del usuario:', data.user);
       
       if (!data?.token || !data?.user) throw new Error('Respuesta inválida del servidor');
 
@@ -85,7 +86,7 @@ export default function AulaVirtual() {
       } else if (data.user.rol === 'admin') {
         Alert.alert('Éxito', 'Panel de admin próximamente');
       } else if (data.user.rol === 'docente') {
-        Alert.alert('Éxito', 'Panel de docente próximamente');
+        router.replace('/roles/docente-movil/dashboard');
       } else if (data.user.rol === 'estudiante') {
         router.replace('/roles/estudiante-movil/miaula');
       } else {

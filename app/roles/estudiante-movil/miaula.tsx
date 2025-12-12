@@ -243,9 +243,19 @@ export default function MiAulaEstudiante() {
       >
         {/* Header de Bienvenida */}
         <View style={[styles.welcomeCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-          <Text style={[styles.greeting, { color: theme.text }]}>
-            👋 ¡Bienvenido{userData?.nombres ? `, ${userData.nombres} ${userData.apellidos || ''}` : (userData?.nombre ? `, ${userData.nombre} ${userData.apellido || ''}` : '')}!
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+            <Ionicons name="hand-right" size={24} color={theme.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.greeting, { color: theme.text }]}>
+                ¡Bienvenido{userData?.nombres ? `, ${userData.nombres}` : (userData?.nombre ? `, ${userData.nombre}` : '')}!
+              </Text>
+              {(userData?.apellidos || userData?.apellido) && (
+                <Text style={[styles.greeting, { color: theme.text }]}>
+                  {userData.apellidos || userData.apellido}
+                </Text>
+              )}
+            </View>
+          </View>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Continúa tu formación en Belleza y Estética
           </Text>

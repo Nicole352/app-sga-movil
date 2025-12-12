@@ -29,6 +29,12 @@ export const useNotifications = (rol: RolUsuario) => {
       if (tipo === 'matricula') return '/roles/estudiante-movil/miaula';
       if (tipo === 'general') return '/roles/estudiante-movil/perfil';
     }
+    if (rol === 'docente') {
+      if (tipo === 'modulo' || tipo === 'tarea') return '/roles/docente-movil/cursos';
+      if (tipo === 'calificacion') return '/roles/docente-movil/calificaciones';
+      if (tipo === 'matricula') return '/roles/docente-movil/estudiantes';
+      if (tipo === 'general') return '/roles/docente-movil/perfil';
+    }
     return undefined;
   };
 
@@ -245,6 +251,55 @@ export const useNotifications = (rol: RolUsuario) => {
         titulo: '⏰ Desbloqueo Temporal Concedido',
         mensaje: `Tienes ${horas} horas para subir la evidencia de pago. Si no lo haces, tu cuenta se bloqueará automáticamente.`,
         link: '/roles/estudiante-movil/pagosmensuales',
+        data
+      });
+    };
+  }
+
+  // Eventos para docentes
+  if (rol === 'docente') {
+    events.nueva_entrega = (data: any) => {
+      const estudiante = data.estudiante_nombre ? `${data.estudiante_nombre}` : 'Un estudiante';
+      const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
+      agregarNotificacion({
+        tipo: 'tarea',
+        titulo: '📤 Nueva entrega recibida',
+        mensaje: `${estudiante} ha entregado: ${data.tarea_titulo}${curso}`,
+        link: '/roles/docente-movil/cursos',
+        data
+      });
+    };
+
+    events.nueva_matricula = (data: any) => {
+      const estudiante = data.estudiante_nombre ? `${data.estudiante_nombre}` : 'Un estudiante';
+      const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
+      agregarNotificacion({
+        tipo: 'matricula',
+        titulo: '🎓 Nueva matrícula',
+        mensaje: `${estudiante} se ha matriculado${curso}`,
+        link: '/roles/docente-movil/estudiantes',
+        data
+      });
+    };
+
+    events.curso_asignado = (data: any) => {
+      agregarNotificacion({
+        tipo: 'general',
+        titulo: '📚 Nuevo curso asignado',
+        mensaje: `Se te ha asignado el curso: ${data.curso_nombre}`,
+        link: '/roles/docente-movil/cursos',
+        data
+      });
+    };
+
+    events.recordatorio_calificacion = (data: any) => {
+      const pendientes = data.entregas_pendientes || 0;
+      const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
+      agregarNotificacion({
+        tipo: 'calificacion',
+        titulo: '⏰ Recordatorio de calificación',
+        mensaje: `Tienes ${pendientes} entregas pendientes de calificar${curso}`,
+        link: '/roles/docente-movil/calificaciones',
         data
       });
     };
