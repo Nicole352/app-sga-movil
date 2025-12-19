@@ -1,9 +1,23 @@
-import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+  Platform,
+  StatusBar
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { getToken, getDarkMode } from '../../../services/storage';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
+import { getToken, storage, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+
+const { width } = Dimensions.get('window');
 
 interface Horario {
   id_asignacion: number;
@@ -16,37 +30,64 @@ interface Horario {
   dias: string;
 }
 
-export default function HorarioScreen() {
+export default function HorarioDocente() {
   const [darkMode, setDarkMode] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
   const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Day Selection Logic
   const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const diasAbrev = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
-  useEffect(() => {
-    loadData();
-    
-    const themeHandler = (isDark: boolean) => setDarkMode(isDark);
-    eventEmitter.on('themeChanged', themeHandler);
-    return () => eventEmitter.off('themeChanged', themeHandler);
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const mode = await getDarkMode();
-      setDarkMode(mode);
-      await fetchHorario();
-    } catch (error) {
-      console.error('Error cargando datos:', error);
-    }
+  // Auto-select current day
+  const getCurrentDayIndex = () => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1;
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchHorario();
-    setRefreshing(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(getCurrentDayIndex());
+
+  // Theme Config - TEACHER BLUE
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#3b82f6',
+      accentGradient: ['#3b82f6', '#2563eb'] as const,
+      activeTabBg: '#3b82f6',
+      activeTabText: '#ffffff',
+      inactiveTabBg: 'rgba(255,255,255,0.05)',
+      inactiveTabText: '#94a3b8'
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#2563eb',
+      accentGradient: ['#3b82f6', '#2563eb'] as const,
+      activeTabBg: '#3b82f6',
+      activeTabText: '#ffffff',
+      inactiveTabBg: '#f1f5f9',
+      inactiveTabText: '#64748b'
+    };
+
+  useEffect(() => {
+    loadDarkMode();
+    fetchHorario();
+    eventEmitter.on('themeChanged', (isDark: boolean) => setDarkMode(isDark));
+  }, []);
+
+  const loadDarkMode = async () => {
+    const savedMode = await storage.getItem('dark_mode');
+    if (savedMode !== null) setDarkMode(savedMode === 'true');
   };
 
   const fetchHorario = async () => {
@@ -56,7 +97,7 @@ export default function HorarioScreen() {
       if (!token) return;
 
       const response = await fetch(`${API_URL}/docentes/mi-horario`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -64,120 +105,169 @@ export default function HorarioScreen() {
         setHorarios(data);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching horario:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
-    accent: '#3b82f6',
+  const getDayClasses = (dayIndex: number) => {
+    const dayName = diasSemana[dayIndex];
+    return horarios.filter(h => h.dias.split(',').map(d => d.trim()).includes(dayName))
+      .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
   };
 
-  const coloresClases = [
-    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#14b8a6'
-  ];
-
-  const horariosPorDia = diasSemana.map((dia) => ({
-    dia,
-    clases: horarios.filter(h => h.dias.split(',').map(d => d.trim()).includes(dia))
-  }));
+  const currentClasses = getDayClasses(selectedDayIndex);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Horario Semanal</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Visualiza tu calendario de clases
-        </Text>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
+
+      {/* Premium Header with Blue Gradient */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={theme.accentGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Mi Horario</Text>
+              <Text style={styles.headerSubtitle}>Calendario Semanal</Text>
+            </View>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="calendar" size={24} color="#fff" />
+            </View>
+          </View>
+        </LinearGradient>
       </View>
 
-      {/* Lista de Días */}
+      {/* Day Selector Tabs */}
+      <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {diasAbrev.map((dia, index) => {
+            const isActive = selectedDayIndex === index;
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSelectedDayIndex(index)}
+                style={[
+                  styles.tab,
+                  {
+                    backgroundColor: isActive ? theme.activeTabBg : theme.inactiveTabBg,
+                    borderColor: isActive ? 'transparent' : theme.border,
+                    borderWidth: isActive ? 0 : 1
+                  }
+                ]}
+              >
+                <Text style={[
+                  styles.tabText,
+                  {
+                    color: isActive ? theme.activeTabText : theme.inactiveTabText,
+                    fontWeight: isActive ? '700' : '500'
+                  }
+                ]}>
+                  {dia}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <ScrollView
-        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchHorario(); }}
+            tintColor={theme.accent}
+          />
         }
       >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando horario...</Text>
-          </View>
-        ) : horarios.length === 0 ? (
-          <View style={[styles.emptyContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <Ionicons name="calendar-outline" size={64} color={theme.textMuted} style={{ opacity: 0.5 }} />
-            <Text style={[styles.emptyTitle, { color: theme.text }]}>No hay horario asignado</Text>
-            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              Tu horario de clases aparecerá aquí cuando se asigne
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.diasList}>
-            {horariosPorDia.map((diaData, diaIndex) => {
-              if (diaData.clases.length === 0) return null;
+        <View style={styles.dayHeaderContainer}>
+          <Text style={[styles.dayHeaderTitle, { color: theme.text }]}>
+            {diasSemana[selectedDayIndex]}
+          </Text>
+          <Text style={[styles.dayHeaderSubtitle, { color: theme.textSecondary }]}>
+            {currentClasses.length} {currentClasses.length === 1 ? 'clase' : 'clases'} programadas
+          </Text>
+        </View>
 
-              return (
-                <View key={diaData.dia} style={[styles.diaCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  <View style={[styles.diaHeader, { backgroundColor: theme.accent + '15', borderColor: theme.border }]}>
-                    <Ionicons name="calendar" size={20} color={theme.accent} />
-                    <Text style={[styles.diaNombre, { color: theme.accent }]}>{diaData.dia}</Text>
-                    <View style={[styles.clasesCount, { backgroundColor: theme.accent }]}>
-                      <Text style={styles.clasesCountText}>{diaData.clases.length}</Text>
-                    </View>
+        {loading ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ color: theme.textSecondary }}>Cargando...</Text>
+          </View>
+        ) : currentClasses.length === 0 ? (
+          <Animated.View
+            entering={FadeInDown.duration(400)}
+            style={[styles.emptyState, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+          >
+            <View style={[styles.emptyIconContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9' }]}>
+              <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
+            </View>
+            <Text style={[styles.emptyStateTitle, { color: theme.text }]}>Sin clases hoy</Text>
+            <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
+              No tienes ninguna clase programada para este día.
+            </Text>
+          </Animated.View>
+        ) : (
+          currentClasses.map((clase, index) => (
+            <Animated.View
+              key={`${clase.id_asignacion}-${index}`}
+              entering={FadeInDown.delay(index * 100).springify()}
+              layout={Layout.springify()}
+              style={styles.cardContainer}
+            >
+              <View style={[styles.classCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                {/* Blue Gradient Stripe */}
+                <LinearGradient
+                  colors={theme.accentGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.cardStripe}
+                />
+
+                <View style={styles.cardContent}>
+                  {/* Time Badge */}
+                  <View style={[styles.timeBadge, { backgroundColor: `${theme.accent}15` }]}>
+                    <Ionicons name="time-outline" size={16} color={theme.accent} />
+                    <Text style={[styles.timeText, { color: theme.accent }]}>
+                      {clase.hora_inicio.substring(0, 5)} - {clase.hora_fin.substring(0, 5)}
+                    </Text>
                   </View>
 
-                  <View style={styles.clasesList}>
-                    {diaData.clases.map((clase, claseIndex) => {
-                      const color = coloresClases[claseIndex % coloresClases.length];
+                  {/* Course Info */}
+                  <View style={styles.courseInfo}>
+                    <View style={[styles.codeBadge, { backgroundColor: `${theme.accent}15` }]}>
+                      <Text style={[styles.codeText, { color: theme.accent }]}>{clase.codigo_curso}</Text>
+                    </View>
+                    <Text style={[styles.courseName, { color: theme.text }]} numberOfLines={2}>
+                      {clase.curso_nombre}
+                    </Text>
+                  </View>
 
-                      return (
-                        <View key={clase.id_asignacion} style={[styles.claseCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
-                          <View style={styles.claseHeader}>
-                            <View style={[styles.claseHora, { backgroundColor: color + '20' }]}>
-                              <Ionicons name="time" size={14} color={color} />
-                              <Text style={[styles.claseHoraText, { color }]}>
-                                {clase.hora_inicio.substring(0, 5)} - {clase.hora_fin.substring(0, 5)}
-                              </Text>
-                            </View>
-                          </View>
-
-                          <View style={styles.claseInfo}>
-                            <View style={[styles.claseBadge, { backgroundColor: color + '20' }]}>
-                              <Text style={[styles.claseBadgeText, { color }]}>{clase.codigo_curso}</Text>
-                            </View>
-                            <Text style={[styles.claseNombre, { color: theme.text }]}>{clase.curso_nombre}</Text>
-                          </View>
-
-                          <View style={styles.claseAula}>
-                            <Ionicons name="location" size={14} color={theme.textMuted} />
-                            <Text style={[styles.claseAulaText, { color: theme.textSecondary }]}>
-                              {clase.aula_nombre}
-                            </Text>
-                            {clase.aula_ubicacion && (
-                              <>
-                                <Text style={[styles.claseAulaSeparator, { color: theme.textMuted }]}>•</Text>
-                                <Text style={[styles.claseAulaUbicacion, { color: theme.textMuted }]}>
-                                  {clase.aula_ubicacion}
-                                </Text>
-                              </>
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })}
+                  {/* Location */}
+                  <View style={styles.locationRow}>
+                    <Ionicons name="location-outline" size={14} color={theme.textMuted} />
+                    <Text style={[styles.locationText, { color: theme.textSecondary }]}>
+                      {clase.aula_nombre}
+                      {clase.aula_ubicacion ? ` • ${clase.aula_ubicacion}` : ''}
+                    </Text>
                   </View>
                 </View>
-              );
-            })}
-          </View>
+              </View>
+            </Animated.View>
+          ))
         )}
+
+        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
@@ -187,136 +277,154 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
+  headerContainer: {
+    marginBottom: 16,
+  },
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: '700',
+    color: '#fff',
     marginBottom: 4,
   },
   headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  headerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabsContainer: {
+    paddingVertical: 12,
+  },
+  tabsContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  tabText: {
+    fontSize: 12,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+  dayHeaderContainer: {
+    marginBottom: 16,
+  },
+  dayHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  dayHeaderSubtitle: {
     fontSize: 13,
   },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
+  emptyState: {
     padding: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-  },
-  emptyContainer: {
-    margin: 16,
-    padding: 40,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
+    marginTop: 20,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 16,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 8,
   },
-  emptyText: {
+  emptyStateText: {
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
   },
-  diasList: {
-    padding: 16,
-    gap: 16,
+  cardContainer: {
+    marginBottom: 12,
   },
-  diaCard: {
-    borderRadius: 12,
+  classCard: {
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  diaHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderBottomWidth: 1,
+  cardStripe: {
+    height: 4,
+    width: '100%',
   },
-  diaNombre: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
+  cardContent: {
+    padding: 16,
   },
-  clasesCount: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clasesCountText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  clasesList: {
-    padding: 12,
-    gap: 12,
-  },
-  claseCard: {
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
-  claseHeader: {
-    marginBottom: 8,
-  },
-  claseHora: {
+  timeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+    marginBottom: 12,
   },
-  claseHoraText: {
+  timeText: {
     fontSize: 13,
     fontWeight: '700',
   },
-  claseInfo: {
+  courseInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  claseBadge: {
+  codeBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
   },
-  claseBadgeText: {
+  codeText: {
     fontSize: 11,
     fontWeight: '700',
   },
-  claseNombre: {
+  courseName: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
   },
-  claseAula: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  claseAulaText: {
+  locationText: {
     fontSize: 13,
-    fontWeight: '500',
-  },
-  claseAulaSeparator: {
-    fontSize: 13,
-  },
-  claseAulaUbicacion: {
-    fontSize: 12,
   },
 });

@@ -324,364 +324,360 @@ export default function DocenteLayout() {
 
   return (
     <>
-    <Tabs
-      key={darkMode ? 'dark' : 'light'}
-      screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: theme.cardBg,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.border,
-        },
-        headerTintColor: theme.text,
-        headerTitle: 'MI PANEL DOCENTE',
-        headerTitleAlign: 'left',
-        headerTitleStyle: {
-          fontWeight: '700',
-          fontSize: 16,
-          letterSpacing: 0.5,
-        },
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
-            <NotificationBell
-              notificaciones={notificaciones}
-              onMarcarTodasLeidas={marcarTodasLeidas}
-              darkMode={darkMode}
-            />
-            <TouchableOpacity
-              onPress={() => setShowProfileDrawer(true)}
-              style={styles.profileButton}
-            >
-              {userData?.foto_perfil ? (
-                <Image 
-                  source={{ uri: userData.foto_perfil }} 
-                  style={styles.headerAvatar}
-                />
-              ) : (
-                <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.accent }]}>
-                  <Text style={styles.headerAvatarText}>{getInitials()}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        ),
-        tabBarActiveTintColor: theme.tabActive,
-        tabBarInactiveTintColor: theme.tabInactive,
-        tabBarStyle: {
-          backgroundColor: theme.tabBg,
-          borderTopColor: theme.border,
-          borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: 8 + insets.bottom,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Mi Aula',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="cursos"
-        options={{
-          title: 'Cursos',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="estudiantes"
-        options={{
-          title: 'Estudiantes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="asistencia"
-        options={{
-          title: 'Asistencia',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkmark-circle" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="calificaciones"
-        options={{
-          title: 'Notas',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="school" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="horario"
-        options={{
-          title: 'Horario',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          href: null,
-          title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="detallecursodocente"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="calificaciones-curso"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="ModalModulo"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="ModalTarea"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="ModalCalificaciones"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="ModalEntregas"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
-
-    <Modal
-      visible={showProfileDrawer}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setShowProfileDrawer(false)}
-    >
-      <TouchableOpacity
-        style={styles.drawerOverlay}
-        activeOpacity={1}
-        onPress={() => setShowProfileDrawer(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={[styles.drawerContent, { backgroundColor: theme.cardBg }]}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <ScrollView>
-            <View style={styles.drawerHeader}>
-              <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>
-                <Ionicons name="close" size={28} color={theme.text} />
-              </TouchableOpacity>
-              <Text style={[styles.drawerTitle, { color: theme.text }]}>Configuración</Text>
-            </View>
-
-            <View style={[styles.profileSection, { borderBottomColor: theme.border }]}>
+      <Tabs
+        key={darkMode ? 'dark' : 'light'}
+        screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: theme.cardBg,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.border,
+          },
+          headerTintColor: theme.text,
+          headerTitle: 'MI PANEL DOCENTE',
+          headerTitleAlign: 'left',
+          headerTitleStyle: {
+            fontWeight: '700',
+            fontSize: 16,
+            letterSpacing: 0.5,
+          },
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+              <NotificationBell
+                notificaciones={notificaciones}
+                onMarcarTodasLeidas={marcarTodasLeidas}
+                darkMode={darkMode}
+              />
               <TouchableOpacity
-                style={styles.avatarContainer}
-                onPress={() => {
-                  setShowProfileDrawer(false);
-                  setTimeout(() => handlePhotoOptions(), 300);
-                }}
+                onPress={() => setShowProfileDrawer(true)}
+                style={styles.profileButton}
               >
                 {userData?.foto_perfil ? (
-                  <Image source={{ uri: userData.foto_perfil }} style={styles.avatarImage} />
+                  <Image
+                    source={{ uri: userData.foto_perfil }}
+                    style={styles.headerAvatar}
+                  />
                 ) : (
-                  <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
-                    <Text style={styles.avatarText}>{getInitials()}</Text>
+                  <View style={[styles.headerAvatarPlaceholder, { backgroundColor: theme.accent }]}>
+                    <Text style={styles.headerAvatarText}>{getInitials()}</Text>
                   </View>
                 )}
-                <View style={[styles.cameraIcon, { backgroundColor: theme.accent }]}>
-                  <Ionicons name="camera" size={16} color="#fff" />
-                </View>
               </TouchableOpacity>
-              <Text style={[styles.profileName, { color: theme.text }]}>
-                {userData?.nombres || userData?.nombre} {userData?.apellidos || userData?.apellido}
-              </Text>
-              <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>
-                {userData?.email || 'docente@belleza.com'}
-              </Text>
             </View>
+          ),
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: theme.tabActive,
+          tabBarInactiveTintColor: theme.tabInactive,
+          tabBarStyle: {
+            backgroundColor: theme.cardBg,
+            borderTopColor: theme.border,
+            borderTopWidth: 1,
+            height: 60 + insets.bottom,
+            paddingTop: 12,
+          },
+        }}
+      >
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            title: 'Mi Aula',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="cursos"
+          options={{
+            title: 'Cursos',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "book" : "book-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="estudiantes"
+          options={{
+            title: 'Estudiantes',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "people" : "people-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="asistencia"
+          options={{
+            title: 'Asistencia',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="calificaciones"
+          options={{
+            title: 'Notas',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="horario"
+          options={{
+            title: 'Horario',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="perfil"
+          options={{
+            href: null,
+            title: 'Perfil',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="detallecursodocente"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="calificaciones-curso"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="ModalModulo"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="ModalTarea"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="ModalCalificaciones"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="ModalEntregas"
+          options={{
+            href: null,
+          }}
+        />
+      </Tabs>
 
-            <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
-              <View style={styles.settingLeft}>
-                <Ionicons
-                  name={darkMode ? 'moon' : 'sunny'}
-                  size={24}
-                  color={theme.accent}
+      <Modal
+        visible={showProfileDrawer}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowProfileDrawer(false)}
+      >
+        <TouchableOpacity
+          style={styles.drawerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProfileDrawer(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.drawerContent, { backgroundColor: theme.cardBg }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView>
+              <View style={styles.drawerHeader}>
+                <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>
+                  <Ionicons name="close" size={28} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.drawerTitle, { color: theme.text }]}>Configuración</Text>
+              </View>
+
+              <View style={[styles.profileSection, { borderBottomColor: theme.border }]}>
+                <TouchableOpacity
+                  style={styles.avatarContainer}
+                  onPress={() => {
+                    setShowProfileDrawer(false);
+                    setTimeout(() => handlePhotoOptions(), 300);
+                  }}
+                >
+                  {userData?.foto_perfil ? (
+                    <Image source={{ uri: userData.foto_perfil }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
+                      <Text style={styles.avatarText}>{getInitials()}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.cameraIcon, { backgroundColor: theme.accent }]}>
+                    <Ionicons name="camera" size={16} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                <Text style={[styles.profileName, { color: theme.text }]}>
+                  {userData?.nombres || userData?.nombre} {userData?.apellidos || userData?.apellido}
+                </Text>
+                <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>
+                  {userData?.email || 'docente@belleza.com'}
+                </Text>
+              </View>
+
+              <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
+                <View style={styles.settingLeft}>
+                  <Ionicons
+                    name={darkMode ? 'moon' : 'sunny'}
+                    size={24}
+                    color={theme.accent}
+                  />
+                  <Text style={[styles.settingText, { color: theme.text }]}>Modo Oscuro</Text>
+                </View>
+                <Switch
+                  value={darkMode}
+                  onValueChange={toggleDarkMode}
+                  trackColor={{ false: '#767577', true: theme.accent }}
+                  thumbColor="#fff"
                 />
-                <Text style={[styles.settingText, { color: theme.text }]}>Modo Oscuro</Text>
-              </View>
-              <Switch
-                value={darkMode}
-                onValueChange={toggleDarkMode}
-                trackColor={{ false: '#767577', true: theme.accent }}
-                thumbColor="#fff"
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.settingItem, { borderBottomColor: theme.border }]}
-              onPress={() => {
-                setShowProfileDrawer(false);
-                setTimeout(() => router.push('/roles/docente-movil/perfil' as any), 300);
-              }}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="person-outline" size={24} color={theme.accent} />
-                <Text style={[styles.settingText, { color: theme.text }]}>Mi Perfil</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.settingItem, { borderBottomWidth: 0 }]}
-              onPress={handleLogout}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="log-out-outline" size={24} color="#ef4444" />
-                <Text style={[styles.settingText, { color: '#ef4444' }]}>Cerrar Sesión</Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-
-    <Modal
-      visible={showPasswordModal}
-      transparent
-      animationType="fade"
-      onRequestClose={() => {
-        if (!isRequiredPasswordChange) {
-          setShowPasswordModal(false);
-        }
-      }}
-    >
-      <View style={styles.passwordModalOverlay}>
-        <View style={[styles.passwordModalContent, { backgroundColor: theme.cardBg }]}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.passwordModalHeader}>
-              <View style={[styles.passwordIconContainer, { backgroundColor: theme.accent + '20' }]}>
-                <Ionicons name="lock-closed" size={32} color={theme.accent} />
-              </View>
-              <Text style={[styles.passwordModalTitle, { color: theme.text }]}>
-                {isFirstLogin ? 'Bienvenido/a' : 'Cambio de Contraseña'}
-              </Text>
-              <Text style={[styles.passwordModalSubtitle, { color: theme.textSecondary }]}>
-                {isFirstLogin 
-                  ? 'Por seguridad, debes cambiar tu contraseña en el primer acceso'
-                  : 'Por seguridad, debes cambiar tu contraseña'
-                }
-              </Text>
-            </View>
-
-            <View style={styles.passwordForm}>
-              <View style={styles.passwordField}>
-                <Text style={[styles.passwordLabel, { color: theme.text }]}>Contraseña Actual</Text>
-                <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={theme.textMuted} />
-                  <TextInput
-                    style={[styles.passwordInput, { color: theme.text }]}
-                    value={passwordData.password_actual}
-                    onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_actual: text }))}
-                    secureTextEntry={!showCurrentPassword}
-                    placeholder="Ingresa tu contraseña actual"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                  <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
-                    <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.passwordField}>
-                <Text style={[styles.passwordLabel, { color: theme.text }]}>Nueva Contraseña</Text>
-                <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  <Ionicons name="key-outline" size={20} color={theme.textMuted} />
-                  <TextInput
-                    style={[styles.passwordInput, { color: theme.text }]}
-                    value={passwordData.password_nueva}
-                    onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_nueva: text }))}
-                    secureTextEntry={!showNewPassword}
-                    placeholder="Mínimo 6 caracteres"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                  <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                    <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.passwordField}>
-                <Text style={[styles.passwordLabel, { color: theme.text }]}>Confirmar Nueva Contraseña</Text>
-                <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  <Ionicons name="checkmark-circle-outline" size={20} color={theme.textMuted} />
-                  <TextInput
-                    style={[styles.passwordInput, { color: theme.text }]}
-                    value={passwordData.confirmar_password}
-                    onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmar_password: text }))}
-                    secureTextEntry={!showConfirmPassword}
-                    placeholder="Repite la nueva contraseña"
-                    placeholderTextColor={theme.textMuted}
-                  />
-                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                    <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
-                  </TouchableOpacity>
-                </View>
               </View>
 
               <TouchableOpacity
-                style={[styles.passwordButton, { backgroundColor: theme.accent }]}
-                onPress={handleChangePassword}
+                style={[styles.settingItem, { borderBottomColor: theme.border }]}
+                onPress={() => {
+                  setShowProfileDrawer(false);
+                  setTimeout(() => router.push('/roles/docente-movil/perfil' as any), 300);
+                }}
               >
-                <Text style={styles.passwordButtonText}>Cambiar Contraseña</Text>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="person-outline" size={24} color={theme.accent} />
+                  <Text style={[styles.settingText, { color: theme.text }]}>Mi Perfil</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
 
-              {!isRequiredPasswordChange && (
+              <TouchableOpacity
+                style={[styles.settingItem, { borderBottomWidth: 0 }]}
+                onPress={handleLogout}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="log-out-outline" size={24} color="#ef4444" />
+                  <Text style={[styles.settingText, { color: '#ef4444' }]}>Cerrar Sesión</Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isRequiredPasswordChange) {
+            setShowPasswordModal(false);
+          }
+        }}
+      >
+        <View style={styles.passwordModalOverlay}>
+          <View style={[styles.passwordModalContent, { backgroundColor: theme.cardBg }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.passwordModalHeader}>
+                <View style={[styles.passwordIconContainer, { backgroundColor: theme.accent + '20' }]}>
+                  <Ionicons name="lock-closed" size={32} color={theme.accent} />
+                </View>
+                <Text style={[styles.passwordModalTitle, { color: theme.text }]}>
+                  {isFirstLogin ? 'Bienvenido/a' : 'Cambio de Contraseña'}
+                </Text>
+                <Text style={[styles.passwordModalSubtitle, { color: theme.textSecondary }]}>
+                  {isFirstLogin
+                    ? 'Por seguridad, debes cambiar tu contraseña en el primer acceso'
+                    : 'Por seguridad, debes cambiar tu contraseña'
+                  }
+                </Text>
+              </View>
+
+              <View style={styles.passwordForm}>
+                <View style={styles.passwordField}>
+                  <Text style={[styles.passwordLabel, { color: theme.text }]}>Contraseña Actual</Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={theme.textMuted} />
+                    <TextInput
+                      style={[styles.passwordInput, { color: theme.text }]}
+                      value={passwordData.password_actual}
+                      onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_actual: text }))}
+                      secureTextEntry={!showCurrentPassword}
+                      placeholder="Ingresa tu contraseña actual"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                      <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.passwordField}>
+                  <Text style={[styles.passwordLabel, { color: theme.text }]}>Nueva Contraseña</Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                    <Ionicons name="key-outline" size={20} color={theme.textMuted} />
+                    <TextInput
+                      style={[styles.passwordInput, { color: theme.text }]}
+                      value={passwordData.password_nueva}
+                      onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_nueva: text }))}
+                      secureTextEntry={!showNewPassword}
+                      placeholder="Mínimo 6 caracteres"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                      <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.passwordField}>
+                  <Text style={[styles.passwordLabel, { color: theme.text }]}>Confirmar Nueva Contraseña</Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                    <Ionicons name="checkmark-circle-outline" size={20} color={theme.textMuted} />
+                    <TextInput
+                      style={[styles.passwordInput, { color: theme.text }]}
+                      value={passwordData.confirmar_password}
+                      onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmar_password: text }))}
+                      secureTextEntry={!showConfirmPassword}
+                      placeholder="Repite la nueva contraseña"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                      <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
                 <TouchableOpacity
-                  style={[styles.passwordCancelButton, { borderColor: theme.border }]}
-                  onPress={() => setShowPasswordModal(false)}
+                  style={[styles.passwordButton, { backgroundColor: theme.accent }]}
+                  onPress={handleChangePassword}
                 >
-                  <Text style={[styles.passwordCancelText, { color: theme.textSecondary }]}>Cancelar</Text>
+                  <Text style={styles.passwordButtonText}>Cambiar Contraseña</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </ScrollView>
+
+                {!isRequiredPasswordChange && (
+                  <TouchableOpacity
+                    style={[styles.passwordCancelButton, { borderColor: theme.border }]}
+                    onPress={() => setShowPasswordModal(false)}
+                  >
+                    <Text style={[styles.passwordCancelText, { color: theme.textSecondary }]}>Cancelar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </>
   );
 }

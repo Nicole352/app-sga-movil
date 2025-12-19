@@ -1,7 +1,9 @@
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl, Platform, StatusBar } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -34,7 +36,7 @@ export default function MisEstudiantesScreen() {
 
   useEffect(() => {
     loadData();
-    
+
     const themeHandler = (isDark: boolean) => setDarkMode(isDark);
     eventEmitter.on('themeChanged', themeHandler);
     return () => eventEmitter.off('themeChanged', themeHandler);
@@ -82,18 +84,33 @@ export default function MisEstudiantesScreen() {
     }
   };
 
-  const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
-    accent: '#3b82f6',
-    green: '#10b981',
-    orange: '#f59e0b',
-    purple: '#8b5cf6',
-  };
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#3b82f6',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+      green: '#10b981',
+      orange: '#f59e0b',
+      purple: '#8b5cf6',
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#2563eb',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+      green: '#10b981',
+      orange: '#f59e0b',
+      purple: '#8b5cf6',
+    };
 
   const cursosUnicos = Array.from(new Set(estudiantes.map(e => `${e.codigo_curso}||${e.curso_nombre}`)))
     .map(k => ({ codigo: k.split('||')[0], nombre: k.split('||')[1] }));
@@ -157,13 +174,25 @@ export default function MisEstudiantesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Estudiantes</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Gestiona y monitorea el progreso de tus estudiantes
-        </Text>
-      </View>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
+
+      {/* PREMIUM BLUE GRADIENT HEADER */}
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <LinearGradient
+          colors={theme.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Mis Estudiantes</Text>
+              <Text style={styles.headerSubtitle}>Gestiona y monitorea el progreso</Text>
+            </View>
+            <Ionicons name="people" size={28} color="#fff" />
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       {/* Estadísticas */}
       <View style={styles.statsContainer}>
@@ -193,9 +222,9 @@ export default function MisEstudiantesScreen() {
       </View>
 
       {/* Filtros */}
-      <View style={[styles.filtersContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+      <View style={styles.filtersContainer}>
         <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: theme.border }]}>
-          <Ionicons name="search" size={18} color={theme.textMuted} />
+          <Ionicons name="search" size={16} color={theme.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: theme.text }]}
             placeholder="Buscar por nombre, cédula..."
@@ -266,7 +295,7 @@ export default function MisEstudiantesScreen() {
 
               return (
                 <View key={`${estudiante.id_usuario}-${estudiante.codigo_curso}`} style={[styles.estudianteCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  {/* Header */}
+                  {/* Compact Header: Avatar + Name + Badge in one line */}
                   <View style={styles.estudianteHeader}>
                     <View style={[styles.estudianteAvatar, { backgroundColor: theme.accent }]}>
                       <Text style={styles.estudianteAvatarText}>
@@ -274,7 +303,7 @@ export default function MisEstudiantesScreen() {
                       </Text>
                     </View>
                     <View style={styles.estudianteInfo}>
-                      <Text style={[styles.estudianteNombre, { color: theme.text }]}>
+                      <Text style={[styles.estudianteNombre, { color: theme.text }]} numberOfLines={1}>
                         {estudiante.apellido}, {estudiante.nombre}
                       </Text>
                       <Text style={[styles.estudianteCedula, { color: theme.textMuted }]}>
@@ -288,11 +317,11 @@ export default function MisEstudiantesScreen() {
                     </View>
                   </View>
 
-                  {/* Curso y Fechas */}
-                  <View style={[styles.estudianteDetails, { backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.04)' }]}>
+                  {/* Compact Details: Course + Dates in single row */}
+                  <View style={[styles.estudianteDetails, { backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.03)' }]}>
                     <View style={styles.estudianteCurso}>
-                      <Ionicons name="book" size={14} color={theme.accent} />
-                      <View style={[styles.cursoBadge, { backgroundColor: theme.accent + '30' }]}>
+                      <Ionicons name="book" size={12} color={theme.accent} />
+                      <View style={[styles.cursoBadge, { backgroundColor: theme.accent + '20' }]}>
                         <Text style={[styles.cursoBadgeText, { color: theme.accent }]}>
                           {estudiante.codigo_curso}
                         </Text>
@@ -302,29 +331,19 @@ export default function MisEstudiantesScreen() {
                       </Text>
                     </View>
 
-                    <View style={[styles.separator, { backgroundColor: theme.border }]} />
-
                     <View style={styles.estudianteFechas}>
                       <View style={styles.fechaItem}>
-                        <Ionicons name="calendar" size={12} color={theme.textMuted} />
-                        <View>
-                          <Text style={[styles.fechaLabel, { color: theme.textMuted }]}>Inicio</Text>
-                          <Text style={[styles.fechaValue, { color: theme.text }]}>
-                            {formatDate(estudiante.fecha_inicio_curso)}
-                          </Text>
-                        </View>
+                        <Ionicons name="calendar-outline" size={10} color={theme.textMuted} />
+                        <Text style={[styles.fechaValue, { color: theme.textSecondary }]}>
+                          {formatDate(estudiante.fecha_inicio_curso)}
+                        </Text>
                       </View>
-
-                      <View style={[styles.separator, { backgroundColor: theme.border }]} />
-
+                      <Ionicons name="arrow-forward" size={10} color={theme.textMuted} />
                       <View style={styles.fechaItem}>
-                        <Ionicons name="calendar" size={12} color={theme.textMuted} />
-                        <View>
-                          <Text style={[styles.fechaLabel, { color: theme.textMuted }]}>Fin</Text>
-                          <Text style={[styles.fechaValue, { color: theme.text }]}>
-                            {formatDate(estudiante.fecha_fin_curso)}
-                          </Text>
-                        </View>
+                        <Ionicons name="calendar-outline" size={10} color={theme.textMuted} />
+                        <Text style={[styles.fechaValue, { color: theme.textSecondary }]}>
+                          {formatDate(estudiante.fecha_fin_curso)}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -343,16 +362,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#fff',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -378,30 +407,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   filtersContainer: {
-    padding: 16,
-    paddingTop: 0,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 8,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
   },
   pickerContainer: {
     borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
+    height: 44,
+    justifyContent: 'center',
   },
   picker: {
-    height: 45,
+    height: 44,
+    fontSize: 12,
   },
   scrollView: {
     flex: 1,
@@ -433,72 +465,73 @@ const styles = StyleSheet.create({
   estudiantesList: {
     padding: 16,
     paddingTop: 0,
-    gap: 12,
+    gap: 8,
   },
   estudianteCard: {
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     overflow: 'hidden',
   },
   estudianteHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    gap: 8,
+    padding: 10,
   },
   estudianteAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
   estudianteAvatarText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
   },
   estudianteInfo: {
     flex: 1,
+    minWidth: 0,
   },
   estudianteNombre: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   estudianteCedula: {
-    fontSize: 11,
+    fontSize: 10,
   },
   estudianteEstadoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
   estudianteEstadoText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   estudianteDetails: {
-    padding: 10,
-    gap: 12,
+    padding: 8,
+    gap: 6,
   },
   estudianteCurso: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   cursoBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
   },
   cursoBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   cursoNombre: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   separator: {
@@ -508,18 +541,19 @@ const styles = StyleSheet.create({
   estudianteFechas: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    justifyContent: 'space-around',
   },
   fechaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   fechaLabel: {
     fontSize: 9,
   },
   fechaValue: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
 });

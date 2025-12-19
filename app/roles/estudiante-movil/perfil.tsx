@@ -1,9 +1,13 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../../constants/config';
 import { getToken, storage } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
 
 interface EstudianteData {
   id_usuario: number;
@@ -44,6 +48,32 @@ export default function PerfilEstudiante() {
     confirmar_password: ''
   });
 
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#fbbf24',
+      primaryGradient: ['#f59e0b', '#d97706'] as const,
+      inputBg: '#334155',
+      success: '#10b981',
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#f59e0b',
+      primaryGradient: ['#fbbf24', '#f59e0b'] as const,
+      inputBg: '#f1f5f9',
+      success: '#059669',
+    };
+
   useEffect(() => {
     const loadDarkMode = async () => {
       const savedMode = await storage.getItem('dark_mode');
@@ -51,10 +81,10 @@ export default function PerfilEstudiante() {
         setDarkMode(savedMode === 'true');
       }
     };
-    
+
     loadDarkMode();
     fetchPerfil();
-    
+
     const handleThemeChange = (isDark: boolean) => {
       setDarkMode(isDark);
     };
@@ -62,7 +92,7 @@ export default function PerfilEstudiante() {
     const handleProfilePhotoUpdate = () => {
       fetchPerfil();
     };
-    
+
     eventEmitter.on('themeChanged', handleThemeChange);
     eventEmitter.on('profilePhotoUpdated', handleProfilePhotoUpdate);
 
@@ -83,7 +113,7 @@ export default function PerfilEstudiante() {
       }
 
       const response = await fetch(`${API_URL}/auth/me`, {
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
@@ -224,712 +254,368 @@ export default function PerfilEstudiante() {
     return `${primerNombre}${primerApellido}`;
   };
 
-  const colors = {
-    background: darkMode ? '#000000' : '#f8fafc',
-    card: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    border: darkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.2)',
-    input: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-    inputBorder: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.3)',
-    accent: '#fbbf24',
-  };
-
   if (loading && !estudiante) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.textMuted }}>Cargando perfil...</Text>
-      </View>
-    );
-  }
-
-  if (!estudiante) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.textMuted }}>No se pudo cargar el perfil</Text>
+      <View style={[styles.container, { backgroundColor: theme.bg, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: theme.textMuted }}>Cargando perfil...</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        showsVerticalScrollIndicator={false}
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      {/* Premium Header Gradient */}
+      <LinearGradient
+        colors={theme.primaryGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Mi Perfil</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Gestiona tu información personal y seguridad
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.headerAvatarContainer}
+          onPress={() => setShowPhotoPreview(true)}
+          activeOpacity={0.9}
+        >
+          {fotoUrl ? (
+            <Image source={{ uri: fotoUrl }} style={styles.headerAvatar} />
+          ) : (
+            <View style={styles.headerAvatarPlaceholder}>
+              <Text style={styles.headerInitials}>{getInitials()}</Text>
+            </View>
+          )}
+          <View style={styles.headerChangeIcon}>
+            <Ionicons name="camera" size={12} color="#fff" />
+          </View>
+        </TouchableOpacity>
 
+        <Text style={styles.headerName}>
+          {(estudiante?.nombres || estudiante?.nombre || 'Estudiante')}
+        </Text>
+        <Text style={styles.headerUsername}>
+          {estudiante?.username ? `@${estudiante.username}` : ''}
+        </Text>
+
+        <View style={styles.headerBadge}>
+          <Ionicons name="school" size={12} color="#fff" />
+          <Text style={styles.headerBadgeText}>Estudiante</Text>
+        </View>
+      </LinearGradient>
+
+      <View style={[styles.contentContainer, { backgroundColor: theme.bg }]}>
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={[styles.tab, { borderBottomColor: activeTab === 'info' ? colors.accent : 'transparent' }]}
+            style={[styles.tab, activeTab === 'info' && styles.activeTab]}
             onPress={() => setActiveTab('info')}
-            activeOpacity={0.7}
           >
-            <Ionicons name="person" size={12} color={activeTab === 'info' ? colors.text : colors.textMuted} />
-            <Text style={[styles.tabText, { color: activeTab === 'info' ? colors.text : colors.textMuted }]}>
-              Información Personal
+            <Ionicons name="person" size={16} color={activeTab === 'info' ? theme.accent : theme.textMuted} />
+            <Text style={[styles.tabText, { color: activeTab === 'info' ? theme.text : theme.textMuted, fontWeight: activeTab === 'info' ? '700' : '500' }]}>
+              Información
             </Text>
+            {activeTab === 'info' && <View style={[styles.activeIndicator, { backgroundColor: theme.accent }]} />}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, { borderBottomColor: activeTab === 'password' ? colors.accent : 'transparent' }]}
+            style={[styles.tab, activeTab === 'password' && styles.activeTab]}
             onPress={() => setActiveTab('password')}
-            activeOpacity={0.7}
           >
-            <Ionicons name="lock-closed" size={12} color={activeTab === 'password' ? colors.text : colors.textMuted} />
-            <Text style={[styles.tabText, { color: activeTab === 'password' ? colors.text : colors.textMuted }]}>
-              Cambiar Contraseña
+            <Ionicons name="lock-closed" size={16} color={activeTab === 'password' ? theme.accent : theme.textMuted} />
+            <Text style={[styles.tabText, { color: activeTab === 'password' ? theme.text : theme.textMuted, fontWeight: activeTab === 'password' ? '700' : '500' }]}>
+              Seguridad
             </Text>
+            {activeTab === 'password' && <View style={[styles.activeIndicator, { backgroundColor: theme.accent }]} />}
           </TouchableOpacity>
         </View>
 
-        {activeTab === 'info' ? (
-          <View style={styles.content}>
-            {/* Card de perfil */}
-            <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <TouchableOpacity onPress={() => setShowPhotoPreview(true)} activeOpacity={0.8}>
-                <View style={[styles.photoContainer, { borderColor: colors.accent }]}>
-                  {fotoUrl ? (
-                    <Image source={{ uri: fotoUrl }} style={styles.photo} />
-                  ) : (
-                    <View style={[styles.photoPlaceholder, { backgroundColor: colors.accent }]}>
-                      <Text style={styles.initials}>{getInitials()}</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <Text style={[styles.userName, { color: colors.text }]}>
-                {(estudiante.nombres || estudiante.nombre || 'Estudiante')} {(estudiante.apellidos || estudiante.apellido || '')}
-              </Text>
-              <Text style={[styles.userUsername, { color: colors.textMuted }]}>
-                {estudiante.username ? `@${estudiante.username}` : ''}
-              </Text>
-
-              <View style={[styles.badge, { backgroundColor: `${colors.accent}20` }]}>
-                <Ionicons name="school" size={12} color={colors.accent} />
-                <Text style={[styles.badgeText, { color: colors.accent }]}>Estudiante</Text>
-              </View>
-
-              <View style={[styles.infoSection, { borderTopColor: colors.border }]}>
-                <View style={styles.infoRow}>
-                  <Ionicons name="checkmark-circle" size={14} color={colors.accent} />
-                  <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Estado</Text>
-                    <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {estudiante?.estado || 'Activo'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Ionicons name="person" size={14} color={colors.accent} />
-                  <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Identificación</Text>
-                    <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {estudiante.identificacion || estudiante.cedula || 'No especificado'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Botones Editar/Guardar */}
-              <View style={[styles.actionsSection, { borderTopColor: colors.border }]}>
-                {!isEditing ? (
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: colors.accent }]}
-                    onPress={() => setIsEditing(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="create" size={12} color="#fff" />
-                    <Text style={styles.primaryButtonText}>Editar Perfil</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.editActions}>
-                    <TouchableOpacity
-                      style={[styles.primaryButton, { backgroundColor: colors.accent, flex: 1 }]}
-                      onPress={handleSave}
-                      disabled={loading}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="checkmark-circle" size={12} color="#fff" />
-                      <Text style={styles.primaryButtonText}>{loading ? 'Guardando...' : 'Guardar'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.secondaryButton, { borderColor: colors.border, flex: 1 }]}
-                      onPress={() => {
-                        setIsEditing(false);
-                        fetchPerfil();
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="close" size={14} color={colors.textSecondary} />
-                      <Text style={[styles.secondaryButtonText, { color: colors.textSecondary }]}>Cancelar</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Información detallada */}
-            <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>INFORMACIÓN PERSONAL</Text>
-
-              <View style={styles.fieldsContainer}>
-                {/* Nombres */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Nombres</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.nombres}
-                      onChangeText={(text) => setFormData({ ...formData, nombres: text })}
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="person" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.nombres || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Apellidos */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Apellidos</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.apellidos}
-                      onChangeText={(text) => setFormData({ ...formData, apellidos: text })}
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="person" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.apellidos || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Email */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Email</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.email}
-                      onChangeText={(text) => setFormData({ ...formData, email: text })}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="mail" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.email || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Teléfono */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Teléfono</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.telefono}
-                      onChangeText={(text) => setFormData({ ...formData, telefono: text })}
-                      keyboardType="phone-pad"
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="call" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.telefono || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Dirección */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Dirección</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.direccion}
-                      onChangeText={(text) => setFormData({ ...formData, direccion: text })}
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="location" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.direccion || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Fecha de nacimiento */}
-                {formData.fecha_nacimiento && (
-                  <View style={styles.field}>
-                    <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Fecha de Nacimiento</Text>
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="calendar" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {new Date(formData.fecha_nacimiento).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Contacto de Emergencia */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Contacto de Emergencia</Text>
-                  {isEditing ? (
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                      value={formData.contacto_emergencia}
-                      onChangeText={(text) => setFormData({ ...formData, contacto_emergencia: text })}
-                      keyboardType="phone-pad"
-                      placeholder="Teléfono de emergencia"
-                      placeholderTextColor={colors.textMuted}
-                    />
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="call" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.contacto_emergencia || 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Género */}
-                <View style={styles.field}>
-                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Género</Text>
-                  {isEditing ? (
-                    <View style={[styles.input, { backgroundColor: colors.input, borderColor: colors.inputBorder }]}>
-                      <Text style={{ color: colors.text, fontSize: 11 }}>
-                        {formData.genero || 'Seleccionar...'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={[styles.fieldValue, { backgroundColor: colors.input, borderColor: colors.border }]}>
-                      <Ionicons name="people" size={12} color="#6b7280" />
-                      <Text style={[styles.fieldValueText, { color: colors.text }]}>
-                        {formData.genero ? (formData.genero.charAt(0).toUpperCase() + formData.genero.slice(1)) : 'No especificado'}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.content}>
-            <View style={[styles.passwordCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>CAMBIAR CONTRASEÑA</Text>
-
-              {/* Contraseña Actual */}
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Contraseña Actual</Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[styles.passwordInput, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                    value={passwordData.password_actual}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
-                    secureTextEntry={!showCurrentPassword}
-                    placeholderTextColor={colors.textMuted}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                  >
-                    <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={16} color="#9ca3af" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Nueva Contraseña */}
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Nueva Contraseña</Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[styles.passwordInput, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                    value={passwordData.password_nueva}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
-                    secureTextEntry={!showNewPassword}
-                    placeholderTextColor={colors.textMuted}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={16} color="#9ca3af" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.passwordHint}>
-                  <Ionicons name="checkmark-circle" size={10} color={passwordData.password_nueva.length >= 8 ? colors.accent : '#9ca3af'} />
-                  <Text style={[styles.passwordHintText, { color: colors.textMuted }]}>
-                    Mínimo 8 caracteres
-                  </Text>
-                </View>
-              </View>
-
-              {/* Confirmar Nueva Contraseña */}
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Confirmar Nueva Contraseña</Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[styles.passwordInput, { backgroundColor: colors.input, borderColor: colors.inputBorder, color: colors.text }]}
-                    value={passwordData.confirmar_password}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
-                    secureTextEntry={!showConfirmPassword}
-                    placeholderTextColor={colors.textMuted}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={16} color="#9ca3af" />
-                  </TouchableOpacity>
-                </View>
-                {passwordData.confirmar_password && (
-                  <View style={styles.passwordHint}>
-                    <Ionicons name="checkmark-circle" size={10} color={colors.accent} />
-                    <Text style={[styles.passwordHintText, { color: colors.textMuted }]}>
-                      {passwordData.password_nueva === passwordData.confirmar_password ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Botón Cambiar Contraseña */}
-              <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: colors.accent, marginTop: 8 }]}
-                onPress={handleChangePassword}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="shield-checkmark" size={14} color="#fff" />
-                <Text style={styles.primaryButtonText}>{loading ? 'Actualizando...' : 'Cambiar Contraseña'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Modal de vista previa de foto */}
-      <Modal
-        visible={showPhotoPreview}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPhotoPreview(false)}
-      >
-        <TouchableOpacity
-          style={styles.photoPreviewOverlay}
-          activeOpacity={1}
-          onPress={() => setShowPhotoPreview(false)}
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
         >
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setShowPhotoPreview(false)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="close" size={20} color="#fff" />
-          </TouchableOpacity>
+          {activeTab === 'info' ? (
+            <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                {/* Header Row */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <Text style={[styles.sectionTitle, { color: theme.accent }]}>DATOS PERSONALES</Text>
+                  {!isEditing ? (
+                    <TouchableOpacity onPress={() => setIsEditing(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="create-outline" size={18} color={theme.accent} />
+                      <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '600' }}>Editar</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={() => setIsEditing(false)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="close-circle-outline" size={18} color={theme.textMuted} />
+                      <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600' }}>Cancelar</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-          <View style={[styles.photoPreviewContainer, { borderColor: colors.accent }]}>
+                {/* Fields Grid */}
+                <View style={{ gap: 15 }}>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Nombres</Text>
+                    <TextInput
+                      editable={isEditing}
+                      value={formData.nombres}
+                      onChangeText={(t) => setFormData({ ...formData, nombres: t })}
+                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Apellidos</Text>
+                    <TextInput
+                      editable={isEditing}
+                      value={formData.apellidos}
+                      onChangeText={(t) => setFormData({ ...formData, apellidos: t })}
+                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                    />
+                  </View>
+
+                  <View style={styles.inputRow}>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+                      <TextInput
+                        editable={isEditing}
+                        value={formData.email}
+                        onChangeText={(t) => setFormData({ ...formData, email: t })}
+                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                        keyboardType="email-address"
+                      />
+                    </View>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: theme.textSecondary }]}>Teléfono</Text>
+                      <TextInput
+                        editable={isEditing}
+                        value={formData.telefono}
+                        onChangeText={(t) => setFormData({ ...formData, telefono: t })}
+                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Dirección</Text>
+                    <TextInput
+                      editable={isEditing}
+                      value={formData.direccion}
+                      onChangeText={(t) => setFormData({ ...formData, direccion: t })}
+                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                    />
+                  </View>
+
+                  {/* Read Only Fields */}
+                  <View style={styles.inputRow}>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: theme.textSecondary }]}>Identificación</Text>
+                      <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                        <Ionicons name="card-outline" size={14} color={theme.textMuted} style={{ marginRight: 8 }} />
+                        <Text style={{ color: theme.textMuted, fontSize: 13 }}>{estudiante?.identificacion || estudiante?.cedula}</Text>
+                      </View>
+                    </View>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: theme.textSecondary }]}>Estado</Text>
+                      <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                        <Ionicons name="checkmark-circle-outline" size={14} color={theme.success} style={{ marginRight: 8 }} />
+                        <Text style={{ color: theme.success, fontSize: 13, textTransform: 'capitalize' }}>{estudiante?.estado || 'Activo'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {isEditing && (
+                  <TouchableOpacity
+                    style={[styles.saveButton, { backgroundColor: theme.accent }]}
+                    onPress={handleSave}
+                  >
+                    <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <Text style={[styles.sectionTitle, { color: theme.accent, marginBottom: 20 }]}>CAMBIAR CONTRASEÑA</Text>
+
+                <View style={{ gap: 15 }}>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Contraseña Actual</Text>
+                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                      <TextInput
+                        style={[styles.passwordInput, { color: theme.text }]}
+                        value={passwordData.password_actual}
+                        onChangeText={(t) => setPasswordData({ ...passwordData, password_actual: t })}
+                        secureTextEntry={!showCurrentPassword}
+                        placeholderTextColor={theme.textMuted}
+                      />
+                      <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)} style={{ padding: 10 }}>
+                        <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Nueva Contraseña</Text>
+                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                      <TextInput
+                        style={[styles.passwordInput, { color: theme.text }]}
+                        value={passwordData.password_nueva}
+                        onChangeText={(t) => setPasswordData({ ...passwordData, password_nueva: t })}
+                        secureTextEntry={!showNewPassword}
+                        placeholderTextColor={theme.textMuted}
+                      />
+                      <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={{ padding: 10 }}>
+                        <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Confirmar Contraseña</Text>
+                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                      <TextInput
+                        style={[styles.passwordInput, { color: theme.text }]}
+                        value={passwordData.confirmar_password}
+                        onChangeText={(t) => setPasswordData({ ...passwordData, confirmar_password: t })}
+                        secureTextEntry={!showConfirmPassword}
+                        placeholderTextColor={theme.textMuted}
+                      />
+                      <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 10 }}>
+                        <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.saveButton, { backgroundColor: theme.accent, marginTop: 25 }]}
+                  onPress={handleChangePassword}
+                  disabled={loading}
+                >
+                  <Text style={styles.saveButtonText}>{loading ? 'Actualizando...' : 'Actualizar Contraseña'}</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Photo Preview Modal */}
+      <Modal visible={showPhotoPreview} transparent animationType="fade" onRequestClose={() => setShowPhotoPreview(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowPhotoPreview(false)}>
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={[styles.previewContainer, { borderColor: theme.accent }]}>
             {fotoUrl ? (
-              <Image source={{ uri: fotoUrl }} style={styles.photoPreview} />
+              <Image source={{ uri: fotoUrl }} style={styles.previewImage} />
             ) : (
-              <View style={[styles.photoPreviewPlaceholder, { backgroundColor: colors.accent }]}>
-                <Text style={styles.photoPreviewInitials}>{getInitials()}</Text>
+              <View style={[styles.previewPlaceholder, { backgroundColor: theme.accent }]}>
+                <Text style={styles.previewInitials}>{getInitials()}</Text>
               </View>
             )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  headerGradient: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    alignItems: 'center',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  header: {
-    padding: 16,
-    paddingBottom: 8,
+  headerAvatarContainer: {
+    position: 'relative',
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
+  headerAvatar: {
+    width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff'
   },
-  subtitle: {
-    fontSize: 11,
+  headerAvatarPlaceholder: {
+    width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center'
+  },
+  headerInitials: {
+    fontSize: 32, fontWeight: '800', color: '#fff'
+  },
+  headerChangeIcon: {
+    position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff'
+  },
+  headerName: {
+    fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2
+  },
+  headerUsername: {
+    fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 10
+  },
+  headerBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20
+  },
+  headerBadgeText: {
+    fontSize: 12, fontWeight: '600', color: '#fff'
+  },
+  contentContainer: {
+    flex: 1, marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingVertical: 10
   },
   tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    flexDirection: 'row', paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)'
   },
   tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
+    marginRight: 20, paddingVertical: 15, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 6
   },
-  tabText: {
-    fontSize: 10,
-    fontWeight: '600',
+  activeTab: {},
+  tabText: { fontSize: 14 },
+  activeIndicator: {
+    position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, borderRadius: 3
   },
-  content: {
-    padding: 16,
-    paddingTop: 4,
-    gap: 10,
+  card: {
+    borderRadius: 20, padding: 20, borderWidth: 1,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
   },
-  profileCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  photoContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 3,
-    marginBottom: 10,
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 35,
-  },
-  photoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initials: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  userUsername: {
-    fontSize: 11,
-    marginBottom: 6,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginTop: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  infoSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    width: '100%',
-    gap: 8,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 8,
-  },
-  infoValue: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  actionsSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    width: '100%',
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  primaryButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  detailsCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  fieldsContainer: {
-    gap: 12,
-  },
-  field: {
-    gap: 4,
-  },
-  fieldLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
+  sectionTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 1 },
+  inputGroup: { gap: 5 },
+  inputRow: { flexDirection: 'row', gap: 10 },
+  label: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
   input: {
-    fontSize: 11,
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
+    padding: 12, borderRadius: 12, borderWidth: 1, fontSize: 14
   },
-  fieldValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
+  readOnlyBox: {
+    padding: 12, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center'
   },
-  fieldValueText: {
-    fontSize: 11,
+  saveButton: {
+    padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 15,
+    shadowColor: "#fbbf24", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
   },
-  passwordCard: {
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
+  saveButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   passwordInputContainer: {
-    position: 'relative',
+    flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12
   },
-  passwordInput: {
-    fontSize: 11,
-    padding: 10,
-    paddingRight: 40,
-    borderRadius: 6,
-    borderWidth: 1,
+  passwordInput: { flex: 1, padding: 12 },
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center'
   },
-  eyeButton: {
-    position: 'absolute',
-    right: 10,
-    top: 10,
+  modalCloseBtn: {
+    position: 'absolute', top: 50, right: 30, padding: 10
   },
-  passwordHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+  previewContainer: {
+    width: width * 0.8, height: width * 0.8, borderRadius: width * 0.4, borderWidth: 4, overflow: 'hidden'
   },
-  passwordHintText: {
-    fontSize: 9,
-  },
-  photoPreviewOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 40,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  photoPreviewContainer: {
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    borderWidth: 4,
-    overflow: 'hidden',
-  },
-  photoPreview: {
-    width: '100%',
-    height: '100%',
-  },
-  photoPreviewPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  photoPreviewInitials: {
-    fontSize: 80,
-    fontWeight: '800',
-    color: '#fff',
-  },
+  previewImage: { width: '100%', height: '100%' },
+  previewPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  previewInitials: { fontSize: 80, fontWeight: 'bold', color: '#fff' }
 });

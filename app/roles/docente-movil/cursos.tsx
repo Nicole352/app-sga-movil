@@ -1,7 +1,9 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Platform, StatusBar } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -34,7 +36,7 @@ export default function MisCursosScreen() {
 
   useEffect(() => {
     loadData();
-    
+
     const themeHandler = (isDark: boolean) => setDarkMode(isDark);
     eventEmitter.on('themeChanged', themeHandler);
     return () => eventEmitter.off('themeChanged', themeHandler);
@@ -102,15 +104,27 @@ export default function MisCursosScreen() {
     }
   };
 
-  const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
-    accent: '#3b82f6',
-  };
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#3b82f6',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#2563eb',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+    };
 
   const coloresGradiente = [
     ['#3b82f6', '#2563eb'],
@@ -133,13 +147,25 @@ export default function MisCursosScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Cursos Asignados</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Gestiona tus cursos y estudiantes
-        </Text>
-      </View>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
+
+      {/* PREMIUM BLUE GRADIENT HEADER */}
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <LinearGradient
+          colors={theme.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Mis Cursos</Text>
+              <Text style={styles.headerSubtitle}>Gestiona tus cursos y estudiantes</Text>
+            </View>
+            <Ionicons name="book" size={28} color="#fff" />
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { borderColor: theme.border }]}>
@@ -147,9 +173,9 @@ export default function MisCursosScreen() {
           style={[
             styles.tab,
             activeTab === 'activos' && styles.tabActive,
-            { 
-              backgroundColor: activeTab === 'activos' 
-                ? theme.accent 
+            {
+              backgroundColor: activeTab === 'activos'
+                ? theme.accent
                 : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
               borderColor: theme.border
             }
@@ -168,9 +194,9 @@ export default function MisCursosScreen() {
           style={[
             styles.tab,
             activeTab === 'finalizados' && styles.tabActive,
-            { 
-              backgroundColor: activeTab === 'finalizados' 
-                ? theme.accent 
+            {
+              backgroundColor: activeTab === 'finalizados'
+                ? theme.accent
                 : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
               borderColor: theme.border
             }
@@ -204,8 +230,8 @@ export default function MisCursosScreen() {
               {activeTab === 'activos' ? 'No tienes cursos activos' : 'No tienes cursos finalizados'}
             </Text>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              {activeTab === 'activos' 
-                ? 'Tus cursos activos aparecerán aquí' 
+              {activeTab === 'activos'
+                ? 'Tus cursos activos aparecerán aquí'
                 : 'Tus cursos finalizados aparecerán aquí'}
             </Text>
           </View>
@@ -213,7 +239,7 @@ export default function MisCursosScreen() {
           <View style={styles.cursosList}>
             {filteredCursos.map((curso, index) => {
               const [color1, color2] = coloresGradiente[index % coloresGradiente.length];
-              
+
               return (
                 <View key={curso.id_curso} style={[styles.cursoCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                   {/* Header con gradiente */}
@@ -343,16 +369,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#fff',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -412,96 +448,97 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   cursoCard: {
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
+    marginBottom: 12,
   },
   cursoHeader: {
-    padding: 16,
+    padding: 12,
     position: 'relative',
   },
   cursoHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   cursoBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   cursoBadgeText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   cursoEstadoBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   cursoEstadoText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   cursoNombre: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 12,
-    lineHeight: 22,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 10,
+    lineHeight: 18,
   },
   cursoStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   cursoStatsBox: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 12,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
   },
   cursoStatsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: 4,
+    marginBottom: 3,
   },
   cursoStatsLabel: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
   cursoStatsValue: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   cursoStatsSubtext: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 9,
+    marginTop: 1,
   },
   cursoProgress: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
+    width: 45,
+    height: 45,
+    borderRadius: 23,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cursoProgressText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   cursoContent: {
-    padding: 16,
+    padding: 12,
   },
   cursoInfoGrid: {
     flexDirection: 'row',
@@ -510,26 +547,26 @@ const styles = StyleSheet.create({
   },
   cursoInfoBox: {
     flex: 1,
-    padding: 10,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
     borderWidth: 1,
   },
   cursoInfoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    gap: 3,
+    marginBottom: 3,
   },
   cursoInfoLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '600',
   },
   cursoInfoValue: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   cursoInfoSubtext: {
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
   },
   cursoDias: {
@@ -539,19 +576,19 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   cursoDiaTag: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
   },
   cursoDiaText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
   },
   cursoPeriodo: {
-    padding: 10,
-    borderRadius: 10,
+    padding: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cursoPeriodoHeader: {
     flexDirection: 'row',
@@ -565,25 +602,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cursoPeriodoDate: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   cursoActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   cursoActionPrimary: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   cursoActionPrimaryText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   cursoActionSecondary: {
@@ -591,14 +628,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 2,
     backgroundColor: 'transparent',
   },
   cursoActionSecondaryText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
 });

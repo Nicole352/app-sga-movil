@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,19 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
 import { storage, getToken, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
 import { useSocket } from '../../../hooks/useSocket';
 
-// Helper para calcular la próxima clase
+// Helper para calcular la próxima clase (lógica mejorada)
 const getProximaClase = (horario: any) => {
   if (!horario?.dias || !horario?.hora_inicio) return null;
 
@@ -31,11 +35,9 @@ const getProximaClase = (horario: any) => {
   const [horaInicioH, horaInicioM] = horario.hora_inicio.split(':').map(Number);
   const minutosInicio = horaInicioH * 60 + horaInicioM;
 
-  // Buscar el próximo día de clase
   let proximoDia = -1;
   let diasHastaClase = -1;
 
-  // Ordenar días para buscar en orden
   const diasIndices = diasClase.map((d: string) => diasMap[d]).sort((a: number, b: number) => a - b);
 
   // 1. Buscar hoy si aún no ha pasado la hora
@@ -49,7 +51,7 @@ const getProximaClase = (horario: any) => {
       proximoDia = diasFuturos[0];
       diasHastaClase = proximoDia - diaHoy;
     } else {
-      // 3. Buscar en la próxima semana (el día más temprano)
+      // 3. Buscar en la próxima semana
       proximoDia = diasIndices[0];
       diasHastaClase = 7 - diaHoy + proximoDia;
     }
@@ -100,7 +102,6 @@ export default function MiAulaEstudiante() {
       const token = await getToken();
       if (!token) return;
 
-      console.log('Fetching cursos desde:', `${API_URL}/estudiantes/mis-cursos`);
       const response = await fetch(`${API_URL}/estudiantes/mis-cursos`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -108,14 +109,9 @@ export default function MiAulaEstudiante() {
         },
       });
 
-      console.log('Response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('Cursos cargados:', data.length);
         setCursos(data);
-      } else {
-        console.error('Error al cargar cursos:', response.status);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -125,377 +121,291 @@ export default function MiAulaEstudiante() {
     }
   };
 
-  // Configurar eventos de WebSocket para actualizaciones en tiempo real
   const socketEvents = {
-    'nueva_tarea': (data: any) => {
-      console.log('Nueva tarea recibida:', data.titulo_tarea);
-      fetchCursos();
-    },
-    'nuevo_modulo': (data: any) => {
-      console.log('Nuevo módulo recibido:', data.nombre_modulo);
-      fetchCursos();
-    },
-    'tarea_calificada': (data: any) => {
-      console.log('Tarea calificada con', data.nota, 'puntos');
-      fetchCursos();
-    },
-    'progreso_actualizado': (data: any) => {
-      console.log('Progreso actualizado');
-      fetchCursos();
-    },
-    'tarea_entregada': (data: any) => {
-      console.log('Tarea entregada');
-      fetchCursos();
-    }
+    'nueva_tarea': () => fetchCursos(),
+    'nuevo_modulo': () => fetchCursos(),
+    'tarea_calificada': () => fetchCursos(),
+    'progreso_actualizado': () => fetchCursos(),
+    'tarea_entregada': () => fetchCursos()
   };
 
-  // Inicializar WebSocket con userId del usuario actual
   useSocket(socketEvents, userData?.id_usuario);
 
   const theme = darkMode
     ? {
-      bg: '#0a0a0a',
-      cardBg: 'rgba(18, 18, 18, 0.95)',
-      text: '#fff',
-      textSecondary: 'rgba(255, 255, 255, 0.7)',
-      textMuted: 'rgba(255, 255, 255, 0.5)',
-      border: 'rgba(251, 191, 36, 0.2)',
-      accent: '#fbbf24',
+      bg: '#0f172a', // Slate 900
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#fbbf24', // Amber 400
+      primaryGradient: ['#f59e0b', '#d97706'] as const,
+      danger: '#ef4444',
+      success: '#10b981',
+      blue: '#3b82f6',
+      purple: '#8b5cf6'
     }
     : {
-      bg: '#f8fafc',
-      cardBg: 'rgba(255, 255, 255, 0.95)',
-      text: '#1e293b',
-      textSecondary: 'rgba(30, 41, 59, 0.7)',
-      textMuted: 'rgba(30, 41, 59, 0.5)',
-      border: 'rgba(251, 191, 36, 0.2)',
-      accent: '#fbbf24',
+      bg: '#f8fafc', // Slate 50
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#f59e0b', // Amber 500
+      primaryGradient: ['#fbbf24', '#f59e0b'] as const,
+      danger: '#dc2626',
+      success: '#059669',
+      blue: '#2563eb',
+      purple: '#7c3aed'
     };
 
   useEffect(() => {
     let isMounted = true;
-
     const loadData = async () => {
       setLoading(true);
-
       const savedMode = await storage.getItem('dark_mode');
-      if (savedMode !== null) {
-        setDarkMode(savedMode === 'true');
-      }
-
+      if (savedMode !== null) setDarkMode(savedMode === 'true');
       const user = await getUserData();
-      if (isMounted) {
-        setUserData(user);
-      }
-
+      if (isMounted) setUserData(user);
       await fetchCursos();
-
-      if (isMounted) {
-        setLoading(false);
-      }
+      if (isMounted) setLoading(false);
     };
 
     loadData();
 
-    const handleThemeChange = (value: boolean) => {
-      setDarkMode(value);
-    };
-
+    const handleThemeChange = (value: boolean) => setDarkMode(value);
     eventEmitter.on('themeChanged', handleThemeChange);
-
     return () => {
       isMounted = false;
       eventEmitter.off('themeChanged', handleThemeChange);
     };
   }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchCursos();
   };
 
+  const proximasClases = useMemo(() => {
+    return cursos
+      .filter(c => c.horario && c.horario.dias)
+      .map(c => ({ ...c, nextDate: getProximaClase(c.horario) }))
+      .filter(c => c.nextDate !== null)
+      .sort((a, b) => (a.nextDate?.getTime() || 0) - (b.nextDate?.getTime() || 0))
+      .slice(0, 5); // Tantas como quieras mostrar
+  }, [cursos]);
 
-
-  const promedioGeneral = cursos.length > 0
-    ? Math.round(cursos.reduce((acc, c) => acc + (c.progreso || 0), 0) / cursos.length) || 0
-    : 0;
-
+  const promedioGeneral = cursos.length > 0 ? Math.round(cursos.reduce((acc, c) => acc + (Number(c.progreso) || 0), 0) / cursos.length) : 0;
   const promedioCalificaciones = cursos.length > 0 && cursos.some(c => c.calificacion)
-    ? (cursos.reduce((acc, c) => acc + (Number(c.calificacion) || 0), 0) / cursos.length).toFixed(1)
-    : '0.0';
-
-  const totalTareasPendientes = cursos.reduce((acc, c) => acc + (c.tareasPendientes || 0), 0);
-
-
+    ? (cursos.reduce((acc, c) => acc + (Number(c.calificacion) || 0), 0) / cursos.length).toFixed(1) : '0.0';
+  const totalTareasPendientes = cursos.reduce((acc, c) => acc + (Number(c.tareasPendientes) || 0), 0);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingTop: 4 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.accent}
-          />
-        }
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header de Bienvenida */}
-        <View style={[styles.welcomeCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
-            <Ionicons name="hand-right" size={24} color={theme.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.greeting, { color: theme.text }]}>
-                ¡Bienvenido{userData?.nombres ? `, ${userData.nombres}` : (userData?.nombre ? `, ${userData.nombre}` : '')}!
-              </Text>
-              {(userData?.apellidos || userData?.apellido) && (
-                <Text style={[styles.greeting, { color: theme.text }]}>
-                  {userData.apellidos || userData.apellido}
+        {/* Header Gradient */}
+        <Animated.View entering={FadeInDown.delay(100).duration(600)}>
+          <LinearGradient
+            colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerTop}>
+                <View>
+                  <Text style={styles.greetingText}>Hola,</Text>
+                  <Text style={styles.nameText}>
+                    {userData?.nombres || userData?.nombre || 'Estudiante'} {userData?.apellido || ''}
+                  </Text>
+                </View>
+                {/* Profile button removed as it exists in the main header */}
+              </View>
+              <View style={styles.dateContainer}>
+                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.dateText}>
+                  {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>
-              )}
+              </View>
             </View>
-          </View>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Continúa tu formación en Belleza y Estética
-          </Text>
-          <View style={styles.dateTimeContainer}>
-            <View style={styles.dateTimeItem}>
-              <Ionicons name="calendar" size={14} color={theme.textMuted} />
-              <Text style={[styles.dateTimeText, { color: theme.textMuted }]}>
-                {new Date().toLocaleDateString('es-ES')}
-              </Text>
-            </View>
-            <View style={styles.dateTimeItem}>
-              <Ionicons name="time" size={14} color={theme.textMuted} />
-              <Text style={[styles.dateTimeText, { color: theme.textMuted }]}>
-                {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </View>
-        </View>
+          </LinearGradient>
+        </Animated.View>
 
-        {/* Estadísticas */}
-        <View style={styles.statsContainer}>
+        {/* Stats Grid */}
+        <Animated.View style={styles.statsContainer} entering={FadeInDown.delay(200).duration(600)}>
           <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
-              <Ionicons name="trending-up" size={16} color="#fbbf24" />
+            <View style={[styles.statIconBadge, { backgroundColor: `${theme.accent}20` }]}>
+              <Ionicons name="trending-up" size={18} color={theme.accent} />
             </View>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Progreso</Text>
-            <Text style={[styles.statValue, { color: '#fbbf24' }]}>{promedioGeneral}%</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Progreso</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{promedioGeneral}%</Text>
           </View>
-
           <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <Ionicons name="book" size={16} color="#3b82f6" />
+            <View style={[styles.statIconBadge, { backgroundColor: `${theme.blue}20` }]}>
+              <Ionicons name="book" size={18} color={theme.blue} />
             </View>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Cursos</Text>
-            <Text style={[styles.statValue, { color: '#3b82f6' }]}>{cursos.length}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Cursos</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{cursos.length}</Text>
           </View>
-
           <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-              <Ionicons name="star" size={16} color="#10b981" />
+            <View style={[styles.statIconBadge, { backgroundColor: `${theme.success}20` }]}>
+              <Ionicons name="star" size={18} color={theme.success} />
             </View>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Promedio</Text>
-            <Text style={[styles.statValue, { color: '#10b981' }]}>{promedioCalificaciones}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Promedio</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{promedioCalificaciones}</Text>
           </View>
-
           <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-              <Ionicons name="clipboard" size={16} color="#8b5cf6" />
+            <View style={[styles.statIconBadge, { backgroundColor: `${theme.purple}20` }]}>
+              <Ionicons name="clipboard" size={18} color={theme.purple} />
             </View>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Tareas</Text>
-            <Text style={[styles.statValue, { color: '#8b5cf6' }]}>{totalTareasPendientes}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Tareas</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{totalTareasPendientes}</Text>
           </View>
-        </View>
+        </Animated.View>
 
-
-
-        {/* Cursos */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Mis Cursos</Text>
-
-          {loading ? (
-            <View style={[styles.emptyCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Cargando cursos...</Text>
+        {/* Proximas Clases Section */}
+        {proximasClases.length > 0 && (
+          <Animated.View entering={FadeInRight.delay(300).duration(600)} style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Próximas Clases</Text>
+              <TouchableOpacity>
+                <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '600' }}>Ver horario</Text>
+              </TouchableOpacity>
             </View>
-          ) : cursos.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <Ionicons name="book-outline" size={48} color={theme.textMuted} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No tienes cursos activos</Text>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                Una vez matriculado, tus cursos aparecerán aquí
-              </Text>
-            </View>
-          ) : (
-            cursos.map((curso) => (
-              <TouchableOpacity
-                key={curso.id_curso}
-                style={[styles.cursoCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
-                onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.cursoHeader}>
-                  <View style={styles.cursoInfo}>
-                    <View style={[styles.cursoBadge, { backgroundColor: `${theme.accent}20` }]}>
-                      <Text style={[styles.cursoBadgeText, { color: theme.accent }]}>
-                        {curso.codigo_curso}
-                      </Text>
-                    </View>
-                    <Text style={[styles.cursoNombre, { color: theme.text }]} numberOfLines={2}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+              {proximasClases.map((curso, index) => (
+                <TouchableOpacity
+                  key={`next-${curso.id_curso}`}
+                  style={[styles.nextClassCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                  activeOpacity={0.8}
+                  onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
+                >
+                  <LinearGradient
+                    colors={index === 0 ? theme.primaryGradient : [theme.cardBg, theme.cardBg]}
+                    style={styles.nextClassIndicator}
+                  />
+                  <View style={styles.nextClassContent}>
+                    <Text style={[styles.nextClassTime, { color: theme.accent }]}>
+                      {curso.horario?.hora_inicio?.substring(0, 5)}
+                    </Text>
+                    <Text style={[styles.nextClassName, { color: theme.text }]} numberOfLines={1}>
                       {curso.nombre}
                     </Text>
-                  </View>
-                  <View style={styles.cursoStats}>
-                    <View style={styles.cursoStat}>
-                      <Ionicons name="star" size={12} color={theme.accent} />
-                      <Text style={[styles.cursoStatText, { color: theme.accent }]}>
-                        {curso.calificacion ? Number(curso.calificacion).toFixed(1) : '0.0'}
+                    <View style={styles.nextClassMeta}>
+                      <Ionicons name="calendar-outline" size={12} color={theme.textMuted} />
+                      <Text style={[styles.nextClassDate, { color: theme.textMuted }]}>
+                        {curso.nextDate?.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
                       </Text>
-                    </View>
-                    <Text style={[styles.cursoProgreso, { color: theme.textSecondary }]}>
-                      {Math.round(curso.progreso || 0)}%
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Información del curso en grid */}
-                <View style={styles.cursoDetailsGrid}>
-                  {curso.docente && (
-                    <View style={[styles.cursoDetailCard, { backgroundColor: 'rgba(251, 191, 36, 0.08)', borderColor: 'rgba(251, 191, 36, 0.25)' }]}>
-                      <View style={styles.cursoDetailHeader}>
-                        <Ionicons name="school" size={12} color={theme.accent} />
-                        <Text style={[styles.cursoDetailLabel, { color: theme.accent }]}>DOCENTE</Text>
-                      </View>
-                      <Text style={[styles.cursoDetailValue, { color: theme.text }]} numberOfLines={1}>
-                        {curso.docente.nombre_completo}
-                      </Text>
-                      {curso.docente.titulo && (
-                        <Text style={[styles.cursoDetailSubtext, { color: theme.textMuted }]} numberOfLines={1}>
-                          {curso.docente.titulo}
-                        </Text>
+                      {curso.aula && (
+                        <>
+                          <Text style={{ color: theme.textMuted }}>•</Text>
+                          <Text style={{ color: theme.textMuted, fontSize: 11 }}>{curso.aula.nombre}</Text>
+                        </>
                       )}
                     </View>
-                  )}
-
-                  {curso.aula && (
-                    <View style={[styles.cursoDetailCard, { backgroundColor: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.25)' }]}>
-                      <View style={styles.cursoDetailHeader}>
-                        <Ionicons name="location" size={12} color="#f59e0b" />
-                        <Text style={[styles.cursoDetailLabel, { color: '#f59e0b' }]}>AULA</Text>
-                      </View>
-                      <Text style={[styles.cursoDetailValue, { color: theme.text }]} numberOfLines={1}>
-                        {curso.aula.nombre}
-                      </Text>
-                      {curso.aula.ubicacion && (
-                        <Text style={[styles.cursoDetailSubtext, { color: theme.textMuted }]} numberOfLines={1}>
-                          {curso.aula.ubicacion}
-                        </Text>
-                      )}
-                    </View>
-                  )}
-
-                  {curso.horario && (
-                    <View style={[styles.cursoDetailCard, { backgroundColor: 'rgba(217, 119, 6, 0.08)', borderColor: 'rgba(217, 119, 6, 0.25)' }]}>
-                      <View style={styles.cursoDetailHeader}>
-                        <Ionicons name="time" size={12} color="#d97706" />
-                        <Text style={[styles.cursoDetailLabel, { color: '#d97706' }]}>HORARIO</Text>
-                      </View>
-                      <Text style={[styles.cursoDetailValue, { color: theme.text }]}>
-                        {curso.horario.hora_inicio?.substring(0, 5)} - {curso.horario.hora_fin?.substring(0, 5)}
-                      </Text>
-                      {curso.horario.dias && (
-                        <View style={styles.diasContainer}>
-                          {curso.horario.dias.split(',').slice(0, 3).map((dia: string, idx: number) => (
-                            <Text key={idx} style={[styles.diaChip, { backgroundColor: 'rgba(251, 191, 36, 0.15)', color: theme.accent }]}>
-                              {dia.trim()}
-                            </Text>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-
-                {/* Barra de progreso mejorada */}
-                <View style={styles.progressSection}>
-                  <View style={styles.progressHeader}>
-                    <Text style={[styles.progressLabel, { color: theme.textMuted }]}>Progreso del curso</Text>
-                    <View style={styles.progressStats}>
-                      <Text style={[styles.progressPercentage, { color: theme.text }]}>
-                        {Math.round(curso.progreso || 0)}%
-                      </Text>
-                      <View style={[styles.calificacionChip, { backgroundColor: `${theme.accent}20`, borderColor: `${theme.accent}30` }]}>
-                        <Text style={[styles.calificacionChipText, { color: theme.accent }]}>
-                          {curso.calificacion ? Number(curso.calificacion).toFixed(1) : '0.0'}
-                        </Text>
-                      </View>
-                    </View>
                   </View>
-                  <View style={[styles.progressBar, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${curso.progreso || 0}%`, backgroundColor: theme.accent }
-                      ]}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* My Courses Section */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.text, marginHorizontal: 16, marginBottom: 12 }]}>Mis Cursos</Text>
+          <View style={{ gap: 16, paddingHorizontal: 16 }}>
+            {cursos.map((curso, index) => (
+              <Animated.View key={curso.id_curso} entering={FadeInDown.delay(400 + (index * 100)).duration(500)}>
+                <TouchableOpacity
+                  style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                  activeOpacity={0.9}
+                  onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
+                >
+                  {/* Course Header with partial gradient */}
+                  <View style={styles.courseHeader}>
+                    <LinearGradient
+                      colors={[`${theme.accent}15`, 'transparent']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={StyleSheet.absoluteFillObject}
                     />
+                    <View style={styles.courseHeaderContent}>
+                      <View style={[styles.courseBadge, { backgroundColor: theme.accent }]}>
+                        <Text style={styles.courseBadgeText}>{curso.codigo_curso}</Text>
+                      </View>
+                      <View style={styles.courseRating}>
+                        <Ionicons name="star" size={14} color={theme.accent} />
+                        <Text style={[styles.courseRatingText, { color: theme.text }]}>
+                          {Number(curso.calificacion || 0).toFixed(1)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
 
-                {/* Estado de tareas */}
-                <View style={styles.tareaStatus}>
-                  {curso.tareasPendientes > 0 ? (
-                    <View style={styles.tareasBadge}>
-                      <Ionicons name="alert-circle" size={12} color="#f59e0b" />
-                      <Text style={[styles.tareasText, { color: '#f59e0b' }]}>
-                        {curso.tareasPendientes} tareas pendientes
-                      </Text>
+                  <View style={styles.courseBody}>
+                    <Text style={[styles.courseTitle, { color: theme.text }]} numberOfLines={2}>
+                      {curso.nombre}
+                    </Text>
+
+                    {curso.docente && (
+                      <View style={styles.teacherRow}>
+                        <Ionicons name="school-outline" size={14} color={theme.textMuted} />
+                        <Text style={[styles.teacherName, { color: theme.textSecondary }]}>
+                          {curso.docente.nombre_completo}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressLabels}>
+                        <Text style={[styles.progressLabel, { color: theme.textMuted }]}>Avance</Text>
+                        <Text style={[styles.progressValue, { color: theme.text }]}>{Math.round(curso.progreso || 0)}%</Text>
+                      </View>
+                      <View style={[styles.progressBarBg, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#f1f5f9' }]}>
+                        <View style={[styles.progressBarFill, { width: `${curso.progreso || 0}%`, backgroundColor: theme.accent }]} />
+                      </View>
                     </View>
-                  ) : (
-                    <View style={styles.tareasBadge}>
-                      <Ionicons name="checkmark-circle" size={12} color="#10b981" />
-                      <Text style={[styles.tareasText, { color: '#10b981' }]}>
-                        Al día con las tareas
-                      </Text>
+
+                    <View style={[styles.courseFooter, { borderTopColor: theme.border }]}>
+                      <View style={styles.taskStatus}>
+                        {curso.tareasPendientes > 0 ? (
+                          <>
+                            <Ionicons name="alert-circle" size={16} color={theme.danger} />
+                            <Text style={[styles.taskStatusText, { color: theme.danger }]}>
+                              {curso.tareasPendientes} pendiente{curso.tareasPendientes !== 1 ? 's' : ''}
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ionicons name="checkmark-circle" size={16} color={theme.success} />
+                            <Text style={[styles.taskStatusText, { color: theme.success }]}>Al día</Text>
+                          </>
+                        )}
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.continueButton, { backgroundColor: `${theme.accent}15` }]}
+                        onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
+                      >
+                        <Text style={[styles.continueButtonText, { color: theme.accent }]}>
+                          {curso.tareasPendientes > 0 ? 'Subir Tarea' : 'Continuar'}
+                        </Text>
+                        <Ionicons name="arrow-forward" size={14} color={theme.accent} />
+                      </TouchableOpacity>
                     </View>
-                  )}
-                </View>
-
-                {/* Botones de acción */}
-                <View style={styles.actionButtons}>
-                  {curso.tareasPendientes > 0 ? (
-                    <TouchableOpacity
-                      style={[styles.primaryButton, { backgroundColor: theme.accent }]}
-                      onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="cloud-upload" size={14} color="#fff" />
-                      <Text style={styles.primaryButtonText}>Subir Tarea</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.primaryButton, { backgroundColor: theme.accent }]}
-                      onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="play" size={14} color="#fff" />
-                      <Text style={styles.primaryButtonText}>Continuar</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    style={[styles.secondaryButton, { borderColor: theme.border }]}
-                    onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="eye" size={14} color={theme.accent} />
-                    <Text style={[styles.secondaryButtonText, { color: theme.accent }]}>Ver Detalles</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -509,277 +419,244 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  welcomeCard: {
-    marginHorizontal: 16,
-    marginTop: 0,
-    marginBottom: 4,
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  greeting: {
+  headerContent: {},
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  greetingText: {
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
+    fontWeight: '500',
+  },
+  nameText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dateText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: -25, // Overlap header
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionContainer: {
+    marginTop: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  nextClassCard: {
+    width: width * 0.5,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    flexDirection: 'row',
+  },
+  nextClassIndicator: {
+    width: 6,
+    height: '100%',
+  },
+  nextClassContent: {
+    padding: 12,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nextClassTime: {
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 2,
   },
-  subtitle: {
-    fontSize: 10,
-    marginBottom: 3,
+  nextClassName: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
   },
-  dateTimeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  dateTimeItem: {
+  nextClassMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  dateTimeText: {
-    fontSize: 9,
+  nextClassDate: {
+    fontSize: 11,
+    textTransform: 'capitalize',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    gap: 2,
-  },
-  statCard: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 2,
-    justifyContent: 'center',
-  },
-  statIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 7.5,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  section: {
-    padding: 16,
-    paddingTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  emptyCard: {
-    padding: 40,
+  courseCard: {
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-    gap: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  emptyTitle: {
+  courseHeader: {
+    height: 40,
+    position: 'relative',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  courseHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  courseBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  courseBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  courseRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  courseRatingText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  courseBody: {
+    padding: 16,
+    paddingTop: 12,
+  },
+  courseTitle: {
     fontSize: 16,
     fontWeight: '700',
+    marginBottom: 8,
+    lineHeight: 22,
   },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
+  teacherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
   },
-  cursoCard: {
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
+  teacherName: {
+    fontSize: 12,
   },
-  cursoHeader: {
+  progressContainer: {
+    marginBottom: 16,
+  },
+  progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  cursoInfo: {
-    flex: 1,
-    gap: 6,
-  },
-  cursoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-  },
-  cursoBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  cursoNombre: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  cursoStats: {
-    alignItems: 'flex-end',
-    gap: 3,
-  },
-  cursoStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  cursoStatText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cursoProgreso: {
-    fontSize: 11,
-  },
-  cursoDetailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  cursoDetailCard: {
-    flex: 1,
-    minWidth: '45%',
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 3,
-  },
-  cursoDetailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginBottom: 1,
-  },
-  cursoDetailLabel: {
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  cursoDetailValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  cursoDetailSubtext: {
-    fontSize: 10,
-    fontStyle: 'italic',
-  },
-  diasContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 3,
-    marginTop: 2,
-  },
-  diaChip: {
-    fontSize: 9,
-    fontWeight: '700',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  progressSection: {
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   progressLabel: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
   },
-  progressStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  progressPercentage: {
-    fontSize: 12,
+  progressValue: {
+    fontSize: 11,
     fontWeight: '700',
   },
-  calificacionChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    borderWidth: 1,
-  },
-  calificacionChipText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  progressBar: {
+  progressBarBg: {
     height: 6,
     borderRadius: 3,
     overflow: 'hidden',
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
     borderRadius: 3,
   },
-  tareaStatus: {
-    marginTop: 6,
-    marginBottom: 8,
+  courseFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
-  tareasBadge: {
+  taskStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  tareasText: {
+  taskStatusText: {
     fontSize: 11,
     fontWeight: '600',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  primaryButton: {
-    flex: 1,
+  continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 12,
+  continueButtonText: {
+    fontSize: 11,
     fontWeight: '700',
   },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
 });

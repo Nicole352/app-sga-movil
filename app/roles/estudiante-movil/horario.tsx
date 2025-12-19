@@ -1,9 +1,23 @@
-import { View, Text, ScrollView, RefreshControl, StyleSheet } from 'react-native';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+  Platform,
+  StatusBar
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
-import { getToken, storage } from '../../../services/storage';
+import { getToken, storage, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+
+const { width } = Dimensions.get('window');
 
 interface Horario {
   id_curso: number;
@@ -23,30 +37,66 @@ export default function HorarioEstudiante() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadDarkMode = async () => {
-      const savedMode = await storage.getItem('dark_mode');
-      if (savedMode !== null) {
-        setDarkMode(savedMode === 'true');
-      }
+  // Day Selection Logic
+  const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const diasAbrev = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+
+  // Auto-select current day (0=Monday in our array logic, but JS Date 0=Sunday)
+  const getCurrentDayIndex = () => {
+    const day = new Date().getDay(); // 0=Sun, 1=Mon...
+    // Convert to 0=Mon, 6=Sun
+    return day === 0 ? 6 : day - 1;
+  };
+
+  const [selectedDayIndex, setSelectedDayIndex] = useState(getCurrentDayIndex());
+
+  // Theme Config
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#fbbf24',
+      accentGradient: ['#f59e0b', '#d97706'] as const,
+      activeTabBg: '#fbbf24',
+      activeTabText: '#0f172a',
+      inactiveTabBg: 'rgba(255,255,255,0.05)',
+      inactiveTabText: '#94a3b8'
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#f59e0b',
+      accentGradient: ['#fbbf24', '#f59e0b'] as const,
+      activeTabBg: '#fbbf24',
+      activeTabText: '#ffffff',
+      inactiveTabBg: '#f1f5f9',
+      inactiveTabText: '#64748b'
     };
-    
+
+  useEffect(() => {
     loadDarkMode();
     fetchHorario();
-    
-    eventEmitter.on('themeChanged', (isDark: boolean) => {
-      setDarkMode(isDark);
-    });
+    eventEmitter.on('themeChanged', (isDark: boolean) => setDarkMode(isDark));
   }, []);
+
+  const loadDarkMode = async () => {
+    const savedMode = await storage.getItem('dark_mode');
+    if (savedMode !== null) setDarkMode(savedMode === 'true');
+  };
 
   const fetchHorario = async () => {
     try {
       const token = await getToken();
       const response = await fetch(`${API_URL}/estudiantes/mis-cursos`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -57,138 +107,186 @@ export default function HorarioEstudiante() {
             id_curso: curso.id_curso,
             nombre: curso.nombre,
             codigo_curso: curso.codigo_curso,
-            aula_nombre: curso.aula?.nombre || 'Sin aula',
+            aula_nombre: curso.aula?.nombre || 'Sin aula asignada',
             aula_ubicacion: curso.aula?.ubicacion || '',
             hora_inicio: curso.horario.hora_inicio,
             hora_fin: curso.horario.hora_fin,
             dias: curso.horario.dias,
-            docente_nombre: curso.docente?.nombre_completo || 'Sin docente'
+            docente_nombre: curso.docente?.nombre_completo || 'Sin docente asignado'
           }));
         setHorarios(cursosConHorario);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching horario:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchHorario();
+  const getDayClasses = (dayIndex: number) => {
+    const dayName = diasSemana[dayIndex];
+    return horarios.filter(h => h.dias.split(',').map(d => d.trim()).includes(dayName))
+      .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
   };
 
-  const colors = {
-    background: darkMode ? '#000000' : '#f8fafc',
-    card: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    border: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.3)',
-    accent: '#fbbf24',
-  };
+  const currentClasses = getDayClasses(selectedDayIndex);
 
-  const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  const coloresClases = ['#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e'];
-
-  // Agrupar horarios por día
-  const horariosPorDia = diasSemana.map((dia) => ({
-    dia,
-    clases: horarios.filter(h => h.dias.split(',').map(d => d.trim()).includes(dia))
-  }));
+  // Gradient colors for cards to add variety but keep theme
+  const cardGradients = [
+    ['#fbbf24', '#f59e0b'] as const,
+    ['#f59e0b', '#d97706'] as const,
+    ['#fbbf24', '#d97706'] as const,
+  ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
+
+      {/* Premium Header with Gradient */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Mi Horario</Text>
+              <Text style={styles.headerSubtitle}>Calendario Semanal</Text>
+            </View>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="calendar" size={24} color="#fff" />
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Day Selector Tabs */}
+      <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {diasAbrev.map((dia, index) => {
+            const isActive = selectedDayIndex === index;
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSelectedDayIndex(index)}
+                style={[
+                  styles.tab,
+                  {
+                    backgroundColor: isActive ? theme.activeTabBg : theme.inactiveTabBg,
+                    borderColor: isActive ? 'transparent' : theme.border,
+                    borderWidth: isActive ? 0 : 1
+                  }
+                ]}
+              >
+                <Text style={[
+                  styles.tabText,
+                  {
+                    color: isActive ? theme.activeTabText : theme.inactiveTabText,
+                    fontWeight: isActive ? '700' : '500'
+                  }
+                ]}>
+                  {dia}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchHorario(); }}
+            tintColor={theme.accent}
+          />
+        }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Mi Horario</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Calendario semanal de clases
+        <View style={styles.dayHeaderContainer}>
+          <Text style={[styles.dayHeaderTitle, { color: theme.text }]}>
+            {diasSemana[selectedDayIndex]}
+          </Text>
+          <Text style={[styles.dayHeaderSubtitle, { color: theme.textSecondary }]}>
+            {currentClasses.length} {currentClasses.length === 1 ? 'clase' : 'clases'} programadas
           </Text>
         </View>
 
         {loading ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Cargando horario...</Text>
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ color: theme.textSecondary }}>Cargando...</Text>
           </View>
-        ) : horarios.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No tienes clases programadas</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Consulta con tu coordinador académico
+        ) : currentClasses.length === 0 ? (
+          <Animated.View
+            entering={FadeInDown.duration(400)}
+            style={[styles.emptyState, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+          >
+            <View style={[styles.emptyIconContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9' }]}>
+              <Ionicons name="calendar-outline" size={48} color={theme.textMuted} />
+            </View>
+            <Text style={[styles.emptyStateTitle, { color: theme.text }]}>Sin clases hoy</Text>
+            <Text style={[styles.emptyStateText, { color: theme.textSecondary }]}>
+              No tienes ninguna clase programada para este día. ¡Disfruta tu tiempo libre!
             </Text>
-          </View>
+          </Animated.View>
         ) : (
-          <View style={styles.section}>
-            {horariosPorDia.map(({ dia, clases }) => (
-              clases.length > 0 && (
-                <View key={dia} style={styles.diaContainer}>
-                  <View style={[styles.diaHeader, { backgroundColor: `${colors.accent}15`, borderColor: colors.border }]}>
-                    <Text style={[styles.diaText, { color: colors.accent }]}>{dia}</Text>
-                    <Text style={[styles.diaCount, { color: colors.textSecondary }]}>
-                      {clases.length} {clases.length === 1 ? 'clase' : 'clases'}
-                    </Text>
-                  </View>
+          currentClasses.map((clase, index) => {
+            // Calculate duration in hours/minutes for visual scaling if desired, 
+            // but fixed cards often look better on mobile.
+            return (
+              <Animated.View
+                key={`${clase.id_curso}-${index}`}
+                entering={FadeInDown.delay(index * 100).springify()}
+                layout={Layout.springify()}
+                style={styles.cardContainer}
+              >
+                {/* Time Column (Left Side) */}
+                <View style={styles.timeColumn}>
+                  <Text style={[styles.timeStart, { color: theme.text }]}>{clase.hora_inicio.substring(0, 5)}</Text>
+                  <View style={[styles.timeLine, { backgroundColor: theme.border }]} />
+                  <Text style={[styles.timeEnd, { color: theme.textSecondary }]}>{clase.hora_fin.substring(0, 5)}</Text>
+                </View>
 
-                  {clases.map((clase, index) => (
-                    <View
-                      key={clase.id_curso}
-                      style={[
-                        styles.claseCard,
-                        {
-                          backgroundColor: colors.card,
-                          borderColor: colors.border,
-                          borderLeftColor: coloresClases[index % coloresClases.length],
-                          borderLeftWidth: 4,
-                        }
-                      ]}
-                    >
-                      <View style={styles.claseHeader}>
-                        <View style={styles.claseInfo}>
-                          <Text style={[styles.claseNombre, { color: colors.text }]} numberOfLines={2}>
-                            {clase.nombre}
-                          </Text>
-                          <View style={[styles.claseBadge, { backgroundColor: `${coloresClases[index % coloresClases.length]}20` }]}>
-                            <Text style={[styles.claseBadgeText, { color: coloresClases[index % coloresClases.length] }]}>
-                              {clase.codigo_curso}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
+                {/* Card Content */}
+                <LinearGradient
+                  colors={darkMode ? ['rgba(251, 191, 36, 0.15)', 'rgba(217, 119, 6, 0.15)'] : ['#ffffff', '#fffbeb']}
+                  style={[styles.classCard, { borderColor: theme.accent + '40' }]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={[styles.accentStrip, { backgroundColor: theme.accent }]} />
 
-                      <View style={styles.claseDetails}>
-                        <View style={styles.claseDetail}>
-                          <Ionicons name="time" size={14} color={colors.accent} />
-                          <Text style={[styles.claseDetailText, { color: colors.textSecondary }]}>
-                            {clase.hora_inicio.substring(0, 5)} - {clase.hora_fin.substring(0, 5)}
-                          </Text>
-                        </View>
-
-                        <View style={styles.claseDetail}>
-                          <Ionicons name="location" size={14} color={colors.accent} />
-                          <Text style={[styles.claseDetailText, { color: colors.textSecondary }]} numberOfLines={1}>
-                            {clase.aula_nombre}
-                          </Text>
-                        </View>
-
-                        <View style={styles.claseDetail}>
-                          <Ionicons name="person" size={14} color={colors.accent} />
-                          <Text style={[styles.claseDetailText, { color: colors.textSecondary }]} numberOfLines={1}>
-                            {clase.docente_nombre}
-                          </Text>
-                        </View>
+                  <View style={styles.cardContent}>
+                    <View style={styles.cardHeader}>
+                      <Text style={[styles.courseCode, { color: theme.accent }]}>{clase.codigo_curso}</Text>
+                      <View style={[styles.locationBadge, { backgroundColor: theme.accent + '20' }]}>
+                        <Ionicons name="location" size={10} color={theme.accent} />
+                        <Text style={[styles.locationText, { color: theme.accent }]}>{clase.aula_nombre}</Text>
                       </View>
                     </View>
-                  ))}
-                </View>
-              )
-            ))}
-          </View>
+
+                    <Text style={[styles.courseName, { color: theme.text }]} numberOfLines={2}>
+                      {clase.nombre}
+                    </Text>
+
+                    <View style={styles.teacherRow}>
+                      <Ionicons name="person-circle-outline" size={16} color={theme.textSecondary} />
+                      <Text style={[styles.teacherName, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {clase.docente_nombre}
+                      </Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </Animated.View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -196,101 +294,198 @@ export default function HorarioEstudiante() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  headerContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 0,
+    zIndex: 10
   },
-  header: {
-    padding: 16,
-    paddingBottom: 8,
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 11,
-  },
-  section: {
-    padding: 16,
-    paddingTop: 4,
-    gap: 10,
-  },
-  emptyCard: {
-    margin: 16,
-    padding: 32,
-    borderRadius: 12,
-    borderWidth: 1,
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  headerIconContainer: {
+    width: 45,
+    height: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+
+  tabsContainer: {
+    paddingTop: 15,
+    paddingBottom: 10,
+  },
+  tabsContent: {
+    paddingHorizontal: 16,
     gap: 10,
   },
-  emptyTitle: {
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  scrollContent: {
+    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 40,
+  },
+  dayHeaderContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  dayHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  dayHeaderSubtitle: {
+    fontSize: 14,
+  },
+
+  cardContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    height: 110,
+  },
+  timeColumn: {
+    width: 50,
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginRight: 10,
+  },
+  timeStart: {
     fontSize: 14,
     fontWeight: '700',
   },
-  emptyText: {
+  timeLine: {
+    width: 2,
+    flex: 1,
+    marginVertical: 4,
+    borderRadius: 1,
+    opacity: 0.5,
+  },
+  timeEnd: {
     fontSize: 12,
-    textAlign: 'center',
+    fontWeight: '500',
   },
-  diaContainer: {
-    gap: 8,
-  },
-  diaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  diaText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  diaCount: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  claseCard: {
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 8,
-  },
-  claseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  claseInfo: {
+
+  classCard: {
     flex: 1,
-    gap: 6,
-  },
-  claseNombre: {
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 16,
-  },
-  claseBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-  },
-  claseBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  claseDetails: {
-    gap: 6,
-  },
-  claseDetail: {
+    borderRadius: 16,
+    borderWidth: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  claseDetailText: {
+  accentStrip: {
+    width: 4,
+    height: '100%',
+  },
+  cardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  courseCode: {
     fontSize: 11,
-    flex: 1,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  locationText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  courseName: {
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  teacherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  teacherName: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  emptyState: {
+    padding: 30,
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 20,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  }
 });

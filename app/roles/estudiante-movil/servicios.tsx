@@ -1,9 +1,13 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { storage } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+
+const { width } = Dimensions.get('window');
 
 export default function ServiciosEstudiante() {
   const router = useRouter();
@@ -16,258 +20,365 @@ export default function ServiciosEstudiante() {
         setDarkMode(savedMode === 'true');
       }
     };
-    
+
     loadDarkMode();
-    
+
     eventEmitter.on('themeChanged', (isDark: boolean) => {
       setDarkMode(isDark);
     });
   }, []);
 
-  const colors = {
-    background: darkMode ? '#000000' : '#f8fafc',
-    card: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.3)',
-    accent: '#fbbf24',
-    success: '#10b981',
-  };
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#fbbf24',
+      accentGradient: ['#f59e0b', '#d97706'] as const,
+      cardGradient: ['#b45309', '#78350f'] as const, // Darker gold for dark mode
+      success: '#10b981',
+    }
+    : {
+      bg: '#f8fafc',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#f59e0b',
+      accentGradient: ['#fbbf24', '#f59e0b'] as const,
+      cardGradient: ['#fbbf24', '#f59e0b'] as const, // Bright gold for light mode
+      success: '#059669',
+    };
 
   const services = [
     {
       id: 1,
       title: 'Pagar Mensualidad',
       description: 'Gestiona y paga las mensualidades de tus cursos matriculados de forma rápida y segura',
-      icon: 'card',
+      icon: 'card-outline',
       status: 'available',
       schedule: '24/7 Online',
       contact: 'pagos@sgabelleza.edu.ec',
       action: 'Gestionar Pagos',
       features: [
-        { text: 'Pagos online seguros', icon: 'shield-checkmark' },
-        { text: 'Historial de pagos', icon: 'calendar' },
-        { text: 'Múltiples métodos de pago', icon: 'flash' }
+        { text: 'Historial de pagos', icon: 'calendar-outline' }
       ],
       route: 'pagosmensuales'
     }
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Servicios Estudiantiles</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Accede a todos los servicios disponibles
-          </Text>
-        </View>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
-        {/* Servicios */}
-        <View style={styles.servicesContainer}>
-          {services.map((service) => (
-            <View key={service.id} style={[styles.serviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {/* Header del servicio */}
-              <View style={styles.serviceHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: `${colors.success}20` }]}>
-                  <Ionicons name={service.icon as any} size={24} color={colors.success} />
+      {/* Premium Header Container */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Servicios</Text>
+              <Text style={styles.headerSubtitle}>Estudiantiles</Text>
+            </View>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="apps" size={24} color="#fff" />
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+          Servicios Disponibles
+        </Text>
+
+        {services.map((service, index) => (
+          <Animated.View
+            key={service.id}
+            entering={FadeInDown.delay(index * 200).springify()}
+            style={styles.cardContainer}
+          >
+            <LinearGradient
+              colors={theme.cardGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.serviceCard}
+            >
+              {/* Decorative Circle Background */}
+              <View style={styles.decorativeCircle} />
+
+              {/* Header */}
+              <View style={styles.cardHeader}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name={service.icon as any} size={28} color={theme.accent} />
                 </View>
-                <View style={styles.serviceHeaderInfo}>
-                  <Text style={[styles.serviceTitle, { color: colors.text }]}>{service.title}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: `${colors.success}20`, borderColor: `${colors.success}40` }]}>
-                    <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
-                    <Text style={[styles.statusText, { color: colors.success }]}>Disponible</Text>
+                <View style={styles.headerTextContainer}>
+                  <Text style={styles.serviceTitle}>{service.title}</Text>
+                  <View style={styles.statusBadge}>
+                    <View style={styles.statusDot} />
+                    <Text style={styles.statusText}>Disponible</Text>
                   </View>
                 </View>
               </View>
 
-              {/* Descripción */}
-              <Text style={[styles.serviceDescription, { color: colors.textSecondary }]}>
+              <Text style={styles.descriptionText}>
                 {service.description}
               </Text>
 
-              {/* Características */}
+              {/* Features */}
               <View style={styles.featuresContainer}>
-                <Text style={[styles.featuresTitle, { color: colors.textMuted }]}>CARACTERÍSTICAS:</Text>
-                {service.features.map((feature, index) => (
-                  <View key={index} style={[styles.featureItem, { backgroundColor: darkMode ? 'rgba(251, 191, 36, 0.05)' : 'rgba(251, 191, 36, 0.08)', borderColor: darkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.15)' }]}>
-                    <View style={[styles.featureIconContainer, { backgroundColor: `${colors.accent}15` }]}>
-                      <Ionicons name={feature.icon as any} size={12} color={colors.accent} />
-                    </View>
-                    <Text style={[styles.featureText, { color: colors.text }]}>{feature.text}</Text>
+                {service.features.map((feature, idx) => (
+                  <View key={idx} style={styles.featureItem}>
+                    <Ionicons name={feature.icon as any} size={14} color="#fff" />
+                    <Text style={styles.featureText}>{feature.text}</Text>
                   </View>
                 ))}
               </View>
 
-              {/* Información de contacto */}
-              <View style={[styles.contactContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>
-                <View style={styles.contactItem}>
-                  <View style={[styles.contactIconContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                    <Ionicons name="time" size={10} color={colors.textMuted} />
-                  </View>
-                  <Text style={[styles.contactText, { color: colors.textSecondary }]}>{service.schedule}</Text>
+              {/* Contact Info (Glass effect) */}
+              <View style={styles.contactContainer}>
+                <View style={styles.contactRow}>
+                  <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.contactText}>{service.schedule}</Text>
                 </View>
-                <View style={styles.contactItem}>
-                  <View style={[styles.contactIconContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
-                    <Ionicons name="mail" size={10} color={colors.textMuted} />
-                  </View>
-                  <Text style={[styles.contactText, { color: colors.textSecondary }]}>{service.contact}</Text>
+                <View style={styles.contactRow}>
+                  <Ionicons name="mail-outline" size={14} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.contactText}>{service.contact}</Text>
                 </View>
               </View>
 
-              {/* Botón de acción */}
+              {/* Action Button */}
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.success }]}
-                onPress={() => router.push(`/roles/estudiante-movil/${service.route}`)}
-                activeOpacity={0.8}
+                style={styles.actionButton}
+                onPress={() => router.push(`/roles/estudiante-movil/${service.route}` as any)}
+                activeOpacity={0.9}
               >
-                <Ionicons name="card" size={14} color="#fff" />
-                <Text style={styles.actionButtonText}>{service.action}</Text>
+                <Text style={[styles.actionButtonText, { color: theme.accent }]}>
+                  {service.action}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color={theme.accent} />
               </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+
+            </LinearGradient>
+          </Animated.View>
+        ))}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  headerContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 0,
+    zIndex: 10
   },
-  header: {
-    padding: 16,
-    paddingBottom: 8,
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 11,
-  },
-  servicesContainer: {
-    padding: 16,
-    paddingTop: 4,
-  },
-  serviceCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  serviceHeader: {
+  headerContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  serviceHeaderInfo: {
-    flex: 1,
-    gap: 6,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.5,
   },
-  serviceTitle: {
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+    marginTop: -4,
+  },
+  headerIconContainer: {
+    width: 45,
+    height: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+  },
+
+  scrollContent: {
+    padding: 20,
+    paddingTop: 24,
+  },
+  sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+
+  cardContainer: {
+    marginBottom: 20,
+    borderRadius: 24,
+    shadowColor: "#f59e0b",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  serviceCard: {
+    borderRadius: 24,
+    padding: 24,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorativeCircle: {
+    position: 'absolute',
+    right: -20,
+    top: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    zIndex: 0,
+  },
+
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    zIndex: 1,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  serviceTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 100,
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
+    backgroundColor: '#10b981', // Green dot always visible on white/gold
+    marginRight: 6,
   },
   statusText: {
-    fontSize: 9,
-    fontWeight: '700',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  serviceDescription: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 12,
+
+  descriptionText: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+    fontWeight: '500',
+    zIndex: 1,
   },
+
   featuresContainer: {
-    marginBottom: 12,
-  },
-  featuresTitle: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+    zIndex: 1,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
+    gap: 6,
     borderWidth: 1,
-    marginBottom: 6,
-  },
-  featureIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   featureText: {
-    fontSize: 10,
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '600',
   },
+
   contactContainer: {
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    gap: 4,
+    zIndex: 1,
   },
-  contactItem: {
+  contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  contactIconContainer: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: 8,
   },
   contactText: {
-    fontSize: 10,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
     fontWeight: '500',
   },
+
   actionButton: {
+    backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 1,
   },
   actionButtonText: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
-  },
+  }
 });

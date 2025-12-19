@@ -1,21 +1,28 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { getToken, getDarkMode } from '../../../services/storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../../constants/config';
+import { getToken, storage } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
 
 interface DocenteData {
   id_usuario: number;
   nombre: string;
   apellido: string;
+  nombres?: string;
+  apellidos?: string;
   identificacion: string;
+  cedula?: string;
   email?: string;
   telefono?: string;
   direccion?: string;
   fecha_nacimiento?: string;
   genero?: string;
-  titulo_profesional: string;
+  titulo_profesional?: string;
   experiencia_anos?: number;
   username: string;
   rol?: string;
@@ -23,53 +30,84 @@ interface DocenteData {
   foto_perfil?: string;
 }
 
-export default function PerfilScreen() {
+export default function PerfilDocente() {
   const [darkMode, setDarkMode] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const [docente, setDocente] = useState<DocenteData | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'password'>('info');
+  const [docente, setDocente] = useState<DocenteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<DocenteData>>({});
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
-
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     password_actual: '',
     password_nueva: '',
     confirmar_password: ''
   });
 
-  useEffect(() => {
-    loadData();
-
-    const themeHandler = (isDark: boolean) => setDarkMode(isDark);
-    eventEmitter.on('themeChanged', themeHandler);
-    return () => eventEmitter.off('themeChanged', themeHandler);
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const mode = await getDarkMode();
-      setDarkMode(mode);
-      await fetchPerfil();
-    } catch (error) {
-      console.error('Error cargando datos:', error);
+  // BLUE THEME for Teacher
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#3b82f6',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+      inputBg: '#334155',
+      success: '#10b981',
     }
-  };
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#2563eb',
+      primaryGradient: ['#3b82f6', '#2563eb'] as const,
+      inputBg: '#f1f5f9',
+      success: '#059669',
+    };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchPerfil();
-    setRefreshing(false);
-  };
+  useEffect(() => {
+    const loadDarkMode = async () => {
+      const savedMode = await storage.getItem('dark_mode');
+      if (savedMode !== null) {
+        setDarkMode(savedMode === 'true');
+      }
+    };
+
+    loadDarkMode();
+    fetchPerfil();
+
+    const handleThemeChange = (isDark: boolean) => {
+      setDarkMode(isDark);
+    };
+
+    const handleProfilePhotoUpdate = () => {
+      fetchPerfil();
+    };
+
+    eventEmitter.on('themeChanged', handleThemeChange);
+    eventEmitter.on('profilePhotoUpdated', handleProfilePhotoUpdate);
+
+    return () => {
+      eventEmitter.off('themeChanged', handleThemeChange);
+      eventEmitter.off('profilePhotoUpdated', handleProfilePhotoUpdate);
+    };
+  }, []);
 
   const fetchPerfil = async () => {
     try {
       setLoading(true);
       const token = await getToken();
-      if (!token) return;
-
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -78,8 +116,8 @@ export default function PerfilScreen() {
         const data = await response.json();
         setDocente(data);
         setFormData({
-          nombre: data.nombre || '',
-          apellido: data.apellido || '',
+          nombre: data.nombre || data.nombres || '',
+          apellido: data.apellido || data.apellidos || '',
           email: data.email || '',
           telefono: data.telefono || '',
           direccion: data.direccion || '',
@@ -87,7 +125,7 @@ export default function PerfilScreen() {
           genero: data.genero || '',
           titulo_profesional: data.titulo_profesional || '',
           experiencia_anos: data.experiencia_anos || 0,
-          identificacion: data.identificacion || ''
+          identificacion: data.identificacion || data.cedula || ''
         });
         if (data.foto_perfil) {
           setFotoUrl(data.foto_perfil);
@@ -97,30 +135,13 @@ export default function PerfilScreen() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
-    accent: '#3b82f6',
-  };
-
-  const getInitials = () => {
-    if (!docente) return 'D';
-    const nombre = docente.nombre?.charAt(0) || '';
-    const apellido = docente.apellido?.charAt(0) || '';
-    return (nombre + apellido).toUpperCase() || 'D';
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'No especificado';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchPerfil();
   };
 
   const handleSave = async () => {
@@ -128,27 +149,27 @@ export default function PerfilScreen() {
       const token = await getToken();
       if (!token || !docente) return;
 
-      // Buscar el ID del docente
-      const searchResponse = await fetch(`${API_URL}/docentes?search=${encodeURIComponent(docente.identificacion)}`, {
+      // Find docente ID
+      const searchResponse = await fetch(`${API_URL}/docentes?search=${encodeURIComponent(formData.identificacion || docente.identificacion)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!searchResponse.ok) {
-        Alert.alert('Error', 'No se pudo obtener información del docente');
+        Alert.alert('Error', 'No se pudo encontrar el registro del docente');
         return;
       }
 
       const docentes = await searchResponse.json();
-      const docenteData = Array.isArray(docentes)
-        ? docentes.find((d: any) => d.identificacion === docente.identificacion)
-        : null;
+      const docenteRecord = Array.isArray(docentes) ? docentes.find((d: any) =>
+        d.identificacion === (formData.identificacion || docente.identificacion)
+      ) : null;
 
-      if (!docenteData?.id_docente) {
+      if (!docenteRecord?.id_docente) {
         Alert.alert('Error', 'No se encontró el ID del docente');
         return;
       }
 
-      const response = await fetch(`${API_URL}/docentes/${docenteData.id_docente}`, {
+      const response = await fetch(`${API_URL}/docentes/${docenteRecord.id_docente}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -156,12 +177,15 @@ export default function PerfilScreen() {
         },
         body: JSON.stringify({
           identificacion: formData.identificacion || docente.identificacion,
-          nombre: formData.nombre || docente.nombre,
-          apellido: formData.apellido || docente.apellido,
-          fecha_nacimiento: formData.fecha_nacimiento || docente.fecha_nacimiento,
-          titulo_profesional: formData.titulo_profesional || docente.titulo_profesional,
+          nombres: formData.nombre || docente.nombre,
+          apellidos: formData.apellido || docente.apellido,
+          email: formData.email,
+          telefono: formData.telefono,
+          direccion: formData.direccion,
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          genero: formData.genero,
+          titulo_profesional: formData.titulo_profesional,
           experiencia_anos: Number(formData.experiencia_anos) || 0,
-          estado: 'activo'
         })
       });
 
@@ -170,7 +194,8 @@ export default function PerfilScreen() {
         setIsEditing(false);
         Alert.alert('Éxito', 'Perfil actualizado correctamente');
       } else {
-        Alert.alert('Error', 'No se pudo actualizar el perfil');
+        const error = await response.json();
+        Alert.alert('Error', error.message || 'No se pudo actualizar el perfil');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -179,8 +204,8 @@ export default function PerfilScreen() {
   };
 
   const handleChangePassword = async () => {
-    if (passwordData.password_nueva !== passwordData.confirmar_password) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+    if (!passwordData.password_actual || !passwordData.password_nueva || !passwordData.confirmar_password) {
+      Alert.alert('Error', 'Todos los campos son obligatorios');
       return;
     }
 
@@ -189,398 +214,468 @@ export default function PerfilScreen() {
       return;
     }
 
+    if (passwordData.password_nueva !== passwordData.confirmar_password) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+
     try {
-      setLoading(true);
       const token = await getToken();
       const response = await fetch(`${API_URL}/usuarios/cambiar-password`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           password_actual: passwordData.password_actual,
-          password_nueva: passwordData.password_nueva
-        })
+          password_nueva: passwordData.password_nueva,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Éxito', 'Contraseña actualizada correctamente');
+        Alert.alert('Éxito', 'Contraseña cambiada correctamente');
         setPasswordData({
           password_actual: '',
           password_nueva: '',
           confirmar_password: ''
         });
       } else {
-        Alert.alert('Error', data.message || 'Error al cambiar contraseña');
+        Alert.alert('Error', data.message || 'No se pudo cambiar la contraseña');
       }
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'Error al cambiar contraseña');
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Error al cambiar la contraseña');
     }
   };
 
+  const getInitials = () => {
+    if (!docente) return '?';
+    const nombre = docente.nombre || docente.nombres || '';
+    const apellido = docente.apellido || docente.apellidos || '';
+    return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 40 }}>Cargando perfil...</Text>
+      </View>
+    );
+  }
+
+  if (!docente) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 40 }}>No se pudo cargar el perfil</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Información personal y configuración
-        </Text>
-      </View>
-
-      {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderColor: theme.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'info' && styles.tabActive,
-            {
-              backgroundColor: activeTab === 'info'
-                ? theme.accent
-                : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-              borderColor: theme.border
-            }
-          ]}
-          onPress={() => setActiveTab('info')}
-        >
-          <Ionicons name="person" size={18} color={activeTab === 'info' ? '#fff' : theme.textSecondary} />
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'info' ? '#fff' : theme.textSecondary }
-          ]}>
-            Información
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'password' && styles.tabActive,
-            {
-              backgroundColor: activeTab === 'password'
-                ? theme.accent
-                : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-              borderColor: theme.border
-            }
-          ]}
-          onPress={() => setActiveTab('password')}
-        >
-          <Ionicons name="lock-closed" size={18} color={activeTab === 'password' ? '#fff' : theme.textSecondary} />
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'password' ? '#fff' : theme.textSecondary }
-          ]}>
-            Contraseña
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
-        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
         }
       >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Cargando perfil...</Text>
-          </View>
-        ) : activeTab === 'info' ? (
-          <View style={styles.content}>
-            {/* Avatar y Nombre */}
-            <View style={[styles.profileCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <TouchableOpacity
-                style={[styles.avatar, { backgroundColor: fotoUrl ? 'transparent' : theme.accent }]}
-                activeOpacity={0.8}
-              >
-                {fotoUrl ? (
-                  <View style={{ width: '100%', height: '100%', borderRadius: 40, overflow: 'hidden' }}>
-                    <Text style={{ width: 80, height: 80, borderRadius: 40 }} />
-                  </View>
-                ) : (
-                  <Text style={styles.avatarText}>{getInitials()}</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={[styles.profileName, { color: theme.text }]}>
-                {docente?.nombre} {docente?.apellido}
-              </Text>
-              <Text style={[styles.profileRole, { color: theme.textSecondary }]}>
-                {docente?.titulo_profesional || 'Docente'}
-              </Text>
-              {docente?.experiencia_anos && (
-                <Text style={[styles.profileExperience, { color: theme.textMuted }]}>
-                  {docente.experiencia_anos} años de experiencia
-                </Text>
-              )}
+        {/* PREMIUM BLUE GRADIENT HEADER */}
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <LinearGradient
+            colors={theme.primaryGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.header}
+          >
+            <View style={styles.headerContent}>
+              <View>
+                <Text style={styles.headerTitle}>Mi Perfil</Text>
+                <Text style={styles.headerSubtitle}>Gestiona tu información</Text>
+              </View>
+              <Ionicons name="person-circle" size={32} color="#fff" />
+            </View>
 
-              {/* Botones Editar/Guardar */}
-              <View style={{ marginTop: 16, width: '100%', gap: 8 }}>
-                {!isEditing ? (
-                  <TouchableOpacity
-                    style={[styles.editButton, { backgroundColor: theme.accent }]}
-                    onPress={() => setIsEditing(true)}
-                  >
-                    <Ionicons name="create" size={16} color="#fff" />
-                    <Text style={styles.editButtonText}>Editar Perfil</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.saveButton, { backgroundColor: theme.accent }]}
-                      onPress={handleSave}
-                    >
-                      <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                      <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+            {/* AVATAR */}
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={() => setShowPhotoPreview(true)}
+            >
+              {fotoUrl ? (
+                <Image source={{ uri: fotoUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatarPlaceholder, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                  <Text style={styles.avatarText}>{getInitials()}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.userName}>
+              {docente.nombre || docente.nombres} {docente.apellido || docente.apellidos}
+            </Text>
+            <Text style={styles.userRole}>{docente.titulo_profesional || 'Docente'}</Text>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* ANIMATED TABS */}
+        <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              {
+                backgroundColor: activeTab === 'info' ? theme.accent : theme.inputBg,
+                borderColor: activeTab === 'info' ? theme.accent : theme.border,
+              }
+            ]}
+            onPress={() => setActiveTab('info')}
+          >
+            <Ionicons
+              name="person"
+              size={18}
+              color={activeTab === 'info' ? '#fff' : theme.textMuted}
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'info' ? '#fff' : theme.textMuted }
+            ]}>
+              Información
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              {
+                backgroundColor: activeTab === 'password' ? theme.accent : theme.inputBg,
+                borderColor: activeTab === 'password' ? theme.accent : theme.border,
+              }
+            ]}
+            onPress={() => setActiveTab('password')}
+          >
+            <Ionicons
+              name="lock-closed"
+              size={18}
+              color={activeTab === 'password' ? '#fff' : theme.textMuted}
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'password' ? '#fff' : theme.textMuted }
+            ]}>
+              Seguridad
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* TAB CONTENT */}
+        <View style={styles.content}>
+          {activeTab === 'info' ? (
+            <Animated.View entering={FadeInUp.duration(300)}>
+              {/* Read-Only Info Card */}
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información del Sistema</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Identificación</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {docente.identificacion || docente.cedula || 'No especificado'}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Estado</Text>
+                  <Text style={[styles.infoValue, { color: theme.success }]}>
+                    {docente.estado || 'Activo'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Editable Info Card */}
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="person-outline" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información Personal</Text>
+                  {!isEditing && (
+                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
+                      <Ionicons name="create-outline" size={20} color={theme.accent} />
                     </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={styles.formGrid}>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nombre</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.nombre || ''}
+                      onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+                      editable={isEditing}
+                      placeholder="Nombre"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Apellido</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.apellido || ''}
+                      onChangeText={(text) => setFormData({ ...formData, apellido: text })}
+                      editable={isEditing}
+                      placeholder="Apellido"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Email</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.email || ''}
+                      onChangeText={(text) => setFormData({ ...formData, email: text })}
+                      editable={isEditing}
+                      placeholder="Email"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="email-address"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Teléfono</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.telefono || ''}
+                      onChangeText={(text) => setFormData({ ...formData, telefono: text })}
+                      editable={isEditing}
+                      placeholder="Teléfono"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Dirección</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.direccion || ''}
+                      onChangeText={(text) => setFormData({ ...formData, direccion: text })}
+                      editable={isEditing}
+                      placeholder="Dirección"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Título Profesional</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.titulo_profesional || ''}
+                      onChangeText={(text) => setFormData({ ...formData, titulo_profesional: text })}
+                      editable={isEditing}
+                      placeholder="Ej: Licenciado en Cosmetología"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Años de Experiencia</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.experiencia_anos?.toString() || '0'}
+                      onChangeText={(text) => setFormData({ ...formData, experiencia_anos: parseInt(text) || 0 })}
+                      editable={isEditing}
+                      placeholder="0"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+
+                {isEditing && (
+                  <View style={styles.buttonRow}>
                     <TouchableOpacity
-                      style={[styles.cancelButton, { borderColor: theme.border }]}
+                      style={[styles.button, styles.cancelButton, { borderColor: theme.border }]}
                       onPress={() => {
                         setIsEditing(false);
                         fetchPerfil();
                       }}
                     >
-                      <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
-                      <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancelar</Text>
+                      <Text style={[styles.buttonText, { color: theme.textSecondary }]}>Cancelar</Text>
                     </TouchableOpacity>
-                  </>
+                    <TouchableOpacity
+                      style={[styles.button, styles.saveButton, { backgroundColor: theme.accent }]}
+                      onPress={handleSave}
+                    >
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                      <Text style={[styles.buttonText, { color: '#fff' }]}>Guardar</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
-            </View>
-
-            {/* Información Personal */}
-            <View style={[styles.section, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Información Personal</Text>
-
-              {isEditing ? (
-                <View style={{ gap: 16 }}>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nombres</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.nombre || ''}
-                      onChangeText={(text) => setFormData({ ...formData, nombre: text })}
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Apellidos</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.apellido || ''}
-                      onChangeText={(text) => setFormData({ ...formData, apellido: text })}
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Email</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.email || ''}
-                      onChangeText={(text) => setFormData({ ...formData, email: text })}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Teléfono</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.telefono || ''}
-                      onChangeText={(text) => setFormData({ ...formData, telefono: text })}
-                      keyboardType="phone-pad"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Dirección</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.direccion || ''}
-                      onChangeText={(text) => setFormData({ ...formData, direccion: text })}
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Fecha de Nacimiento (YYYY-MM-DD)</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.fecha_nacimiento || ''}
-                      onChangeText={(text) => setFormData({ ...formData, fecha_nacimiento: text })}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Título Profesional</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.titulo_profesional || ''}
-                      onChangeText={(text) => setFormData({ ...formData, titulo_profesional: text })}
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                  <View>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Años de Experiencia</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                      value={formData.experiencia_anos?.toString() || ''}
-                      onChangeText={(text) => setFormData({ ...formData, experiencia_anos: Number(text) })}
-                      keyboardType="numeric"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeInUp.duration(300)}>
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="lock-closed-outline" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Cambiar Contraseña</Text>
                 </View>
-              ) : (
-                <>
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="card" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Identificación</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.identificacion || 'No especificado'}</Text>
-                    </View>
-                  </View>
 
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="mail" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Email</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.email || 'No especificado'}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="call" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Teléfono</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.telefono || 'No especificado'}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="location" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Dirección</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.direccion || 'No especificado'}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="calendar" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Fecha de Nacimiento</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>{formatDate(docente?.fecha_nacimiento)}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="person" size={18} color={theme.accent} />
-                    </View>
-                    <View style={styles.infoContent}>
-                      <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Género</Text>
-                      <Text style={[styles.infoValue, { color: theme.text }]}>
-                        {docente?.genero === 'M' ? 'Masculino' : docente?.genero === 'F' ? 'Femenino' : 'No especificado'}
-                      </Text>
-                    </View>
-                  </View>
-                </>
-              )}
-            </View>
-
-            {/* Información de Cuenta */}
-            <View style={[styles.section, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Información de Cuenta</Text>
-
-              <View style={styles.infoItem}>
-                <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                  <Ionicons name="person-circle" size={18} color={theme.accent} />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Usuario</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.username}</Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <View style={[styles.infoIcon, { backgroundColor: theme.accent + '20' }]}>
-                  <Ionicons name="shield-checkmark" size={18} color={theme.accent} />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Rol</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{docente?.rol || 'Docente'}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.content}>
-            <View style={[styles.section, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Cambiar Contraseña</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.textMuted }]}>
-                Asegúrate de usar una contraseña segura
-              </Text>
-
-              <View style={{ gap: 16 }}>
-                <View>
+                <View style={styles.inputGroup}>
                   <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contraseña Actual</Text>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                    value={passwordData.password_actual}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
-                    secureTextEntry
-                    placeholderTextColor={theme.textMuted}
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.password_actual}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
+                      secureTextEntry={!showCurrentPassword}
+                      placeholder="••••••••"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                    >
+                      <Ionicons
+                        name={showCurrentPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View>
+
+                <View style={styles.inputGroup}>
                   <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nueva Contraseña</Text>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                    value={passwordData.password_nueva}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
-                    secureTextEntry
-                    placeholderTextColor={theme.textMuted}
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.password_nueva}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
+                      secureTextEntry={!showNewPassword}
+                      placeholder="Mínimo 8 caracteres"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <Ionicons
+                        name={showNewPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View>
+
+                <View style={styles.inputGroup}>
                   <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Confirmar Nueva Contraseña</Text>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.bg }]}
-                    value={passwordData.confirmar_password}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
-                    secureTextEntry
-                    placeholderTextColor={theme.textMuted}
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.confirmar_password}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
+                      secureTextEntry={!showConfirmPassword}
+                      placeholder="Repite la contraseña"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.saveButton, { backgroundColor: theme.accent, marginTop: 8 }]}
+                  style={[styles.button, styles.saveButton, { backgroundColor: theme.accent, marginTop: 8 }]}
                   onPress={handleChangePassword}
                 >
-                  <Ionicons name="lock-closed" size={16} color="#fff" />
-                  <Text style={styles.saveButtonText}>Actualizar Contraseña</Text>
+                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                  <Text style={[styles.buttonText, { color: '#fff' }]}>Cambiar Contraseña</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        )}
+            </Animated.View>
+          )}
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Photo Preview Modal */}
+      <Modal visible={showPhotoPreview} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPhotoPreview(false)}
+        >
+          <View style={styles.modalContent}>
+            {fotoUrl ? (
+              <Image source={{ uri: fotoUrl }} style={styles.modalImage} />
+            ) : (
+              <View style={[styles.modalImagePlaceholder, { backgroundColor: theme.accent }]}>
+                <Text style={styles.modalImageText}>{getInitials()}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -590,185 +685,126 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingTop: 60,
+    paddingBottom: 100,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: 'center',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#fff',
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+  },
+  avatarContainer: {
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#fff',
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  userRole: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   tabsContainer: {
     flexDirection: 'row',
-    gap: 8,
-    padding: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    gap: 12,
+    marginTop: -40,
+    zIndex: 10,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
-  },
-  tabActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-  },
   content: {
     padding: 16,
-    gap: 16,
   },
-  profileCard: {
-    padding: 24,
+  card: {
     borderRadius: 16,
     borderWidth: 1,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  profileRole: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  profileExperience: {
-    fontSize: 12,
-  },
-  section: {
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
     marginBottom: 16,
   },
-  infoItem: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
-  infoContent: {
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     flex: 1,
   },
+  editButton: {
+    padding: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
   infoLabel: {
-    fontSize: 12,
-    marginBottom: 2,
+    fontSize: 13,
   },
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
   },
-  infoBox: {
-    flexDirection: 'row',
+  formGrid: {
     gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 16,
   },
-  infoBoxText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-  },
-  cancelButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
+  inputGroup: {
+    marginBottom: 4,
   },
   inputLabel: {
     fontSize: 12,
@@ -776,10 +812,71 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
     fontSize: 14,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    padding: 4,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  cancelButton: {
+    borderWidth: 1,
+  },
+  saveButton: {
+    // backgroundColor set dynamically
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: width * 0.9,
+    aspectRatio: 1,
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
+  modalImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImageText: {
+    fontSize: 80,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

@@ -1,13 +1,15 @@
-
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
 import { getToken, storage, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
 import { useSocket } from '../../../hooks/useSocket';
+
+const { width } = Dimensions.get('window');
 
 interface CursoConPagos {
   id_matricula: number;
@@ -44,6 +46,8 @@ interface Cuota {
   tipo_curso_nombre: string;
   modalidad_pago?: 'mensual' | 'clases';
   meses_duracion?: number;
+  numero_clases?: number;
+  precio_por_clase?: number;
 }
 
 interface ResumenPagos {
@@ -78,22 +82,53 @@ export default function PagosMensuales() {
         setDarkMode(savedMode === 'true');
       }
     };
-    
+
     const loadUserData = async () => {
       const user = await getUserData();
       setUserData(user);
     };
-    
+
     loadDarkMode();
     loadUserData();
     fetchData();
-    
+
     eventEmitter.on('themeChanged', (isDark: boolean) => {
       setDarkMode(isDark);
     });
   }, []);
 
-  // Configurar eventos de WebSocket para actualizaciones en tiempo real
+  const theme = darkMode
+    ? {
+      bg: '#0f172a',
+      cardBg: '#1e293b',
+      text: '#f8fafc',
+      textSecondary: '#cbd5e1',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      accent: '#fbbf24',
+      accentGradient: ['#f59e0b', '#d97706'] as const,
+      success: '#10b981',
+      danger: '#ef4444',
+      warning: '#f59e0b',
+      info: '#3b82f6',
+      inputBg: 'rgba(255,255,255,0.05)',
+    }
+    : {
+      bg: '#f8fafc',
+      cardBg: '#ffffff',
+      text: '#0f172a',
+      textSecondary: '#475569',
+      textMuted: '#64748b',
+      border: '#e2e8f0',
+      accent: '#f59e0b',
+      accentGradient: ['#fbbf24', '#f59e0b'] as const,
+      success: '#059669',
+      danger: '#dc2626',
+      warning: '#d97706',
+      info: '#2563eb',
+      inputBg: '#f8fafc',
+    };
+
   const socketEvents = {
     'pago_verificado_estudiante': (data: any) => {
       console.log('Pago verificado:', data.numero_cuota);
@@ -112,7 +147,6 @@ export default function PagosMensuales() {
       setLoading(true);
       const token = await getToken();
 
-      // Cargar cursos con pagos pendientes
       const resCursos = await fetch(`${API_URL}/pagos-mensuales/cursos-pendientes`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -120,12 +154,9 @@ export default function PagosMensuales() {
       if (resCursos.ok) {
         const cursos = await resCursos.json();
         setCursosConPagos(cursos);
-        
-        // Actualizar historial de cursos
         actualizarHistorialCursos(cursos);
       }
 
-      // Cargar resumen de pagos
       const resResumen = await fetch(`${API_URL}/pagos-mensuales/resumen`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -233,10 +264,10 @@ export default function PagosMensuales() {
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
-      case 'pagado': return '#10b981';
-      case 'verificado': return '#3b82f6';
-      case 'vencido': return '#ef4444';
-      default: return '#f59e0b';
+      case 'pagado': return theme.success;
+      case 'verificado': return theme.info;
+      case 'vencido': return theme.danger;
+      default: return theme.warning;
     }
   };
 
@@ -280,361 +311,279 @@ export default function PagosMensuales() {
     return cuotas.reduce((total, cuota) => total + (Number(cuota.monto) || 0), 0);
   };
 
-  const colors = {
-    background: darkMode ? '#000000' : '#f8fafc',
-    card: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.3)',
-    accent: '#fbbf24',
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Gestión de Pagos</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-            Gestiona las mensualidades de tus cursos
-          </Text>
-        </View>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
-        {/* Resumen */}
-        {resumenPagos && (
-          <View style={styles.resumenContainer}>
-            <View style={[styles.resumenCard, { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
-              <Text style={[styles.resumenValue, { color: '#3b82f6' }]}>{resumenPagos.total_cuotas}</Text>
-              <Text style={[styles.resumenLabel, { color: colors.textSecondary }]}>Total</Text>
+      {/* Premium Header */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Gestión de Pagos</Text>
+              <Text style={styles.headerSubtitle}>Tus finanzas al día</Text>
             </View>
-            <View style={[styles.resumenCard, { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }]}>
-              <Text style={[styles.resumenValue, { color: '#10b981' }]}>{resumenPagos.cuotas_verificadas}</Text>
-              <Text style={[styles.resumenLabel, { color: colors.textSecondary }]}>Verificadas</Text>
-            </View>
-            <View style={[styles.resumenCard, { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
-              <Text style={[styles.resumenValue, { color: '#f59e0b' }]}>{resumenPagos.cuotas_pendientes}</Text>
-              <Text style={[styles.resumenLabel, { color: colors.textSecondary }]}>Pendientes</Text>
-            </View>
-            <View style={[styles.resumenCard, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
-              <Text style={[styles.resumenValue, { color: '#ef4444' }]}>${formatearMonto(resumenPagos.monto_pendiente)}</Text>
-              <Text style={[styles.resumenLabel, { color: colors.textSecondary }]}>Monto</Text>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="card" size={24} color="#fff" />
             </View>
           </View>
+        </LinearGradient>
+      </View>
+
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Horizontal Dashboard (Fintech Style) */}
+        {resumenPagos && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dashboardContainer} contentContainerStyle={{ paddingHorizontal: 4 }}>
+            <View style={styles.statsCardWrapper}>
+              <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <View style={styles.statsIconBg}><Ionicons name="list" size={18} color="#fff" /></View>
+                <Text style={styles.statsValue}>{resumenPagos.total_cuotas}</Text>
+                <Text style={styles.statsLabel}>Total Cuotas</Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.statsCardWrapper}>
+              <LinearGradient colors={['#10b981', '#059669']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <View style={styles.statsIconBg}><Ionicons name="checkmark-done" size={18} color="#fff" /></View>
+                <Text style={styles.statsValue}>{resumenPagos.cuotas_verificadas}</Text>
+                <Text style={styles.statsLabel}>Verificadas</Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.statsCardWrapper}>
+              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <View style={styles.statsIconBg}><Ionicons name="time" size={18} color="#fff" /></View>
+                <Text style={styles.statsValue}>{resumenPagos.cuotas_pendientes}</Text>
+                <Text style={styles.statsLabel}>Pendientes</Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.statsCardWrapper}>
+              <LinearGradient colors={['#ef4444', '#b91c1c']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <View style={styles.statsIconBg}><Ionicons name="alert-circle" size={18} color="#fff" /></View>
+                <Text style={styles.statsValue}>${formatearMonto(resumenPagos.monto_pendiente)}</Text>
+                <Text style={styles.statsLabel}>Por Pagar</Text>
+              </LinearGradient>
+            </View>
+          </ScrollView>
         )}
 
-        {/* Cursos con pagos pendientes */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Cursos con Pagos Pendientes</Text>
+        {/* Cursos Pendientes Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>PENDIENTES DE PAGO</Text>
+        </View>
 
-          {loading ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Cargando...</Text>
-            </View>
-          ) : cursosConPagos.length === 0 ? (
-            <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Ionicons name="checkmark-circle" size={40} color="#10b981" />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>¡Excelente!</Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No tienes pagos pendientes
-              </Text>
-            </View>
-          ) : (
-            cursosConPagos.map((curso) => {
+        {loading ? (
+          <View style={{ padding: 20, alignItems: 'center' }}><Text style={{ color: theme.textSecondary }}>Cargando información...</Text></View>
+        ) : cursosConPagos.length === 0 ? (
+          <View style={[styles.emptyStateCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+            <Ionicons name="shield-checkmark" size={48} color={theme.success} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>¡Todo al día!</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>No tienes deudas pendientes.</Text>
+          </View>
+        ) : (
+          cursosConPagos
+            .filter(curso => curso.curso_nombre.toString() !== "0" && curso.curso_nombre.toString().trim() !== "")
+            .map((curso, index) => {
               const fechaInicioCobro = curso.fecha_inicio_cobro ? new Date(curso.fecha_inicio_cobro) : null;
-              const promocionTerminada = Boolean(fechaInicioCobro && fechaInicioCobro.getTime() <= Date.now());
               const decisionTomada = Boolean(curso.es_curso_promocional && curso.decision_estudiante && curso.decision_estudiante !== 'pendiente');
 
               return (
-                <View key={curso.id_matricula} style={[styles.cursoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={styles.cursoHeader}>
-                    <View style={styles.cursoInfo}>
-                      <Text style={[styles.cursoNombre, { color: colors.text }]} numberOfLines={2}>
-                        {curso.curso_nombre}
-                      </Text>
-                      {!!curso.es_curso_promocional && (
-                        <View style={styles.promocionalBadge}>
-                          <Ionicons name="gift" size={10} color="#fff" />
-                          <Text style={styles.promocionalText}>PROMOCIONAL</Text>
-                        </View>
-                      )}
-                      <Text style={[styles.cursoTipo, { color: colors.textSecondary }]}>
-                        {curso.tipo_curso_nombre}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.verCuotasButton, { backgroundColor: cursoExpandido === curso.id_matricula ? '#ef4444' : colors.accent }]}
-                      onPress={() => handleToggleCuotas(curso)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name={cursoExpandido === curso.id_matricula ? 'close' : 'eye'} size={14} color="#fff" />
-                      <Text style={styles.verCuotasText}>
-                        {cursoExpandido === curso.id_matricula ? 'Ocultar' : 'Ver'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Estadísticas */}
-                  <View style={styles.statsContainer}>
-                    <View style={[styles.statBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
-                      <Ionicons name="time" size={10} color="#f59e0b" />
-                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Pendientes</Text>
-                      <Text style={[styles.statValue, { color: '#f59e0b' }]}>{curso.cuotas_pendientes}</Text>
-                    </View>
-                    <View style={[styles.statBox, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                      <Ionicons name="alert-circle" size={10} color="#ef4444" />
-                      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Vencidas</Text>
-                      <Text style={[styles.statValue, { color: '#ef4444' }]}>{curso.cuotas_vencidas}</Text>
-                    </View>
-                  </View>
-
-                  {!!curso.es_curso_promocional && (
-                    <View style={[styles.promocionInfo, { backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }]}>
-                      <View style={styles.promocionHeader}>
-                        <Ionicons name="gift" size={14} color="#10b981" />
-                        <Text style={[styles.promocionTitle, { color: darkMode ? '#d1fae5' : '#065f46' }]}>Beneficio Promocional</Text>
-                      </View>
-                      <Text style={[styles.promocionText, { color: darkMode ? 'rgba(209, 250, 229, 0.9)' : '#047857' }]}>
-                        {curso.meses_gratis} {curso.meses_gratis === 1 ? 'mes' : 'meses'} GRATIS
-                      </Text>
-                      {fechaInicioCobro ? (
-                        <Text style={[styles.promocionText, { color: darkMode ? 'rgba(209, 250, 229, 0.9)' : '#047857' }]}>
-                          Inicio de cobros: {fechaInicioCobro.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' })}
-                        </Text>
-                      ) : null}
-                      {!decisionTomada ? (
-                        <View style={styles.decisionButtons}>
-                          <TouchableOpacity
-                            style={[styles.decisionButton, { backgroundColor: '#10b981' }]}
-                            onPress={() => handleDecisionPromocion(curso, 'continuar')}
-                            activeOpacity={0.8}>
-                            <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                            <Text style={styles.decisionButtonText}>Continuar</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.decisionButton, { backgroundColor: darkMode ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2', borderWidth: 1, borderColor: '#ef4444' }]}
-                            onPress={() => {
-                              Alert.alert('Confirmar', '¿Seguro que no deseas continuar después del período gratuito?', [
-                                { text: 'Cancelar', style: 'cancel' },
-                                { text: 'Confirmar', onPress: () => handleDecisionPromocion(curso, 'rechazar') }
-                              ]);
-                            }}
-                            activeOpacity={0.8}>
-                            <Ionicons name="close-circle" size={14} color="#ef4444" />
-                            <Text style={[styles.decisionButtonText, { color: '#ef4444' }]}>No Continuar</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
-
-                  {/* Cuotas expandidas */}
-                  {cursoExpandido === curso.id_matricula && (
-                    <View style={styles.cuotasContainer}>
-                      {loadingCuotas[curso.id_matricula] ? (
-                        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando cuotas...</Text>
-                      ) : !cuotasPorCurso[curso.id_matricula] || cuotasPorCurso[curso.id_matricula]?.length === 0 ? (
-                        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No hay cuotas</Text>
-                      ) : (
-                        (cuotasPorCurso[curso.id_matricula] || []).map((cuota) => (
-                          <View key={cuota.id_pago} style={[styles.cuotaCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', borderColor: colors.border }]}>
-                            <View style={styles.cuotaHeader}>
-                              <View style={styles.cuotaInfo}>
-                                <Text style={[styles.cuotaNumero, { color: colors.text }]}>
-                                  {`Cuota #${cuota.numero_cuota}`}
-                                </Text>
-                                <Text style={[styles.cuotaFecha, { color: colors.textSecondary }]}>
-                                  {`Vence: ${formatearFecha(cuota.fecha_vencimiento)}`}
-                                </Text>
-                              </View>
-                              <Text style={[styles.cuotaMonto, { color: colors.text }]}>
-                                {`$${formatearMonto(cuota.monto)}`}
-                              </Text>
-                            </View>
-
-                            <View style={styles.cuotaFooter}>
-                              <View style={[styles.estadoBadge, { backgroundColor: `${getEstadoColor(cuota.estado)}20` }]}>
-                                <Text style={[styles.estadoText, { color: getEstadoColor(cuota.estado) }]}>
-                                  {getEstadoTexto(cuota.estado)}
-                                </Text>
-                              </View>
-
-                              {cuota.estado === 'pendiente' && (
-                                <TouchableOpacity
-                                  style={[styles.pagarButton, { backgroundColor: '#10b981' }]}
-                                  onPress={() => handlePagarCuota(cuota)}
-                                  activeOpacity={0.8}
-                                >
-                                  <Ionicons name="card" size={12} color="#fff" />
-                                  <Text style={styles.pagarButtonText}>Pagar</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          </View>
-                        ))
-                      )}
-                    </View>
-                  )}
-                </View>
-              );
-            })
-          )}
-        </View>
-
-        {/* Cursos al Día */}
-        {cursosAlDia.length > 0 && (
-          <View style={[styles.section, { marginTop: 16 }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Cursos al Día</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginBottom: 12 }]}>
-              Estos cursos ya no tienen cuotas pendientes. Puedes consultar su historial de pagos.
-            </Text>
-
-            {cursosAlDia.map((curso) => (
-              <View
-                key={`al-dia-${curso.id_matricula}`}
-                style={[styles.cursoCard, { backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.08)' : '#ecfdf5', borderColor: darkMode ? 'rgba(16, 185, 129, 0.4)' : '#a7f3d0' }]}
-              >
-                <View style={styles.cursoHeader}>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <Text style={[styles.cursoNombre, { color: darkMode ? '#d1fae5' : '#065f46' }]}>
-                        {curso.curso_nombre}
-                      </Text>
-                      <View style={[styles.badge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                        <Ionicons name="checkmark-circle" size={10} color="#059669" />
-                        <Text style={[styles.badgeText, { color: '#059669' }]}>Pagos completados</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.cursoTipo, { color: darkMode ? 'rgba(209, 250, 229, 0.85)' : '#047857' }]}>
-                      {curso.tipo_curso_nombre}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.verHistorialButton, { backgroundColor: cursoExpandido === curso.id_matricula ? '#047857' : '#10b981' }]}
-                    onPress={() => handleToggleCuotas(curso)}
+                <Animated.View
+                  key={curso.id_matricula}
+                  entering={FadeInDown.delay(index * 100).springify()}
+                  style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                >
+                  {/* Course Header with Gradient */}
+                  <LinearGradient
+                    colors={theme.accentGradient}
+                    style={styles.courseHeaderGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
                   >
-                    <Ionicons name={cursoExpandido === curso.id_matricula ? 'eye-off' : 'eye'} size={14} color="#fff" />
-                    <Text style={styles.verHistorialText}>
-                      {cursoExpandido === curso.id_matricula ? 'Ocultar' : 'Ver'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.statsRow}>
-                  <View style={[styles.statBox, { backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.12)' : '#d1fae5', borderColor: darkMode ? 'rgba(16,185,129,0.3)' : '#a7f3d0' }]}>
-                    <Ionicons name="checkmark-circle" size={10} color="#059669" />
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Cuotas pagadas</Text>
-                    <Text style={[styles.statValue, { color: '#059669' }]}>{curso.total_cuotas}</Text>
-                  </View>
-                  <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.statLabel, { color: darkMode ? 'rgba(209,250,229,0.9)' : '#047857' }]}>Monto total</Text>
-                    <Text style={[styles.statValue, { color: darkMode ? '#d1fae5' : '#047857' }]}>
-                      ${formatearMonto(obtenerMontoTotalPagado(curso))}
-                    </Text>
-                  </View>
-                </View>
-
-                {cursoExpandido === curso.id_matricula && (
-                  <View style={styles.cuotasContainer}>
-                    {loadingCuotas[curso.id_matricula] ? (
-                      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando historial...</Text>
-                    ) : (
-                      cuotasPorCurso[curso.id_matricula]?.map((cuota) => (
-                        <View key={cuota.id_pago} style={[styles.cuotaItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                          <View style={styles.cuotaInfo}>
-                            <Text style={[styles.cuotaNumero, { color: colors.text }]}>Cuota #{cuota.numero_cuota}</Text>
-                            <Text style={[styles.cuotaMonto, { color: colors.textSecondary }]}>${formatearMonto(cuota.monto)}</Text>
+                    <View style={styles.courseHeaderContent}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.courseTitle}>{curso.curso_nombre}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={styles.courseCode}>{curso.codigo_curso}</Text>
                           </View>
-                          <View style={[styles.estadoBadge, { backgroundColor: `${getEstadoColor(cuota.estado)}20`, borderColor: `${getEstadoColor(cuota.estado)}40` }]}>
-                            <Text style={[styles.estadoText, { color: getEstadoColor(cuota.estado) }]}>
-                              {getEstadoTexto(cuota.estado)}
-                            </Text>
-                          </View>
+                          {!!curso.es_curso_promocional && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Ionicons name="gift" size={10} color="#fff" />
+                              <Text style={styles.courseCode}>PROMOCIONAL</Text>
+                            </View>
+                          )}
                         </View>
-                      ))
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleToggleCuotas(curso)}
+                        style={styles.expandButton}
+                      >
+                        <Ionicons name={cursoExpandido === curso.id_matricula ? 'chevron-up' : 'chevron-down'} size={20} color={theme.accent} />
+                      </TouchableOpacity>
+                    </View>
+                  </LinearGradient>
+
+                  {/* Course Body */}
+                  <View style={styles.courseBody}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Tipo</Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>{curso.tipo_curso_nombre}</Text>
+                      </View>
+                      <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Vencidas</Text>
+                        <Text style={[styles.infoValue, { color: theme.danger, fontWeight: '700' }]}>{curso.cuotas_vencidas}</Text>
+                      </View>
+                      <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Pendientes</Text>
+                        <Text style={[styles.infoValue, { color: theme.warning, fontWeight: '700' }]}>{curso.cuotas_pendientes}</Text>
+                      </View>
+                    </View>
+
+                    {/* Promocion Panel */}
+                    {!!curso.es_curso_promocional && (
+                      <View style={[styles.promoPanel, { backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5', borderColor: theme.success }]}>
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <Ionicons name="gift-outline" size={16} color={theme.success} />
+                          <Text style={[styles.promoTitle, { color: theme.success }]}>Beneficio Activo</Text>
+                        </View>
+                        <Text style={[styles.promoText, { color: theme.textSecondary }]}>
+                          Tienes {curso.meses_gratis} meses GRATIS.
+                          {fechaInicioCobro && ` Inicio de cobro: ${fechaInicioCobro.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`}
+                        </Text>
+
+                        {!decisionTomada && (
+                          <View style={styles.decisionButtons}>
+                            <TouchableOpacity
+                              style={[styles.btnDecision, { backgroundColor: theme.success }]}
+                              onPress={() => handleDecisionPromocion(curso, 'continuar')}
+                            >
+                              <Text style={styles.btnDecisionText}>Continuar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.btnDecision, { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.danger }]}
+                              onPress={() => Alert.alert('Confirmar', '¿Seguro?', [{ text: 'Sí', onPress: () => handleDecisionPromocion(curso, 'rechazar') }, { text: 'No' }])}
+                            >
+                              <Text style={[styles.btnDecisionText, { color: theme.danger }]}>Rechazar</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Expanded Quotas */}
+                    {cursoExpandido === curso.id_matricula && (
+                      <Animated.View entering={FadeInDown} style={styles.quotasContainer}>
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <Text style={[styles.quotasTitle, { color: theme.textSecondary }]}>Selecciona una cuota para pagar:</Text>
+
+                        {loadingCuotas[curso.id_matricula] ? (
+                          <Text style={{ textAlign: 'center', margin: 20, color: theme.textSecondary }}>Cargando...</Text>
+                        ) : (cuotasPorCurso[curso.id_matricula] || []).map((cuota) => (
+                          <TouchableOpacity
+                            key={cuota.id_pago}
+                            style={[styles.quotaItem, { backgroundColor: theme.bg, borderColor: theme.border }]}
+                            onPress={() => cuota.estado === 'pendiente' && handlePagarCuota(cuota)}
+                            disabled={cuota.estado !== 'pendiente'}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.quotaName, { color: theme.text }]}>Cuota #{cuota.numero_cuota}</Text>
+                              <Text style={[styles.quotaDate, { color: theme.textSecondary }]}>Vence: {formatearFecha(cuota.fecha_vencimiento)}</Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                              <Text style={[styles.quotaAmount, { color: theme.text }]}>${formatearMonto(cuota.monto)}</Text>
+                              <View style={[styles.statusBadge, { backgroundColor: getEstadoColor(cuota.estado) + '20' }]}>
+                                <Text style={[styles.statusText, { color: getEstadoColor(cuota.estado) }]}>{getEstadoTexto(cuota.estado)}</Text>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </Animated.View>
                     )}
                   </View>
-                )}
+                </Animated.View>
+              );
+            })
+        )}
+
+        {/* Cursos al Dia Section */}
+        {cursosAlDia.length > 0 && (
+          <View style={{ marginTop: 24 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>HISTORIAL COMPLETO</Text>
+            </View>
+            {cursosAlDia.map((curso) => (
+              <View key={`hist-${curso.id_matricula}`} style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border, opacity: 0.8 }]}>
+                <View style={[styles.courseHeaderGradient, { backgroundColor: darkMode ? '#0f172a' : '#f1f5f9', paddingVertical: 12 }]}>
+                  <View style={styles.courseHeaderContent}>
+                    <Text style={[styles.courseTitle, { color: theme.textSecondary }]}>{curso.curso_nombre}</Text>
+                    <Ionicons name="checkmark-circle" size={20} color={theme.success} />
+                  </View>
+                </View>
               </View>
             ))}
           </View>
         )}
+
       </ScrollView>
 
-      {/* Modal de pago */}
+      {/* Payment Modal */}
       <ModalPago
         visible={showPagoModal}
         cuota={selectedCuota}
-        onClose={() => {
-          setShowPagoModal(false);
-          setSelectedCuota(null);
-        }}
-        onSuccess={() => {
-          fetchData();
-          if (cursoExpandido) {
-            loadCuotasMatricula(cursoExpandido);
-          }
-        }}
+        onClose={() => { setShowPagoModal(false); setSelectedCuota(null); }}
+        onSuccess={() => { fetchData(); if (cursoExpandido) loadCuotasMatricula(cursoExpandido); }}
         darkMode={darkMode}
+        theme={theme}
       />
     </View>
   );
 }
 
-// Modal de Pago
+// === Payment Modal Component ===
 interface ModalPagoProps {
   visible: boolean;
   cuota: Cuota | null;
   onClose: () => void;
   onSuccess: () => void;
   darkMode: boolean;
+  theme: any;
 }
 
-function ModalPago({ visible, cuota, onClose, onSuccess, darkMode }: ModalPagoProps) {
+// === Payment Modal Component per Web Requirements ===
+interface ModalPagoProps {
+  visible: boolean;
+  cuota: Cuota | null;
+  onClose: () => void;
+  onSuccess: () => void;
+  darkMode: boolean;
+  theme: any;
+}
+
+function ModalPago({ visible, cuota, onClose, onSuccess, darkMode, theme }: ModalPagoProps) {
   const [metodoPago, setMetodoPago] = useState<'transferencia' | 'efectivo'>('transferencia');
   const [montoPagar, setMontoPagar] = useState('');
   const [numeroComprobante, setNumeroComprobante] = useState('');
   const [bancoComprobante, setBancoComprobante] = useState('');
-  const [fechaTransferencia, setFechaTransferencia] = useState('');
   const [recibidoPor, setRecibidoPor] = useState('');
-  const [observaciones, setObservaciones] = useState('');
   const [archivoComprobante, setArchivoComprobante] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [showBancoPicker, setShowBancoPicker] = useState(false);
-
-  const colors = {
-    card: darkMode ? '#1a1a1a' : '#ffffff',
-    text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    border: darkMode ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 191, 36, 0.3)',
-    input: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-  };
 
   const bancos = [
-    'Banco Pichincha',
-    'Banco del Guayaquil',
-    'Banco del Pacífico',
-    'Produbanco',
-    'Banco Internacional',
-    'Banco Bolivariano',
-    'Banco de Machala',
-    'Banco ProCredit',
-    'Banco Solidario',
-    'Banco Capital',
-    'Banco Comercial de Manabí',
-    'Banco Coopnacional',
-    'Banco D-MIRO',
-    'Banco Finca',
-    'Banco General Rumiñahui',
-    'Banco Loja',
-    'Banco VisionFund Ecuador'
+    'Banco Pichincha', 'Banco del Guayaquil', 'Banco del Pacífico', 'Produbanco',
+    'Banco Internacional', 'Banco Bolivariano', 'Banco de Machala', 'Banco ProCredit',
+    'Banco Solidario', 'Banco Capital', 'Banco Comercial de Manabí', 'Banco Coopnacional',
+    'Banco D-MIRO', 'Banco Finca', 'Banco General Rumiñahui', 'Banco Loja', 'Banco VisionFund Ecuador'
   ];
 
-  // Función para obtener fecha de Ecuador (UTC-5)
   const getFechaEcuador = () => {
     const now = new Date();
     const ecuadorOffset = -5 * 60;
@@ -643,103 +592,91 @@ function ModalPago({ visible, cuota, onClose, onSuccess, darkMode }: ModalPagoPr
     return ecuadorTime.toISOString().split('T')[0];
   };
 
-  // Función para verificar si un valor es múltiplo de una base
+  const montoPorClase = Number(cuota?.monto || 0);
+  const pasoClases = !isNaN(montoPorClase) && montoPorClase > 0 ? montoPorClase : 0.01;
+
+  useEffect(() => {
+    if (cuota && visible) {
+      setMontoPagar(cuota.monto.toString());
+      setMetodoPago('transferencia');
+      setNumeroComprobante('');
+      setBancoComprobante('');
+      setRecibidoPor('');
+      setArchivoComprobante(null);
+    }
+  }, [cuota, visible]);
+
+  if (!cuota) return null;
+
   const esMultiploDe = (valor: number, base: number) => {
     if (!base) return false;
     const ratio = valor / base;
     return Math.abs(ratio - Math.round(ratio)) < 0.0001;
   };
 
-  const montoPorClase = Number(cuota?.monto || 0);
-
-  useEffect(() => {
-    if (cuota && visible) {
-      setMontoPagar(cuota.monto.toString());
-      setFechaTransferencia(getFechaEcuador());
-    }
-  }, [cuota, visible]);
-
-  if (!cuota) return null;
-
-  const handleFileSelect = async () => {
-    Alert.alert(
-      'Seleccionar comprobante',
-      'Elige una opción',
-      [
-        { text: 'Cámara', onPress: selectFromCamera },
-        { text: 'Galería', onPress: selectFromGallery },
-        { text: 'Cancelar', style: 'cancel' }
-      ]
-    );
+  const handleIncrement = () => {
+    const actual = parseFloat(montoPagar) || 0;
+    const paso = cuota.modalidad_pago === 'mensual' ? 90 : (cuota.modalidad_pago === 'clases' ? pasoClases : 0.01);
+    const nuevo = actual + paso;
+    setMontoPagar(nuevo.toFixed(2));
   };
 
-  const selectFromCamera = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Error', 'Se necesita permiso para la cámara');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setArchivoComprobante(result.assets[0]);
-    }
+  const handleDecrement = () => {
+    const actual = parseFloat(montoPagar) || 0;
+    const paso = cuota.modalidad_pago === 'mensual' ? 90 : (cuota.modalidad_pago === 'clases' ? pasoClases : 0.01);
+    const nuevo = Math.max(paso, actual - paso);
+    setMontoPagar(nuevo.toFixed(2));
   };
 
-  const selectFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setArchivoComprobante(result.assets[0]);
-    }
+  const handleFileSelect = () => {
+    Alert.alert('Subir Comprobante', 'Elige una opción', [
+      {
+        text: '📷 Cámara', onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permiso denegado');
+          const { assets } = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: false });
+          if (assets?.[0]) setArchivoComprobante(assets[0]);
+        }
+      },
+      {
+        text: '🖼️ Galería', onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') return Alert.alert('Permiso denegado');
+          const { assets } = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+          if (assets?.[0]) setArchivoComprobante(assets[0]);
+        }
+      },
+      { text: 'Cancelar', style: 'cancel' }
+    ]);
   };
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
-
       const montoNumerico = parseFloat(montoPagar);
-      if (isNaN(montoNumerico) || montoNumerico <= 0) {
-        Alert.alert('Error', 'El monto debe ser mayor a 0');
-        return;
+
+      // --- Validaciones (Web Parity) ---
+      if (isNaN(montoNumerico) || montoNumerico <= 0) throw new Error('El monto debe ser mayor a 0');
+      if (montoNumerico < cuota.monto) throw new Error(`El monto mínimo es $${cuota.monto.toFixed(2)}`);
+
+      if (cuota.modalidad_pago === 'mensual') {
+        if (Math.abs(montoNumerico % 90) > 0.01) throw new Error('Solo múltiplos de $90 (90, 180, 270...)');
+        const max = 90 * (cuota.meses_duracion || 12);
+        if (montoNumerico > max) throw new Error(`Monto máximo excedido ($${max})`);
+      } else if (cuota.modalidad_pago === 'clases') {
+        if (!esMultiploDe(montoNumerico, montoPorClase)) throw new Error(`Solo múltiplos de $${montoPorClase.toFixed(2)}`);
       }
 
-      if (montoNumerico < cuota.monto) {
-        Alert.alert('Error', `El monto mínimo es ${cuota.monto.toFixed(2)}`);
-        return;
+      if (metodoPago === 'transferencia') {
+        if (!numeroComprobante) throw new Error('Falta el número de comprobante');
+        if (!bancoComprobante) throw new Error('Selecciona el banco');
+      } else {
+        // Efectivo
+        if (!numeroComprobante) throw new Error('Falta el número de factura');
+        if (!recibidoPor) throw new Error('Indica quién recibió el pago');
       }
 
-      if (cuota.modalidad_pago === 'mensual' && montoNumerico % 90 !== 0) {
-        Alert.alert('Error', 'Solo se permiten múltiplos de $90');
-        return;
-      }
-
-      if (cuota.modalidad_pago === 'clases' && !esMultiploDe(montoNumerico, montoPorClase)) {
-        Alert.alert('Error', `Solo se permiten múltiplos de ${montoPorClase.toFixed(2)} (por clase)`);
-        return;
-      }
-
-      if (metodoPago === 'transferencia' && (!numeroComprobante || !bancoComprobante || !fechaTransferencia)) {
-        Alert.alert('Error', 'Completa todos los campos de transferencia');
-        return;
-      }
-
-      if (metodoPago === 'efectivo' && (!numeroComprobante || !recibidoPor)) {
-        Alert.alert('Error', 'Completa todos los campos');
-        return;
-      }
-
-      if (!archivoComprobante) {
-        Alert.alert('Error', 'Debes subir el comprobante');
-        return;
-      }
+      if (!archivoComprobante) throw new Error('Debes subir la evidencia (foto/pdf)');
 
       const formData = new FormData();
       formData.append('metodo_pago', metodoPago);
@@ -748,752 +685,413 @@ function ModalPago({ visible, cuota, onClose, onSuccess, darkMode }: ModalPagoPr
 
       if (metodoPago === 'transferencia') {
         formData.append('banco_comprobante', bancoComprobante);
-        formData.append('fecha_transferencia', fechaTransferencia);
+        formData.append('fecha_transferencia', getFechaEcuador());
       } else {
         formData.append('banco_comprobante', 'N/A');
         formData.append('fecha_transferencia', getFechaEcuador());
         formData.append('recibido_por', recibidoPor);
       }
 
-      formData.append('observaciones', observaciones);
-
       const file: any = {
         uri: archivoComprobante.uri,
         type: archivoComprobante.mimeType || 'image/jpeg',
-        name: archivoComprobante.fileName || 'comprobante.jpg',
+        name: archivoComprobante.fileName || `comprobante_${Date.now()}.jpg`,
       };
       formData.append('comprobante', file);
 
       const token = await getToken();
-      const response = await fetch(`${API_URL}/pagos-mensuales/pagar/${cuota.id_pago}`, {
+      const res = await fetch(`${API_URL}/pagos-mensuales/pagar/${cuota.id_pago}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
-        body: formData,
+        body: formData
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al procesar el pago');
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al procesar pago');
 
-      Alert.alert('Éxito', 'Pago registrado. Pendiente de verificación');
+      Alert.alert('¡Pago Enviado!', 'Tu pago ha sido registrado y está en proceso de verificación.');
       onSuccess();
       onClose();
-      resetForm();
-
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Error al procesar');
+    } catch (e: any) {
+      Alert.alert('Atención', e.message || 'Error desconocido');
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setMetodoPago('transferencia');
-    setMontoPagar('');
-    setNumeroComprobante('');
-    setBancoComprobante('');
-    setFechaTransferencia('');
-    setRecibidoPor('');
-    setObservaciones('');
-    setArchivoComprobante(null);
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+          {/* Header */}
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{`Pagar Cuota #${cuota.numero_cuota}`}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ backgroundColor: theme.accent, padding: 8, borderRadius: 8 }}>
+                <Ionicons name="card" size={20} color="#fff" />
+              </View>
+              <View>
+                <Text style={[styles.modalTitle, { color: theme.text, fontSize: 18 }]}>Registrar Pago</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{cuota.curso_nombre}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.textSecondary} /></TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Monto */}
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.text }]}>Monto a Pagar</Text>
-              <View style={styles.montoContainer}>
-                {/* Botón decrementar */}
-                <TouchableOpacity
-                  style={[styles.montoButton, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.35)' }]}
-                  onPress={() => {
-                    const montoActual = parseFloat(montoPagar) || 0;
-                    const paso = cuota.modalidad_pago === 'mensual' ? 90 : (cuota.modalidad_pago === 'clases' ? montoPorClase : 0.01);
-                    const nuevoMonto = Math.max(paso, montoActual - paso);
-                    setMontoPagar(nuevoMonto.toFixed(2));
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.montoButtonText}>−</Text>
+          <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+
+            {/* Amount Control */}
+            <View style={[styles.modalInfoBox, { flexDirection: 'column', gap: 10, alignItems: 'stretch' }]}>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, textAlign: 'center', fontWeight: '700', textTransform: 'uppercase' }}>Monto a Pagar</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <TouchableOpacity onPress={handleDecrement} style={[styles.stepBtn, { borderColor: theme.success }]}>
+                  <Text style={{ fontSize: 24, color: theme.success, lineHeight: 24 }}>-</Text>
                 </TouchableOpacity>
-
-                {/* Input de monto */}
-                <TextInput
-                  style={[styles.modalInput, styles.montoInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
-                  value={montoPagar}
-                  onChangeText={(valor) => {
-                    const numero = parseFloat(valor);
-
-                    if (valor === '' || numero === 0) {
-                      setMontoPagar(valor);
-                      return;
-                    }
-
-                    if (cuota.modalidad_pago === 'mensual') {
-                      if (numero % 90 === 0 && numero >= 90) {
-                        setMontoPagar(valor);
-                      } else {
-                        Alert.alert('Aviso', 'Solo se permiten múltiplos de $90 (90, 180, 270, 360...)');
-                      }
-                      return;
-                    }
-
-                    if (cuota.modalidad_pago === 'clases') {
-                      if (numero >= montoPorClase && esMultiploDe(numero, montoPorClase)) {
-                        setMontoPagar(valor);
-                      } else {
-                        Alert.alert('Aviso', `Solo se permiten múltiplos de ${montoPorClase.toFixed(2)} (por clase)`);
-                      }
-                      return;
-                    }
-
-                    setMontoPagar(valor);
-                  }}
-                  onBlur={() => {
-                    // Al perder el foco, validar y restaurar si es inválido
-                    if (cuota.modalidad_pago === 'mensual') {
-                      const numero = parseFloat(montoPagar);
-                      if (!numero || numero < 90 || numero % 90 !== 0) {
-                        setMontoPagar(cuota.monto.toString());
-                        Alert.alert('Error', 'Monto inválido. Se restauró al valor de la cuota.');
-                      }
-                      return;
-                    }
-
-                    if (cuota.modalidad_pago === 'clases') {
-                      const numero = parseFloat(montoPagar);
-                      if (!numero || numero < montoPorClase || !esMultiploDe(numero, montoPorClase)) {
-                        setMontoPagar(cuota.monto.toString());
-                        Alert.alert('Error', `Monto inválido. Solo múltiplos de ${montoPorClase.toFixed(2)}.`);
-                      }
-                      return;
-                    }
-                  }}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                {/* Botón incrementar */}
-                <TouchableOpacity
-                  style={[styles.montoButton, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.35)' }]}
-                  onPress={() => {
-                    const montoActual = parseFloat(montoPagar) || 0;
-                    const paso = cuota.modalidad_pago === 'mensual' ? 90 : (cuota.modalidad_pago === 'clases' ? montoPorClase : 0.01);
-                    const maxMonto = cuota.modalidad_pago === 'mensual' ? (90 * (cuota.meses_duracion || 12)) : undefined;
-                    const nuevoMonto = montoActual + paso;
-
-                    if (maxMonto && nuevoMonto > maxMonto) {
-                      Alert.alert('Aviso', `El monto máximo es ${maxMonto.toFixed(2)}`);
-                      return;
-                    }
-
-                    setMontoPagar(nuevoMonto.toFixed(2));
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.montoButtonText}>+</Text>
+                <Text style={{ color: theme.text, fontSize: 26, fontWeight: '800' }}>${parseFloat(montoPagar || '0').toFixed(2)}</Text>
+                <TouchableOpacity onPress={handleIncrement} style={[styles.stepBtn, { backgroundColor: 'rgba(16,185,129,0.1)', borderColor: theme.success }]}>
+                  <Text style={{ fontSize: 24, color: theme.success, lineHeight: 24 }}>+</Text>
                 </TouchableOpacity>
               </View>
+              <Text style={{ textAlign: 'center', fontSize: 10, color: theme.textMuted }}>
+                {cuota.modalidad_pago === 'mensual' ? 'Múltiplos de $90.00' : `Múltiplos de $${montoPorClase.toFixed(2)}`}
+              </Text>
             </View>
 
-            {/* Método de pago */}
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.text }]}>Método de Pago</Text>
-              <View style={styles.metodoPagoButtons}>
-                <TouchableOpacity
-                  style={[styles.metodoPagoButton, { backgroundColor: metodoPago === 'transferencia' ? '#10b981' : colors.input, borderColor: colors.border }]}
-                  onPress={() => setMetodoPago('transferencia')}
-                >
-                  <Text style={[styles.metodoPagoText, { color: metodoPago === 'transferencia' ? '#fff' : colors.text }]}>
-                    {'Transferencia'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.metodoPagoButton, { backgroundColor: metodoPago === 'efectivo' ? '#10b981' : colors.input, borderColor: colors.border }]}
-                  onPress={() => setMetodoPago('efectivo')}
-                >
-                  <Text style={[styles.metodoPagoText, { color: metodoPago === 'efectivo' ? '#fff' : colors.text }]}>
-                    {'Efectivo'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+            {/* Method Selector */}
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Método de Pago</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+              <TouchableOpacity
+                onPress={() => setMetodoPago('transferencia')}
+                style={[styles.methodBtn, metodoPago === 'transferencia' ? { backgroundColor: theme.success, borderColor: theme.success } : { borderColor: theme.border, backgroundColor: theme.inputBg }]}
+              >
+                <Ionicons name="business" size={18} color={metodoPago === 'transferencia' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.methodText, { color: metodoPago === 'transferencia' ? '#fff' : theme.textSecondary }]}>Transferencia</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMetodoPago('efectivo')}
+                style={[styles.methodBtn, metodoPago === 'efectivo' ? { backgroundColor: theme.success, borderColor: theme.success } : { borderColor: theme.border, backgroundColor: theme.inputBg }]}
+              >
+                <Ionicons name="cash" size={18} color={metodoPago === 'efectivo' ? '#fff' : theme.textSecondary} />
+                <Text style={[styles.methodText, { color: metodoPago === 'efectivo' ? '#fff' : theme.textSecondary }]}>Efectivo / Factura</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Número de comprobante */}
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.text }]}>Número de Comprobante</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
-                value={numeroComprobante}
-                onChangeText={setNumeroComprobante}
-                keyboardType="numeric"
-                placeholder="123456"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
-            {/* Campos específicos */}
+            {/* Dynamic Fields */}
             {metodoPago === 'transferencia' ? (
               <>
-                <View style={styles.modalField}>
-                  <Text style={[styles.modalLabel, { color: colors.text }]}>Banco *</Text>
-                  <TouchableOpacity
-                    style={[styles.modalInput, { backgroundColor: colors.input, borderColor: colors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
-                    onPress={() => setShowBancoPicker(true)}
-                  >
-                    <Text style={[{ color: bancoComprobante ? colors.text : colors.textSecondary }]}>
-                      {bancoComprobante || 'Seleccionar banco'}
-                    </Text>
-                    <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.label, { color: theme.textSecondary }]}>Banco de Origen</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 15, maxHeight: 40 }}>
+                  {bancos.map(b => (
+                    <TouchableOpacity
+                      key={b}
+                      onPress={() => setBancoComprobante(b)}
+                      style={[styles.bankChip, bancoComprobante === b ? { backgroundColor: theme.info, borderColor: theme.info } : { borderColor: theme.border }]}
+                    >
+                      <Text style={{ color: bancoComprobante === b ? '#fff' : theme.textSecondary, fontSize: 12, fontWeight: '600' }}>{b}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
 
-                <View style={styles.modalField}>
-                  <Text style={[styles.modalLabel, { color: colors.text }]}>Fecha de Transferencia *</Text>
-                  <View style={[styles.modalInput, { backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: colors.border, opacity: 0.7 }]}>
-                    <Text style={[{ color: colors.textSecondary }]}>
-                      {fechaTransferencia ? new Date(fechaTransferencia + 'T00:00:00').toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Fecha actual'}
-                    </Text>
-                  </View>
-                </View>
+                <Text style={[styles.label, { color: theme.textSecondary }]}>Número de Comprobante</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                  placeholder="Ej: 09123456"
+                  placeholderTextColor={theme.textMuted}
+                  value={numeroComprobante}
+                  onChangeText={(t) => /^\d*$/.test(t) && setNumeroComprobante(t)}
+                  keyboardType="numeric"
+                />
               </>
             ) : (
-              <View style={styles.modalField}>
-                <Text style={[styles.modalLabel, { color: colors.text }]}>Recibido Por</Text>
+              <>
+                <Text style={[styles.label, { color: theme.textSecondary }]}>Número de Factura</Text>
                 <TextInput
-                  style={[styles.modalInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
+                  style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                  placeholder="Ej: 001-001-123456789"
+                  placeholderTextColor={theme.textMuted}
+                  value={numeroComprobante}
+                  onChangeText={setNumeroComprobante}
+                />
+
+                <Text style={[styles.label, { color: theme.textSecondary }]}>Recibido Por (Nombre Personal)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                  placeholder="¿Quién recibió el dinero?"
+                  placeholderTextColor={theme.textMuted}
                   value={recibidoPor}
                   onChangeText={setRecibidoPor}
-                  placeholder="Nombre de quien recibió"
-                  placeholderTextColor={colors.textSecondary}
                 />
-              </View>
+              </>
             )}
 
-            {/* Observaciones */}
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.text }]}>Observaciones (opcional)</Text>
-              <TextInput
-                style={[styles.modalInput, styles.modalTextArea, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
-                value={observaciones}
-                onChangeText={setObservaciones}
-                multiline
-                numberOfLines={3}
-                placeholder="Comentarios adicionales"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
-            {/* Comprobante */}
-            <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.text }]}>Comprobante</Text>
-              <TouchableOpacity
-                style={[styles.fileButton, { backgroundColor: colors.input, borderColor: colors.border }]}
-                onPress={handleFileSelect}
-              >
-                <Ionicons name="cloud-upload" size={20} color={colors.text} />
-                <Text style={[styles.fileButtonText, { color: colors.text }]}>
-                  {archivoComprobante ? 'Archivo seleccionado' : 'Seleccionar archivo'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Botones */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#10b981' }]}
-                onPress={handleSubmit}
-                disabled={loading}
-              >
-                <Text style={styles.modalButtonText}>{loading ? 'Procesando...' : 'Pagar'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.input, borderWidth: 1, borderColor: colors.border }]}
-                onPress={onClose}
-              >
-                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={[styles.label, { color: theme.textSecondary, marginTop: 10 }]}>Evidencia del Pago</Text>
+            <TouchableOpacity
+              style={[styles.cameraButton, { borderColor: theme.border, backgroundColor: theme.inputBg }]}
+              onPress={handleFileSelect}
+            >
+              {archivoComprobante ? (
+                <View style={{ alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="checkmark-circle" size={36} color={theme.success} />
+                  <Text style={{ color: theme.success, fontWeight: '700' }}>Archivo Cargado</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 10 }}>{archivoComprobante.fileName?.substring(0, 20)}...</Text>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="cloud-upload-outline" size={32} color={theme.textMuted} />
+                  <Text style={{ color: theme.textMuted, fontWeight: '600' }}>Subir Foto o Captura</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.payButton, { backgroundColor: loading ? theme.textMuted : theme.success }]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <Text style={styles.payButtonText}>Procesando...</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="paper-plane" size={18} color="#fff" />
+                <Text style={styles.payButtonText}>Confirmar Pago</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
-
-      {/* Modal Picker de Bancos */}
-      <Modal
-        visible={showBancoPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowBancoPicker(false)}
-      >
-        <View style={styles.pickerModalOverlay}>
-          <View style={[styles.pickerModalContent, { backgroundColor: colors.card }]}>
-            <View style={styles.pickerHeader}>
-              <Text style={[styles.pickerTitle, { color: colors.text }]}>Seleccionar Banco</Text>
-              <TouchableOpacity onPress={() => setShowBancoPicker(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.pickerList}>
-              {bancos.map((banco, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.pickerItem,
-                    { borderBottomColor: colors.border },
-                    bancoComprobante === banco && { backgroundColor: darkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.05)' }
-                  ]}
-                  onPress={() => {
-                    setBancoComprobante(banco);
-                    setShowBancoPicker(false);
-                  }}
-                >
-                  <Text style={[styles.pickerItemText, { color: bancoComprobante === banco ? '#fbbf24' : colors.text }]}>
-                    {banco}
-                  </Text>
-                  {bancoComprobante === banco && (
-                    <Ionicons name="checkmark-circle" size={20} color="#fbbf24" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  headerContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 0,
+    zIndex: 10
   },
-  header: {
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  headerIconContainer: {
+    width: 45,
+    height: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: { paddingBottom: 40 },
+
+  dashboardContainer: {
+    paddingVertical: 20,
+    paddingLeft: 16,
+  },
+  statsCardWrapper: {
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  statsCard: {
+    width: 140,
+    height: 100,
+    borderRadius: 16,
     padding: 16,
-    paddingBottom: 8,
+    justifyContent: 'space-between',
   },
-  title: {
+  statsIconBg: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    padding: 6,
+  },
+  statsValue: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  statsLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  sectionHeader: { paddingHorizontal: 20, marginTop: 10, marginBottom: 10 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 1 },
+
+  emptyStateCard: {
+    margin: 20,
+    padding: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 16 },
+  emptySubtitle: { fontSize: 14, textAlign: 'center', marginTop: 8 },
+
+  courseCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  courseHeaderGradient: {
+    padding: 16,
+  },
+  courseHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  courseTitle: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 2,
   },
-  subtitle: {
-    fontSize: 11,
-  },
-  resumenContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    paddingTop: 4,
-    gap: 6,
-  },
-  resumenCard: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  resumenValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  resumenLabel: {
-    fontSize: 8,
+  courseCode: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '600',
   },
-  section: {
+  expandButton: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  courseBody: {
     padding: 16,
-    paddingTop: 4,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  sectionSubtitle: {
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  verHistorialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  verHistorialText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  cuotaItem: {
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 6,
+    marginBottom: 12,
   },
-  cuotaInfo: {
-    flex: 1,
-  },
-  cuotaNumero: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cuotaMonto: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  emptyCard: {
-    padding: 32,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  cursoCard: {
-    borderRadius: 12,
-    borderWidth: 1,
+  infoItem: { alignItems: 'center' },
+  infoLabel: { fontSize: 11, marginBottom: 2 },
+  infoValue: { fontSize: 14, fontWeight: '600' },
+
+  promoPanel: {
     padding: 12,
-    marginBottom: 10,
-  },
-  cursoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  cursoInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  cursoNombre: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  cursoTipo: {
-    fontSize: 10,
-  },
-  promocionalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#10b981',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  promocionalText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  verCuotasButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  verCuotasText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 10,
-  },
-  statBox: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
-    gap: 3,
-  },
-  statLabel: {
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  promocionInfo: {
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 8,
-  },
-  promocionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  promocionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  promocionText: {
-    fontSize: 10,
-    lineHeight: 16,
-  },
-  decisionButtons: {
-    flexDirection: 'row',
-    gap: 8,
     marginTop: 8,
   },
-  decisionButton: {
+  promoTitle: { fontWeight: '700', fontSize: 13 },
+  promoText: { fontSize: 12, marginBottom: 12, lineHeight: 18 },
+  decisionButtons: { flexDirection: 'row', gap: 10 },
+  btnDecision: {
     flex: 1,
-    flexDirection: 'row',
+    paddingVertical: 8,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
   },
-  decisionButtonText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  cuotasContainer: {
-    marginTop: 10,
-    gap: 8,
-  },
-  loadingText: {
-    fontSize: 11,
-    textAlign: 'center',
-    padding: 16,
-  },
-  cuotaCard: {
-    padding: 10,
-    borderRadius: 10,
+  btnDecisionText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+
+  quotasContainer: { marginTop: 8 },
+  divider: { height: 1, width: '100%', marginBottom: 12 },
+  quotasTitle: { fontSize: 12, marginBottom: 8 },
+  quotaItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    gap: 8,
+    marginBottom: 8,
   },
-  cuotaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  cuotaFecha: {
-    fontSize: 9,
-    marginTop: 2,
-  },
-  cuotaFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  estadoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  estadoText: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  pagarButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  pagarButtonText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
+  quotaName: { fontWeight: '700', fontSize: 13 },
+  quotaDate: { fontSize: 11, marginTop: 2 },
+  quotaAmount: { fontWeight: '700', fontSize: 14 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  statusText: { fontSize: 10, fontWeight: '700' },
+
+  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '90%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalField: {
-    marginBottom: 16,
-  },
-  modalLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  modalInput: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    fontSize: 12,
-  },
-  montoContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  modalTitle: { fontSize: 20, fontWeight: '800' },
+  modalInfoBox: {
     alignItems: 'center',
+    backgroundColor: 'rgba(120,120,120,0.1)',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
   },
-  montoButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  montoButtonText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#10b981',
-  },
-  montoInput: {
-    flex: 1,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  modalTextArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  metodoPagoButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  metodoPagoButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  metodoPagoText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  fileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  fileButtonText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-  modalButton: {
-    flex: 1,
+  label: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 16 },
+  input: {
+    borderRadius: 12,
     padding: 14,
-    borderRadius: 10,
+    fontSize: 15,
+    borderWidth: 1,
+  },
+  cameraButton: {
+    height: 100,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  modalButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  pickerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  pickerModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  payButton: {
+    marginTop: 24,
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  pickerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  pickerList: {
-    maxHeight: 400,
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderRadius: 16,
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
   },
-  pickerItemText: {
-    fontSize: 14,
-    fontWeight: '500',
+  payButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  stepBtn: {
+    width: 40, height: 40, borderRadius: 20, borderWidth: 2, alignItems: 'center', justifyContent: 'center'
   },
+  methodBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1
+  },
+  methodText: { fontWeight: '700', fontSize: 12 },
+  bankChip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 8
+  }
 });

@@ -431,7 +431,7 @@ export default function EstudianteLayout() {
             letterSpacing: 0.5,
           },
           headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16, gap: 12 }}>
               <NotificationBell
                 notificaciones={notificaciones}
                 onMarcarTodasLeidas={marcarTodasLeidas}
@@ -439,11 +439,11 @@ export default function EstudianteLayout() {
               />
               <TouchableOpacity
                 onPress={() => setShowProfileDrawer(true)}
-                style={styles.profileButton}
+                style={[styles.profileButton, { marginRight: 0 }]}
               >
                 {userData?.foto_perfil ? (
-                  <Image 
-                    source={{ uri: userData.foto_perfil }} 
+                  <Image
+                    source={{ uri: userData.foto_perfil }}
                     style={styles.headerAvatar}
                   />
                 ) : (
@@ -454,19 +454,21 @@ export default function EstudianteLayout() {
               </TouchableOpacity>
             </View>
           ),
-          tabBarActiveTintColor: theme.tabActive,
-          tabBarInactiveTintColor: theme.tabInactive,
+          tabBarShowLabel: false,
+          headerShadowVisible: false,
+          tabBarActiveTintColor: theme.accent,
+          tabBarInactiveTintColor: theme.textMuted,
           tabBarStyle: {
-            backgroundColor: theme.tabBg,
+            backgroundColor: theme.cardBg,
             borderTopColor: theme.border,
             borderTopWidth: 1,
             height: 60 + insets.bottom,
-            paddingBottom: 8 + insets.bottom,
-            paddingTop: 8,
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
+            paddingTop: 12,
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            elevation: 0,
           },
         }}
       >
@@ -474,8 +476,8 @@ export default function EstudianteLayout() {
           name="miaula"
           options={{
             title: 'Mi Aula',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="book" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
             ),
           }}
         />
@@ -483,8 +485,8 @@ export default function EstudianteLayout() {
           name="horario"
           options={{
             title: 'Horario',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={28} color={color} />
             ),
           }}
         />
@@ -492,8 +494,8 @@ export default function EstudianteLayout() {
           name="calificaciones"
           options={{
             title: 'Notas',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="trophy" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "ribbon" : "ribbon-outline"} size={28} color={color} />
             ),
           }}
         />
@@ -501,8 +503,8 @@ export default function EstudianteLayout() {
           name="historial"
           options={{
             title: 'Historial',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="time" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "time" : "time-outline"} size={28} color={color} />
             ),
           }}
         />
@@ -510,8 +512,8 @@ export default function EstudianteLayout() {
           name="servicios"
           options={{
             title: 'Servicios',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="grid" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "grid" : "grid-outline"} size={28} color={color} />
             ),
           }}
         />
@@ -529,6 +531,7 @@ export default function EstudianteLayout() {
           name="detallecursoestudiante"
           options={{
             href: null, // Esto oculta la pantalla de los tabs
+            headerShown: false,
           }}
         />
         <Tabs.Screen
