@@ -122,27 +122,25 @@ export default function HorarioDocente() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="light-content" />
 
       {/* Premium Header with Blue Gradient */}
-      <View style={styles.headerContainer}>
+      <Animated.View entering={FadeInDown.duration(400)}>
         <LinearGradient
           colors={theme.accentGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+          style={styles.header}
         >
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.headerTitle}>Mi Horario</Text>
               <Text style={styles.headerSubtitle}>Calendario Semanal</Text>
             </View>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="calendar" size={24} color="#fff" />
-            </View>
+            <Ionicons name="calendar" size={28} color="#fff" />
           </View>
         </LinearGradient>
-      </View>
+      </Animated.View>
 
       {/* Day Selector Tabs */}
       <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
@@ -277,10 +275,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerContainer: {
-    marginBottom: 16,
-  },
-  headerGradient: {
+  header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -293,7 +288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 4,
@@ -301,14 +296,6 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
-  },
-  headerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   tabsContainer: {
     paddingVertical: 12,

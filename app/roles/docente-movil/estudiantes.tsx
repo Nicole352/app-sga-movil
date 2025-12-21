@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl, Platform, StatusBar, Modal, Button, SafeAreaView } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -23,6 +23,89 @@ interface Estudiante {
   estado_curso?: 'activo' | 'finalizado' | 'planificado' | 'cancelado';
   fecha_matricula?: string;
 }
+
+interface PickerItem {
+  label: string;
+  value: string;
+}
+
+const CompactPicker = ({
+  items,
+  selectedValue,
+  onValueChange,
+  placeholder,
+  theme
+}: {
+  items: PickerItem[],
+  selectedValue: string,
+  onValueChange: (val: string) => void,
+  placeholder?: string,
+  theme: any
+}) => {
+  const [showModal, setShowModal] = useState(false);
+
+  // ANDROID: Use standard Picker (dropdown style)
+  if (Platform.OS === 'android') {
+    return (
+      <View style={[styles.pickerContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+        <Picker
+          selectedValue={selectedValue}
+          onValueChange={onValueChange}
+          style={[styles.picker, { color: theme.text }]}
+          dropdownIconColor={theme.text}
+        >
+          {items.map((item) => (
+            <Picker.Item key={item.value} label={item.label} value={item.value} />
+          ))}
+        </Picker>
+      </View>
+    );
+  }
+
+  // IOS: Use Custom Modal with Wheel Picker
+  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || items[0]?.label;
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setShowModal(true)}
+        style={[styles.pickerContainer, { backgroundColor: theme.cardBg, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 }]}
+      >
+        <Text style={{ color: theme.text, fontSize: 13 }} numberOfLines={1}>
+          {selectedLabel}
+        </Text>
+        <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
+      </TouchableOpacity>
+
+      <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 }}>
+            {/* Toolbar */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Text style={{ color: theme.textMuted, fontSize: 16 }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowModal(false)}>
+                <Text style={{ color: theme.accent, fontWeight: '700', fontSize: 16 }}>Listo</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Picker Wheel */}
+            <Picker
+              selectedValue={selectedValue}
+              onValueChange={onValueChange}
+              style={{ height: 200, color: theme.text }}
+              itemStyle={{ color: theme.text, fontSize: 16 }}
+            >
+              {items.map((item) => (
+                <Picker.Item key={item.value} label={item.label} value={item.value} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+};
 
 export default function MisEstudiantesScreen() {
   const [darkMode, setDarkMode] = useState(false);
@@ -234,32 +317,28 @@ export default function MisEstudiantesScreen() {
           />
         </View>
 
-        <View style={[styles.pickerContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: theme.border }]}>
-          <Picker
-            selectedValue={cursoFiltro}
-            onValueChange={(value) => setCursoFiltro(value)}
-            style={[styles.picker, { color: theme.text }]}
-            dropdownIconColor={theme.text}
-          >
-            <Picker.Item label="Todos los cursos" value="" />
-            {cursosUnicos.map(c => (
-              <Picker.Item key={c.codigo} label={`${c.codigo} - ${c.nombre}`} value={c.codigo} />
-            ))}
-          </Picker>
-        </View>
+        <CompactPicker
+          items={[
+            { label: "Todos los cursos", value: "" },
+            ...cursosUnicos.map(c => ({ label: `${c.codigo} - ${c.nombre}`, value: c.codigo }))
+          ]}
+          selectedValue={cursoFiltro}
+          onValueChange={setCursoFiltro}
+          theme={theme}
+          placeholder="Todos los cursos"
+        />
 
-        <View style={[styles.pickerContainer, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: theme.border }]}>
-          <Picker
-            selectedValue={estadoFiltro}
-            onValueChange={(value) => setEstadoFiltro(value as 'todos' | 'activos' | 'finalizados')}
-            style={[styles.picker, { color: theme.text }]}
-            dropdownIconColor={theme.text}
-          >
-            <Picker.Item label="Todos los estados" value="todos" />
-            <Picker.Item label="Cursos Activos" value="activos" />
-            <Picker.Item label="Cursos Finalizados" value="finalizados" />
-          </Picker>
-        </View>
+        <CompactPicker
+          items={[
+            { label: "Todos los estados", value: "todos" },
+            { label: "Cursos Activos", value: "activos" },
+            { label: "Cursos Finalizados", value: "finalizados" }
+          ]}
+          selectedValue={estadoFiltro}
+          onValueChange={(val) => setEstadoFiltro(val as any)}
+          theme={theme}
+          placeholder="Todos los estados"
+        />
       </View>
 
       {/* Lista de Estudiantes */}
@@ -433,7 +512,8 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 44,
-    fontSize: 12,
+    fontSize: 11,
+    transform: [{ scaleX: 0.95 }, { scaleY: 0.95 }], // Truco para reducir visualmente un poco más si el fontSize nativo tiene límites
   },
   scrollView: {
     flex: 1,

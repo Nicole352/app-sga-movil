@@ -405,9 +405,10 @@ export default function DocenteLayout() {
           }}
         />
         <Tabs.Screen
-          name="asistencia"
+          name="tomarasistencia"
           options={{
             title: 'Asistencia',
+            headerShown: true,
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={28} color={color} />
             ),

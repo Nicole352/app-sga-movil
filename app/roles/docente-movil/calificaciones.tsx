@@ -1,7 +1,9 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Platform, StatusBar } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -26,7 +28,7 @@ export default function CalificacionesScreen() {
 
   useEffect(() => {
     loadData();
-    
+
     const themeHandler = (isDark: boolean) => setDarkMode(isDark);
     eventEmitter.on('themeChanged', themeHandler);
     return () => eventEmitter.off('themeChanged', themeHandler);
@@ -76,18 +78,20 @@ export default function CalificacionesScreen() {
     textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
     textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
     border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
+    primary: '#2563eb',
     accent: '#3b82f6',
+    primaryGradient: ['#3b82f6', '#2563eb'] as const,
   };
 
   const filteredCursos = cursos.filter(curso => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
+
     const fechaFin = new Date(curso.fecha_fin || new Date());
     fechaFin.setHours(0, 0, 0, 0);
-    
+
     const cursoEstado = curso.estado || 'activo';
-    
+
     if (activeTab === 'activos') {
       return (cursoEstado === 'activo' || cursoEstado === 'planificado') && fechaFin >= hoy;
     } else {
@@ -97,25 +101,36 @@ export default function CalificacionesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Calificaciones</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Selecciona un curso para ver las calificaciones
-        </Text>
-      </View>
+      <StatusBar barStyle="light-content" />
+
+      {/* Premium Header */}
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <LinearGradient
+          colors={theme.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={{ flexDirection: 'column', gap: 4 }}>
+              <Text style={styles.headerTitle}>Calificaciones</Text>
+              <Text style={styles.headerSubtitle}>Gestión Académica</Text>
+            </View>
+            <Ionicons name="ribbon" size={28} color="#fff" />
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderColor: theme.border }]}>
+      <View style={[styles.tabsContainer, { backgroundColor: theme.cardBg, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={[
             styles.tab,
             activeTab === 'activos' && styles.tabActive,
-            { 
-              backgroundColor: activeTab === 'activos' 
-                ? theme.accent 
-                : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-              borderColor: theme.border
+            {
+              backgroundColor: activeTab === 'activos'
+                ? theme.accent
+                : (darkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9'),
             }
           ]}
           onPress={() => setActiveTab('activos')}
@@ -132,11 +147,10 @@ export default function CalificacionesScreen() {
           style={[
             styles.tab,
             activeTab === 'finalizados' && styles.tabActive,
-            { 
-              backgroundColor: activeTab === 'finalizados' 
-                ? theme.accent 
-                : (darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-              borderColor: theme.border
+            {
+              backgroundColor: activeTab === 'finalizados'
+                ? theme.accent
+                : (darkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9'),
             }
           ]}
           onPress={() => setActiveTab('finalizados')}
@@ -153,6 +167,7 @@ export default function CalificacionesScreen() {
       {/* Lista de Cursos */}
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
         }
@@ -163,48 +178,70 @@ export default function CalificacionesScreen() {
           </View>
         ) : filteredCursos.length === 0 ? (
           <View style={[styles.emptyContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <Ionicons name="book-outline" size={64} color={theme.textMuted} style={{ opacity: 0.5 }} />
+            <LinearGradient
+              colors={darkMode ? ['#1e293b', '#0f172a'] : ['#f1f5f9', '#e2e8f0']}
+              style={styles.emptyIconBg}
+            >
+              <Ionicons name="book-outline" size={32} color={theme.textMuted} />
+            </LinearGradient>
             <Text style={[styles.emptyTitle, { color: theme.text }]}>
               {activeTab === 'activos' ? 'No tienes cursos activos' : 'No tienes cursos finalizados'}
             </Text>
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-              {activeTab === 'activos' 
-                ? 'Los cursos activos aparecerán aquí cuando se asignen' 
+              {activeTab === 'activos'
+                ? 'Los cursos activos aparecerán aquí cuando se asignen'
                 : 'Los cursos finalizados aparecerán aquí cuando se completen'}
             </Text>
           </View>
         ) : (
           <View style={styles.cursosList}>
-            {filteredCursos.map((curso) => (
-              <TouchableOpacity
+            {filteredCursos.map((curso, index) => (
+              <Animated.View
                 key={curso.id_curso}
-                style={[styles.cursoCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
-                onPress={() => {
-                  // Navegar a la pantalla de calificaciones del curso
-                  router.push(`/roles/docente-movil/calificaciones-curso?id=${curso.id_curso}` as any);
-                }}
-                activeOpacity={0.7}
+                entering={FadeInDown.delay(index * 100).springify()}
               >
-                <View style={styles.cursoHeader}>
-                  <View style={styles.cursoInfo}>
-                    <View style={[styles.cursoBadge, { backgroundColor: theme.accent + '30' }]}>
-                      <Text style={[styles.cursoBadgeText, { color: theme.accent }]}>
+                <TouchableOpacity
+                  style={[styles.cursoCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                  onPress={() => {
+                    router.push(`/roles/docente-movil/calificaciones-curso?id=${curso.id_curso}` as any);
+                  }}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.cursoHeader}>
+                    {/* Badge de Código con gradiente sutil */}
+                    <LinearGradient
+                      colors={darkMode ? ['rgba(59, 130, 246, 0.2)', 'rgba(37, 99, 235, 0.2)'] : ['#eff6ff', '#dbeafe']}
+                      style={styles.cursoBadge}
+                    >
+                      <Text style={[styles.cursoBadgeText, { color: theme.primary }]}>
                         {curso.codigo_curso}
                       </Text>
-                    </View>
-                    <Text style={[styles.cursoNombre, { color: theme.text }]}>
-                      {curso.nombre}
-                    </Text>
-                    <View style={styles.cursoEstudiantes}>
-                      <Ionicons name="people" size={16} color={theme.textMuted} />
-                      <Text style={[styles.cursoEstudiantesText, { color: theme.textMuted }]}>
+                    </LinearGradient>
+                    <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+                  </View>
+
+                  <Text style={[styles.cursoNombre, { color: theme.text }]}>
+                    {curso.nombre}
+                  </Text>
+
+                  <View style={styles.cardFooter}>
+                    <View style={styles.cursoStat}>
+                      <Ionicons name="people-outline" size={16} color={theme.textMuted} />
+                      <Text style={[styles.cursoStatText, { color: theme.textMuted }]}>
                         {curso.total_estudiantes} estudiantes
                       </Text>
                     </View>
+                    {curso.fecha_fin && (
+                      <View style={styles.cursoStat}>
+                        <Ionicons name="calendar-outline" size={16} color={theme.textMuted} />
+                        <Text style={[styles.cursoStatText, { color: theme.textMuted }]}>
+                          Fin: {new Date(curso.fecha_fin).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <Ionicons name="chevron-forward" size={24} color={theme.accent} />
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </Animated.View>
             ))}
           </View>
         )}
@@ -218,42 +255,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
+    color: '#fff',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 11,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   tabsContainer: {
     flexDirection: 'row',
-    gap: 8,
     padding: 16,
-    paddingBottom: 12,
+    paddingTop: 20,
+    gap: 12,
     borderBottomWidth: 1,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   scrollView: {
     flex: 1,
@@ -264,64 +310,84 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
+    marginTop: 10,
   },
   emptyContainer: {
-    margin: 16,
+    margin: 20,
     padding: 40,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
+    borderStyle: 'dashed',
     alignItems: 'center',
+  },
+  emptyIconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginTop: 16,
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
+    lineHeight: 20,
   },
   cursosList: {
-    padding: 16,
-    gap: 12,
+    padding: 20,
+    gap: 16,
   },
   cursoCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cursoHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  cursoInfo: {
-    flex: 1,
-    marginRight: 12,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   cursoBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginBottom: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   cursoBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
   cursoNombre: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+    lineHeight: 22,
   },
-  cursoEstudiantes: {
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingTop: 12,
+  },
+  cursoStat: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  cursoEstudiantesText: {
+  cursoStatText: {
     fontSize: 12,
+    fontWeight: '500',
   },
 });

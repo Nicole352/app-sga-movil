@@ -1,8 +1,9 @@
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, RefreshControl, Alert, Platform, StatusBar } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -257,9 +258,11 @@ export default function CalificacionesCursoScreen() {
     textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
     textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
     border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
+    primary: '#2563eb',
     accent: '#3b82f6',
     green: '#10b981',
     red: '#ef4444',
+    primaryGradient: ['#3b82f6', '#2563eb'] as const,
   };
 
   const promedioGeneral = filteredEstudiantes.length > 0
@@ -271,21 +274,33 @@ export default function CalificacionesCursoScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: theme.accent + '20', borderColor: theme.accent + '40' }]}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.accent} />
-          <Text style={[styles.backButtonText, { color: theme.accent }]}>Volver</Text>
-        </TouchableOpacity>
+      <StatusBar barStyle="light-content" />
 
-        <Text style={[styles.headerTitle, { color: theme.text }]}>{cursoNombre}</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
-          Calificaciones del curso
-        </Text>
-      </View>
+      {/* Premium Header */}
+      <LinearGradient
+        colors={theme.primaryGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {cursoNombre || "Cargando..."}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              Calificaciones del curso
+            </Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
+      </LinearGradient>
 
       {/* Estadísticas */}
       <View style={styles.statsContainer}>
@@ -313,6 +328,7 @@ export default function CalificacionesCursoScreen() {
           <Text style={styles.statValue}>{promedioGeneral}</Text>
         </View>
       </View>
+
 
       {/* Filtros */}
       <View style={[styles.filtersContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
@@ -544,36 +560,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backButton: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
+    justifyContent: 'space-between',
   },
-  backButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  backButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  backButtonText: {
+    display: 'none', // Ocultar si existía
   },
   statsContainer: {
     flexDirection: 'row',
     padding: 16,
     gap: 8,
+    marginTop: 10,
   },
   statCard: {
     flex: 1,

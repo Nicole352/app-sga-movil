@@ -252,6 +252,16 @@ export default function DocenteDashboard() {
             </View>
             <Text style={[styles.quickBtnText, { color: theme.text }]} numberOfLines={1}>Estudiantes</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickBtn, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+            onPress={() => router.push('/roles/docente-movil/tomarasistencia' as any)}
+          >
+            <View style={[styles.quickBtnIcon, { backgroundColor: `${theme.primaryGradient[0]}15` }]}>
+              <Ionicons name="checkmark-circle" size={20} color={theme.primaryGradient[0]} />
+            </View>
+            <Text style={[styles.quickBtnText, { color: theme.text }]} numberOfLines={1}>Asistencia</Text>
+          </TouchableOpacity>
         </View>
 
         {/* COURSE LIST */}
