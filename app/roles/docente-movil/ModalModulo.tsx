@@ -9,6 +9,8 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -36,7 +38,8 @@ export default function ModalModulo({
     descripcion: '',
     fecha_inicio: '',
     fecha_fin: '',
-    estado: 'activo'
+    estado: 'activo',
+    categorias: [{ id: Date.now().toString(), nombre: '', ponderacion: '' }]
   });
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<{
@@ -56,7 +59,14 @@ export default function ModalModulo({
         descripcion: moduloEditar.descripcion || '',
         fecha_inicio: moduloEditar.fecha_inicio ? moduloEditar.fecha_inicio.split('T')[0] : '',
         fecha_fin: moduloEditar.fecha_fin ? moduloEditar.fecha_fin.split('T')[0] : '',
-        estado: moduloEditar.estado || 'activo'
+        estado: moduloEditar.estado || 'activo',
+        categorias: moduloEditar.categorias && moduloEditar.categorias.length > 0
+          ? moduloEditar.categorias.map((c: any) => ({
+            id: c.id || Date.now().toString() + Math.random(),
+            nombre: c.nombre,
+            ponderacion: c.ponderacion.toString()
+          }))
+          : [{ id: Date.now().toString(), nombre: '', ponderacion: '' }]
       });
     } else {
       setFormData({
@@ -64,7 +74,8 @@ export default function ModalModulo({
         descripcion: '',
         fecha_inicio: '',
         fecha_fin: '',
-        estado: 'activo'
+        estado: 'activo',
+        categorias: [{ id: Date.now().toString(), nombre: '', ponderacion: '' }]
       });
     }
   }, [moduloEditar, visible]);
@@ -101,9 +112,48 @@ export default function ModalModulo({
     });
   };
 
+  const handleCategoriaChange = (index: number, field: string, value: string) => {
+    const newCategorias: any[] = [...formData.categorias];
+    newCategorias[index][field] = value;
+    setFormData({ ...formData, categorias: newCategorias });
+  };
+
+  const addCategoria = () => {
+    if (totalPonderacion >= 10) {
+      Alert.alert('Límite Alcanzado', 'La suma de ponderaciones ya es 10.');
+      return;
+    }
+    setFormData({
+      ...formData,
+      categorias: [...formData.categorias, { id: Date.now().toString(), nombre: '', ponderacion: '' }]
+    });
+  };
+
+  const removeCategoria = (index: number) => {
+    const newCategorias = formData.categorias.filter((_, i) => i !== index);
+    setFormData({ ...formData, categorias: newCategorias });
+  };
+
+  const totalPonderacion = formData.categorias.reduce((sum, cat) => {
+    const val = parseFloat(cat.ponderacion);
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+
   const handleSubmit = async () => {
     if (!formData.nombre.trim()) {
       Alert.alert('Error', 'El nombre del módulo es obligatorio');
+      return;
+    }
+
+    if (Math.abs(totalPonderacion - 10) > 0.1) {
+      Alert.alert('Error Ponderación', `La suma de las categorías debe ser exacta de 10 puntos.\nActual: ${totalPonderacion.toFixed(2)} pts.`);
+      return;
+    }
+
+    // Validar campos vacíos en categorías
+    const categoriasInvalidas = formData.categorias.some(c => !c.nombre.trim() || !c.ponderacion);
+    if (categoriasInvalidas) {
+      Alert.alert('Error', 'Completa todos los campos de las categorías.');
       return;
     }
 
@@ -113,7 +163,11 @@ export default function ModalModulo({
 
       const dataToSend = {
         ...formData,
-        id_curso: parseInt(id_curso)
+        id_curso: parseInt(id_curso),
+        categorias: formData.categorias.map(c => ({
+          ...c,
+          ponderacion: parseFloat(c.ponderacion)
+        }))
       };
 
       const url = moduloEditar
@@ -166,7 +220,10 @@ export default function ModalModulo({
       transparent
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
         <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
           {/* Header */}
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
@@ -282,6 +339,66 @@ export default function ModalModulo({
               </View>
             </View>
 
+            {/* Sección de Categorías */}
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.label, { color: theme.textSecondary, marginBottom: 0 }]}>
+                  Categorías de Evaluación
+                </Text>
+                <View style={[
+                  styles.badgeContainer,
+                  { backgroundColor: Math.abs(totalPonderacion - 10) < 0.1 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
+                ]}>
+                  <Text style={[
+                    styles.badgeText,
+                    { color: Math.abs(totalPonderacion - 10) < 0.1 ? '#10b981' : '#ef4444' }
+                  ]}>
+                    Total: {totalPonderacion.toFixed(2)}/10
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.categoriasList}>
+              {formData.categorias.map((cat, index) => (
+                <View key={cat.id} style={[styles.categoriaRow, { borderColor: theme.border, backgroundColor: theme.inputBg }]}>
+                  <View style={{ flex: 2 }}>
+                    <TextInput
+                      style={[styles.inputSmall, { color: theme.text, borderColor: theme.border }]}
+                      placeholder="Nombre (ej. EXAMEN)"
+                      placeholderTextColor={theme.textMuted}
+                      value={cat.nombre}
+                      onChangeText={(text) => handleCategoriaChange(index, 'nombre', text)}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={[styles.inputSmall, { color: theme.text, borderColor: theme.border }]}
+                      placeholder="Pts"
+                      placeholderTextColor={theme.textMuted}
+                      value={cat.ponderacion}
+                      onChangeText={(text) => handleCategoriaChange(index, 'ponderacion', text)}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => removeCategoria(index)}
+                    style={[styles.deleteButton, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                onPress={addCategoria}
+                style={[styles.addButton, { borderColor: theme.accent }]}
+              >
+                <Text style={[styles.addButtonText, { color: theme.accent }]}>+ Agregar Categoría</Text>
+              </TouchableOpacity>
+            </View>
+
             {showDatePicker && (
               <DateTimePicker
                 value={showDatePicker.value}
@@ -333,7 +450,7 @@ export default function ModalModulo({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -455,5 +572,53 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  sectionHeader: {
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  badgeContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  categoriasList: {
+    gap: 8,
+  },
+  categoriaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  inputSmall: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 6,
+    fontSize: 12,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButton: {
+    marginTop: 4,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

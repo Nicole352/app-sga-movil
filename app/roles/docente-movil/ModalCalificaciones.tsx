@@ -50,10 +50,25 @@ export default function ModalCalificaciones({
     }
   }, [visible, estudiantes]);
 
-  const handleNotaChange = (estudianteId: number, nota: string) => {
+  const handleNotaChange = (estudianteId: number, text: string) => {
+    // Reemplazar coma por punto para decimales
+    let formattedText = text.replace(',', '.');
+
+    // Validar si es un número válido y aplicar clamping (tope máximo)
+    const notaNum = parseFloat(formattedText);
+
+    if (!isNaN(notaNum)) {
+      if (notaNum > tarea.puntaje) {
+        Alert.alert('Aviso', `La nota máxima es ${tarea.puntaje}`);
+        formattedText = tarea.puntaje.toString();
+      } else if (notaNum < 0) {
+        formattedText = '0';
+      }
+    }
+
     const newCalificaciones = new Map(calificaciones);
     const current = newCalificaciones.get(estudianteId) || { nota: '', comentario: '' };
-    newCalificaciones.set(estudianteId, { ...current, nota });
+    newCalificaciones.set(estudianteId, { ...current, nota: formattedText });
     setCalificaciones(newCalificaciones);
   };
 
@@ -70,7 +85,8 @@ export default function ModalCalificaciones({
 
     calificaciones.forEach((value, estudianteId) => {
       if (value.nota) {
-        const nota = parseFloat(value.nota);
+        const notaStr = value.nota.replace(',', '.');
+        const nota = parseFloat(notaStr);
         if (isNaN(nota) || nota < 0 || nota > tarea.puntaje) {
           hasError = true;
           Alert.alert(
@@ -97,9 +113,9 @@ export default function ModalCalificaciones({
 
   const getNotaColor = (nota: string) => {
     if (!nota) return '#6b7280';
-    const notaNum = parseFloat(nota);
+    const notaNum = parseFloat(nota.replace(',', '.'));
     const porcentaje = (notaNum / tarea.puntaje) * 100;
-    
+
     if (porcentaje >= 90) return '#10b981';
     if (porcentaje >= 70) return '#3b82f6';
     if (porcentaje >= 50) return '#f59e0b';
@@ -114,9 +130,9 @@ export default function ModalCalificaciones({
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Aplicar',
-          onPress: (nota) => {
+          onPress: (nota?: string) => {
             if (nota) {
-              const notaNum = parseFloat(nota);
+              const notaNum = parseFloat(nota.replace(',', '.'));
               if (!isNaN(notaNum) && notaNum >= 0 && notaNum <= tarea.puntaje) {
                 const newCalificaciones = new Map(calificaciones);
                 estudiantes.forEach((est) => {
@@ -208,10 +224,10 @@ export default function ModalCalificaciones({
                           <TextInput
                             style={[styles.notaInput, { borderColor: getNotaColor(calif.nota) }]}
                             value={calif.nota}
-                            onChangeText={(text) => handleNotaChange(estudiante.id, text)}
-                            placeholder="0"
+                            onChangeText={(text) => handleNotaChange(estudiante.id, text.replace(',', '.'))}
+                            placeholder="0.00"
                             placeholderTextColor="#999"
-                            keyboardType="numeric"
+                            keyboardType="decimal-pad"
                           />
                           <Text style={styles.notaMax}>/ {tarea.puntaje}</Text>
                         </View>

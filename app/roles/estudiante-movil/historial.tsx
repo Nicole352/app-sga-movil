@@ -261,7 +261,7 @@ export default function HistorialAcademico() {
 
               <View style={styles.statItem}>
                 <Text style={[styles.statValue, { color: curso.calificacion >= 7 ? theme.success : theme.warning }]}>
-                  {curso.calificacion != null ? Number(curso.calificacion).toFixed(1) : '0.0'}
+                  {curso.calificacion != null ? Number(curso.calificacion).toFixed(2) : '0.00'}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textMuted }]}>PROMEDIO</Text>
               </View>

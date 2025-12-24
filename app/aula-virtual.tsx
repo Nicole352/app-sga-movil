@@ -72,7 +72,7 @@ export default function AulaVirtual() {
       const data = await res.json();
       console.log('✅ Login exitoso:', { user: data.user?.username, rol: data.user?.rol });
       console.log('📋 Datos completos del usuario:', data.user);
-      
+
       if (!data?.token || !data?.user) throw new Error('Respuesta inválida del servidor');
 
       // Guardar token y datos del usuario
@@ -83,8 +83,8 @@ export default function AulaVirtual() {
       // Navegar según el rol
       if (data.user.rol === 'superadmin') {
         router.replace('/roles/superadmin-movil');
-      } else if (data.user.rol === 'admin') {
-        Alert.alert('Éxito', 'Panel de admin próximamente');
+      } else if (data.user.rol === 'admin' || data.user.rol === 'administrativo') {
+        router.replace('/roles/admin-movil/dashboard');
       } else if (data.user.rol === 'docente') {
         router.replace('/roles/docente-movil/dashboard');
       } else if (data.user.rol === 'estudiante') {
@@ -112,7 +112,7 @@ export default function AulaVirtual() {
         resizeMode="cover"
       >
         <View style={styles.overlay} />
-        
+
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -123,11 +123,11 @@ export default function AulaVirtual() {
               <Ionicons name="eye-outline" size={16} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.badgeText}>Plataforma Virtual de Aprendizaje</Text>
             </View>
-            
+
             <Text style={styles.title}>
               Aula <Text style={styles.titleGradient}>Virtual</Text>
             </Text>
-            
+
             <Text style={styles.subtitle}>
               Accede a tu plataforma de aprendizaje personalizada.
               Continúa tu formación profesional desde cualquier lugar.
@@ -171,10 +171,10 @@ export default function AulaVirtual() {
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <Ionicons 
-                      name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                      size={20} 
-                      color="rgba(255, 255, 255, 0.7)" 
+                    <Ionicons
+                      name={showPassword ? "eye-outline" : "eye-off-outline"}
+                      size={20}
+                      color="rgba(255, 255, 255, 0.7)"
                     />
                   </TouchableOpacity>
                 </View>

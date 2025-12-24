@@ -73,6 +73,7 @@ export default function PagosMensuales() {
   const [loadingCuotas, setLoadingCuotas] = useState<{ [key: number]: boolean }>({});
   const [showPagoModal, setShowPagoModal] = useState(false);
   const [selectedCuota, setSelectedCuota] = useState<Cuota | null>(null);
+  const [selectedCurso, setSelectedCurso] = useState<CursoConPagos | null>(null);
   const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
@@ -88,8 +89,20 @@ export default function PagosMensuales() {
       setUserData(user);
     };
 
+    const loadHistorico = async () => {
+      try {
+        const stored = await storage.getItem('pagos-cursos-historicos');
+        if (stored) {
+          setCursosHistoricos(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.warn('Error loading historico:', error);
+      }
+    };
+
     loadDarkMode();
     loadUserData();
+    loadHistorico();
     fetchData();
 
     eventEmitter.on('themeChanged', (isDark: boolean) => {
@@ -155,6 +168,19 @@ export default function PagosMensuales() {
         const cursos = await resCursos.json();
         setCursosConPagos(cursos);
         actualizarHistorialCursos(cursos);
+
+        // Limpiar cache de matrículas inválidas (Paridad Web)
+        const matriculasValidas = new Set(cursos.map((c: CursoConPagos) => c.id_matricula));
+        setCursosHistoricos(prev => {
+          // Filtrar cursos que sean válidos o que ya estén pagados (al día)
+          // Esto replica la lógica exacta de la web para eliminar cursos "fantasma" del historial
+          const filtrados = prev.filter(curso => matriculasValidas.has(curso.id_matricula) || curso.estado_pago === 'al-dia');
+
+          if (filtrados.length !== prev.length) {
+            storage.setItem('pagos-cursos-historicos', JSON.stringify(filtrados)).catch(e => console.warn(e));
+          }
+          return filtrados;
+        });
       }
 
       const resResumen = await fetch(`${API_URL}/pagos-mensuales/resumen`, {
@@ -206,8 +232,9 @@ export default function PagosMensuales() {
     }
   };
 
-  const handlePagarCuota = (cuota: Cuota) => {
+  const handlePagarCuota = (cuota: Cuota, curso: CursoConPagos) => {
     setSelectedCuota(cuota);
+    setSelectedCurso(curso);
     setShowPagoModal(true);
   };
 
@@ -298,7 +325,9 @@ export default function PagosMensuales() {
           });
         }
       });
-      return Array.from(map.values());
+      const updated = Array.from(map.values());
+      storage.setItem('pagos-cursos-historicos', JSON.stringify(updated)).catch(e => console.warn(e));
+      return updated;
     });
   };
 
@@ -342,36 +371,36 @@ export default function PagosMensuales() {
       >
         {/* Horizontal Dashboard (Fintech Style) */}
         {resumenPagos && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dashboardContainer} contentContainerStyle={{ paddingHorizontal: 4 }}>
-            <View style={styles.statsCardWrapper}>
-              <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                <View style={styles.statsIconBg}><Ionicons name="list" size={18} color="#fff" /></View>
-                <Text style={styles.statsValue}>{resumenPagos.total_cuotas}</Text>
-                <Text style={styles.statsLabel}>Total Cuotas</Text>
-              </LinearGradient>
+          <View style={{ flexDirection: 'row', paddingHorizontal: 10, gap: 6, marginBottom: 20 }}>
+            <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.statIconBadge, { backgroundColor: '#3b82f620' }]}>
+                <Ionicons name="list" size={16} color="#3b82f6" />
+              </View>
+              <Text style={[styles.statValue, { color: theme.text }]}>{resumenPagos.total_cuotas}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Total{'\n'}Cuotas</Text>
             </View>
-            <View style={styles.statsCardWrapper}>
-              <LinearGradient colors={['#10b981', '#059669']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                <View style={styles.statsIconBg}><Ionicons name="checkmark-done" size={18} color="#fff" /></View>
-                <Text style={styles.statsValue}>{resumenPagos.cuotas_verificadas}</Text>
-                <Text style={styles.statsLabel}>Verificadas</Text>
-              </LinearGradient>
+            <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.statIconBadge, { backgroundColor: '#10b98120' }]}>
+                <Ionicons name="checkmark-done" size={16} color="#10b981" />
+              </View>
+              <Text style={[styles.statValue, { color: theme.text }]}>{resumenPagos.cuotas_verificadas}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Verificadas</Text>
             </View>
-            <View style={styles.statsCardWrapper}>
-              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                <View style={styles.statsIconBg}><Ionicons name="time" size={18} color="#fff" /></View>
-                <Text style={styles.statsValue}>{resumenPagos.cuotas_pendientes}</Text>
-                <Text style={styles.statsLabel}>Pendientes</Text>
-              </LinearGradient>
+            <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.statIconBadge, { backgroundColor: '#f59e0b20' }]}>
+                <Ionicons name="time" size={16} color="#f59e0b" />
+              </View>
+              <Text style={[styles.statValue, { color: theme.text }]}>{resumenPagos.cuotas_pendientes}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pendientes</Text>
             </View>
-            <View style={styles.statsCardWrapper}>
-              <LinearGradient colors={['#ef4444', '#b91c1c']} style={styles.statsCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                <View style={styles.statsIconBg}><Ionicons name="alert-circle" size={18} color="#fff" /></View>
-                <Text style={styles.statsValue}>${formatearMonto(resumenPagos.monto_pendiente)}</Text>
-                <Text style={styles.statsLabel}>Por Pagar</Text>
-              </LinearGradient>
+            <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.statIconBadge, { backgroundColor: '#ef444420' }]}>
+                <Ionicons name="alert-circle" size={16} color="#ef4444" />
+              </View>
+              <Text style={[styles.statValue, { color: theme.text }]}>${formatearMonto(resumenPagos.monto_pendiente)}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Por Pagar</Text>
             </View>
-          </ScrollView>
+          </View>
         )}
 
         {/* Cursos Pendientes Section */}
@@ -491,7 +520,7 @@ export default function PagosMensuales() {
                           <TouchableOpacity
                             key={cuota.id_pago}
                             style={[styles.quotaItem, { backgroundColor: theme.bg, borderColor: theme.border }]}
-                            onPress={() => cuota.estado === 'pendiente' && handlePagarCuota(cuota)}
+                            onPress={() => cuota.estado === 'pendiente' && handlePagarCuota(cuota, curso)}
                             disabled={cuota.estado !== 'pendiente'}
                           >
                             <View style={{ flex: 1 }}>
@@ -539,7 +568,8 @@ export default function PagosMensuales() {
       <ModalPago
         visible={showPagoModal}
         cuota={selectedCuota}
-        onClose={() => { setShowPagoModal(false); setSelectedCuota(null); }}
+        curso={selectedCurso}
+        onClose={() => { setShowPagoModal(false); setSelectedCuota(null); setSelectedCurso(null); }}
         onSuccess={() => { fetchData(); if (cursoExpandido) loadCuotasMatricula(cursoExpandido); }}
         darkMode={darkMode}
         theme={theme}
@@ -552,23 +582,14 @@ export default function PagosMensuales() {
 interface ModalPagoProps {
   visible: boolean;
   cuota: Cuota | null;
+  curso: CursoConPagos | null;
   onClose: () => void;
   onSuccess: () => void;
   darkMode: boolean;
   theme: any;
 }
 
-// === Payment Modal Component per Web Requirements ===
-interface ModalPagoProps {
-  visible: boolean;
-  cuota: Cuota | null;
-  onClose: () => void;
-  onSuccess: () => void;
-  darkMode: boolean;
-  theme: any;
-}
-
-function ModalPago({ visible, cuota, onClose, onSuccess, darkMode, theme }: ModalPagoProps) {
+function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme }: ModalPagoProps) {
   const [metodoPago, setMetodoPago] = useState<'transferencia' | 'efectivo'>('transferencia');
   const [montoPagar, setMontoPagar] = useState('');
   const [numeroComprobante, setNumeroComprobante] = useState('');
@@ -617,7 +638,35 @@ function ModalPago({ visible, cuota, onClose, onSuccess, darkMode, theme }: Moda
   const handleIncrement = () => {
     const actual = parseFloat(montoPagar) || 0;
     const paso = cuota.modalidad_pago === 'mensual' ? 90 : (cuota.modalidad_pago === 'clases' ? pasoClases : 0.01);
-    const nuevo = actual + paso;
+    let nuevo = actual + paso;
+
+    // Calcular el máximo permitido
+    let maximo = Infinity;
+
+    // Límite por deuda restante del curso
+    if (curso && curso.monto_pendiente) {
+      maximo = Math.min(maximo, curso.monto_pendiente);
+    }
+
+    // Límite por meses restantes (solo para cursos mensuales)
+    if (cuota.modalidad_pago === 'mensual') {
+      const duracionCurso = cuota.meses_duracion || 12;
+      const mesesRestantes = duracionCurso - cuota.numero_cuota + 1;
+      const montoTotalCurso = 90 * mesesRestantes;
+      maximo = Math.min(maximo, montoTotalCurso);
+    }
+
+    // No permitir exceder el máximo
+    if (nuevo > maximo) {
+      nuevo = maximo;
+      // Mostrar mensaje cuando se alcanza el máximo
+      Alert.alert(
+        'Límite alcanzado',
+        `El monto máximo es $${maximo.toFixed(2)}`,
+        [{ text: 'Entendido' }]
+      );
+    }
+
     setMontoPagar(nuevo.toFixed(2));
   };
 
@@ -659,10 +708,44 @@ function ModalPago({ visible, cuota, onClose, onSuccess, darkMode, theme }: Moda
       if (isNaN(montoNumerico) || montoNumerico <= 0) throw new Error('El monto debe ser mayor a 0');
       if (montoNumerico < cuota.monto) throw new Error(`El monto mínimo es $${cuota.monto.toFixed(2)}`);
 
+      // Validación: No se puede pagar más que la deuda restante del curso
+      if (curso && montoNumerico > curso.monto_pendiente) {
+        throw new Error(`El monto excede la deuda restante ($${curso.monto_pendiente.toFixed(2)})`);
+      }
+
       if (cuota.modalidad_pago === 'mensual') {
-        if (Math.abs(montoNumerico % 90) > 0.01) throw new Error('Solo múltiplos de $90 (90, 180, 270...)');
-        const max = 90 * (cuota.meses_duracion || 12);
-        if (montoNumerico > max) throw new Error(`Monto máximo excedido ($${max})`);
+        const MONTO_BASE = 90;
+
+        // Verificar que sea múltiplo de 90
+        if (montoNumerico % MONTO_BASE !== 0) {
+          const mesesPagados = Math.floor(montoNumerico / MONTO_BASE);
+          const montoSugerido = mesesPagados * MONTO_BASE;
+          const montoSiguiente = (mesesPagados + 1) * MONTO_BASE;
+
+          throw new Error(
+            `Para cursos mensuales solo se permiten múltiplos de $${MONTO_BASE}.\n` +
+            `Puedes pagar: $${montoSugerido} (${mesesPagados} ${mesesPagados === 1 ? 'mes' : 'meses'}) ` +
+            `o $${montoSiguiente} (${mesesPagados + 1} meses)`
+          );
+        }
+
+        // Verificar que no sea menor a 90
+        if (montoNumerico < MONTO_BASE) {
+          throw new Error(`El monto mínimo para cursos mensuales es $${MONTO_BASE} (1 mes)`);
+        }
+
+        // Verificar que no exceda el monto total del curso
+        // Calcular meses restantes desde la cuota actual
+        const duracionCurso = cuota.meses_duracion || 12;
+        const mesesRestantes = duracionCurso - cuota.numero_cuota + 1;
+        const montoTotalCurso = MONTO_BASE * mesesRestantes;
+
+        if (montoNumerico > montoTotalCurso) {
+          throw new Error(
+            `El monto máximo para este curso es $${montoTotalCurso} (${mesesRestantes} ${mesesRestantes === 1 ? 'mes restante' : 'meses restantes'}).\n` +
+            `Estás en la cuota ${cuota.numero_cuota} de ${duracionCurso}.`
+          );
+        }
       } else if (cuota.modalidad_pago === 'clases') {
         if (!esMultiploDe(montoNumerico, montoPorClase)) throw new Error(`Solo múltiplos de $${montoPorClase.toFixed(2)}`);
       }
@@ -940,6 +1023,38 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // Estilos para tarjetas compactas 
+  statCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 
   sectionHeader: { paddingHorizontal: 20, marginTop: 10, marginBottom: 10 },

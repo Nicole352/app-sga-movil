@@ -1,7 +1,8 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl, Alert, Platform, StatusBar } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import ModalModulo from './ModalModulo';
@@ -56,6 +57,8 @@ export default function DetalleCursoDocenteScreen() {
   const [showModalEntregas, setShowModalEntregas] = useState(false);
   const [moduloSeleccionado, setModuloSeleccionado] = useState<number | null>(null);
   const [tareaSeleccionada, setTareaSeleccionada] = useState<Tarea | null>(null);
+  const [moduloEditar, setModuloEditar] = useState<Modulo | null>(null);
+  const [tareaEditar, setTareaEditar] = useState<Tarea | null>(null);
 
   useEffect(() => {
     loadData();
@@ -162,7 +165,7 @@ export default function DetalleCursoDocenteScreen() {
 
   const handleCerrarModulo = async (id_modulo: number) => {
     Alert.alert(
-      '¿Cerrar este módulo?',
+      'Cerrar módulo',
       'Los estudiantes ya no podrán enviar tareas una vez que cierres este módulo.',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -179,8 +182,11 @@ export default function DetalleCursoDocenteScreen() {
               if (response.ok) {
                 Alert.alert('Éxito', 'Módulo cerrado exitosamente');
                 fetchModulos();
+              } else {
+                Alert.alert('Error', 'No se pudo cerrar el módulo');
               }
             } catch (error) {
+              console.error('Error cerrando módulo:', error);
               Alert.alert('Error', 'No se pudo cerrar el módulo');
             }
           }
@@ -191,7 +197,7 @@ export default function DetalleCursoDocenteScreen() {
 
   const handleReabrirModulo = async (id_modulo: number) => {
     Alert.alert(
-      '¿Reabrir este módulo?',
+      'Reabrir módulo',
       'Los estudiantes podrán enviar tareas nuevamente.',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -207,8 +213,11 @@ export default function DetalleCursoDocenteScreen() {
               if (response.ok) {
                 Alert.alert('Éxito', 'Módulo reabierto exitosamente');
                 fetchModulos();
+              } else {
+                Alert.alert('Error', 'No se pudo reabrir el módulo');
               }
             } catch (error) {
+              console.error('Error reabriendo módulo:', error);
               Alert.alert('Error', 'No se pudo reabrir el módulo');
             }
           }
@@ -217,9 +226,14 @@ export default function DetalleCursoDocenteScreen() {
     );
   };
 
+  const handleEditarModulo = (modulo: Modulo) => {
+    setModuloEditar(modulo);
+    setShowModalModulo(true);
+  };
+
   const handleEliminarModulo = async (id_modulo: number) => {
     Alert.alert(
-      '¿Eliminar módulo?',
+      'Eliminar módulo',
       'Se eliminarán todas las tareas asociadas. Esta acción no se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -236,8 +250,11 @@ export default function DetalleCursoDocenteScreen() {
               if (response.ok) {
                 Alert.alert('Éxito', 'Módulo eliminado exitosamente');
                 fetchModulos();
+              } else {
+                Alert.alert('Error', 'No se pudo eliminar el módulo');
               }
             } catch (error) {
+              console.error('Error eliminando módulo:', error);
               Alert.alert('Error', 'No se pudo eliminar el módulo');
             }
           }
@@ -247,14 +264,14 @@ export default function DetalleCursoDocenteScreen() {
   };
 
   const handleEditarTarea = (tarea: Tarea, id_modulo: number) => {
-    setTareaSeleccionada(tarea);
+    setTareaEditar(tarea);
     setModuloSeleccionado(id_modulo);
     setShowModalTarea(true);
   };
 
   const handleEliminarTarea = async (id_tarea: number, id_modulo: number) => {
     Alert.alert(
-      '¿Eliminar tarea?',
+      'Eliminar tarea',
       'Se eliminarán todas las entregas asociadas. Esta acción no se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -272,8 +289,11 @@ export default function DetalleCursoDocenteScreen() {
                 Alert.alert('Éxito', 'Tarea eliminada exitosamente');
                 fetchTareasModulo(id_modulo);
                 fetchModulos();
+              } else {
+                Alert.alert('Error', 'No se pudo eliminar la tarea');
               }
             } catch (error) {
+              console.error('Error eliminando tarea:', error);
               Alert.alert('Error', 'No se pudo eliminar la tarea');
             }
           }
@@ -290,6 +310,7 @@ export default function DetalleCursoDocenteScreen() {
     textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
     border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
     accent: '#3b82f6',
+    primaryGradient: ['#3b82f6', '#2563eb'] as const,
     blue: '#3b82f6',
     green: '#10b981',
     red: '#ef4444',
@@ -319,27 +340,36 @@ export default function DetalleCursoDocenteScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: theme.blue + '20', borderColor: theme.blue + '40' }]}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.blue} />
-          <Text style={[styles.backButtonText, { color: theme.blue }]}>Volver</Text>
-        </TouchableOpacity>
+      <StatusBar barStyle="light-content" />
 
-        <View style={styles.headerContent}>
-          <View style={[styles.headerIcon, { backgroundColor: theme.blue }]}>
-            <Ionicons name="book" size={24} color="#fff" />
+      {/* Header Azul con Gradiente */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={theme.primaryGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Text style={styles.backButtonText}>Volver</Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerContent}>
+            <View style={styles.headerIconContainer}>
+              <Ionicons name="book" size={28} color={theme.blue} />
+            </View>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>{curso?.nombre || 'Detalle del Curso'}</Text>
+              <Text style={styles.headerSubtitle}>
+                Código: {curso?.codigo_curso} • {curso?.total_estudiantes || 0} estudiantes
+              </Text>
+            </View>
           </View>
-          <View style={styles.headerInfo}>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>{curso?.nombre || 'Detalle del Curso'}</Text>
-            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-              Código: {curso?.codigo_curso} • {curso?.total_estudiantes || 0} estudiantes
-            </Text>
-          </View>
-        </View>
+        </LinearGradient>
       </View>
 
       <ScrollView
@@ -359,7 +389,10 @@ export default function DetalleCursoDocenteScreen() {
           <View style={styles.toolsButtons}>
             <TouchableOpacity
               style={[styles.toolButton, { backgroundColor: theme.blue }]}
-              onPress={() => setShowModalModulo(true)}
+              onPress={() => {
+                setModuloEditar(null);
+                setShowModalModulo(true);
+              }}
             >
               <Ionicons name="add" size={18} color="#fff" />
               <Text style={styles.toolButtonText}>Módulo</Text>
@@ -441,6 +474,14 @@ export default function DetalleCursoDocenteScreen() {
                   {/* Botones de Acción del Módulo */}
                   <View style={styles.moduloActions}>
                     <TouchableOpacity
+                      style={[styles.moduloActionButton, { backgroundColor: theme.blue + '20', borderColor: theme.blue + '40' }]}
+                      onPress={() => handleEditarModulo(modulo)}
+                    >
+                      <Ionicons name="pencil" size={14} color={theme.blue} />
+                      <Text style={[styles.moduloActionText, { color: theme.blue }]}>Editar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                       style={[styles.moduloActionButton, { backgroundColor: modulo.promedios_publicados ? theme.blue + '20' : 'rgba(156, 163, 175, 0.15)', borderColor: modulo.promedios_publicados ? theme.blue + '40' : 'rgba(156, 163, 175, 0.3)' }]}
                       onPress={() => handleTogglePromedios(modulo.id_modulo, modulo.promedios_publicados)}
                     >
@@ -477,102 +518,143 @@ export default function DetalleCursoDocenteScreen() {
                   </View>
 
                   {/* Lista de Tareas (expandible) */}
-                  {isExpanded && (
-                    <View style={styles.tareasContainer}>
-                      <TouchableOpacity
-                        style={[styles.addTareaButton, { backgroundColor: theme.blue }]}
-                        onPress={() => {
-                          setModuloSeleccionado(modulo.id_modulo);
-                          setShowModalTarea(true);
-                        }}
-                      >
-                        <Ionicons name="add" size={16} color="#fff" />
-                        <Text style={styles.addTareaButtonText}>Nueva Tarea</Text>
-                      </TouchableOpacity>
+                  {
+                    isExpanded && (
+                      <View style={styles.tareasContainer}>
+                        <TouchableOpacity
+                          style={[styles.addTareaButton, { backgroundColor: theme.blue }]}
+                          onPress={() => {
+                            setModuloSeleccionado(modulo.id_modulo);
+                            setShowModalTarea(true);
+                          }}
+                        >
+                          <Ionicons name="add" size={16} color="#fff" />
+                          <Text style={styles.addTareaButtonText}>Nueva Tarea</Text>
+                        </TouchableOpacity>
 
-                      {!tareasPorModulo[modulo.id_modulo] ? (
-                        <Text style={[styles.tareasLoading, { color: theme.textMuted }]}>Cargando tareas...</Text>
-                      ) : tareasPorModulo[modulo.id_modulo].length === 0 ? (
-                        <View style={styles.tareasEmpty}>
-                          <Ionicons name="document-text-outline" size={36} color={theme.textMuted} style={{ opacity: 0.3 }} />
-                          <Text style={[styles.tareasEmptyText, { color: theme.textMuted }]}>
-                            No hay tareas en este módulo
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.tareasList}>
-                          {tareasPorModulo[modulo.id_modulo].map((tarea) => (
-                            <View key={tarea.id_tarea} style={[styles.tareaCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: theme.border }]}>
-                              <Text style={[styles.tareaTitulo, { color: theme.text }]}>{tarea.titulo}</Text>
-                              {tarea.descripcion && (
-                                <Text style={[styles.tareaDescripcion, { color: theme.textMuted }]} numberOfLines={2}>
-                                  {tarea.descripcion}
-                                </Text>
-                              )}
+                        {!tareasPorModulo[modulo.id_modulo] ? (
+                          <Text style={[styles.tareasLoading, { color: theme.textMuted }]}>Cargando tareas...</Text>
+                        ) : tareasPorModulo[modulo.id_modulo].length === 0 ? (
+                          <View style={styles.tareasEmpty}>
+                            <Ionicons name="document-text-outline" size={36} color={theme.textMuted} style={{ opacity: 0.3 }} />
+                            <Text style={[styles.tareasEmptyText, { color: theme.textMuted }]}>
+                              No hay tareas en este módulo
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.tareasList}>
+                            {/* Agrupación por Categoría */}
+                            {(() => {
+                              const tareasModulo = tareasPorModulo[modulo.id_modulo] || [];
+                              const tareasPorCategoria = tareasModulo.reduce((acc, tarea) => {
+                                // Usar cast para propiedades que no estén en la interfaz base pero vengan del backend
+                                const tareaAny = tarea as any;
+                                const nombreCat = tareaAny.categoria_nombre || 'Sin Categoría';
+                                const ponderacionCat = tareaAny.categoria_ponderacion || 0;
+                                const key = `${nombreCat}|${ponderacionCat}`;
 
-                              <View style={styles.tareaInfo}>
-                                <View style={styles.tareaInfoItem}>
-                                  <Ionicons name="time" size={12} color={theme.textMuted} />
-                                  <Text style={[styles.tareaInfoText, { color: theme.textMuted }]}>
-                                    {formatDateTime(tarea.fecha_limite)}
-                                  </Text>
-                                </View>
-                                <View style={styles.tareaInfoItem}>
-                                  <Ionicons name="checkmark-circle" size={12} color={theme.green} />
-                                  <Text style={[styles.tareaInfoText, { color: theme.green }]}>
-                                    {tarea.entregas_calificadas}/{tarea.total_entregas}
-                                  </Text>
-                                </View>
-                                <View style={styles.tareaInfoItem}>
-                                  <Ionicons name="alert-circle" size={12} color={theme.red} />
-                                  <Text style={[styles.tareaInfoText, { color: theme.red }]}>
-                                    {tarea.nota_maxima}pts | {tarea.ponderacion}%
-                                  </Text>
-                                </View>
-                              </View>
+                                if (!acc[key]) acc[key] = [];
+                                acc[key].push(tarea);
+                                return acc;
+                              }, {} as Record<string, Tarea[]>);
 
-                              {/* Botones de acción */}
-                              <View style={styles.tareaActions}>
-                                <TouchableOpacity
-                                  style={[styles.tareaActionButton, { backgroundColor: theme.blue + '20', borderColor: theme.blue + '40' }]}
-                                  onPress={() => handleEditarTarea(tarea, modulo.id_modulo)}
-                                >
-                                  <Ionicons name="pencil" size={14} color={theme.blue} />
-                                  <Text style={[styles.tareaActionText, { color: theme.blue }]}>Editar</Text>
-                                </TouchableOpacity>
+                              return Object.entries(tareasPorCategoria).map(([key, tareas]) => {
+                                const [nombreCat, ponderacionCat] = key.split('|');
 
-                                <TouchableOpacity
-                                  style={[styles.tareaActionButton, { backgroundColor: theme.red + '20', borderColor: theme.red + '40' }]}
-                                  onPress={() => handleEliminarTarea(tarea.id_tarea, modulo.id_modulo)}
-                                >
-                                  <Ionicons name="trash" size={14} color={theme.red} />
-                                  <Text style={[styles.tareaActionText, { color: theme.red }]}>Eliminar</Text>
-                                </TouchableOpacity>
-                              </View>
+                                return (
+                                  <View key={key}>
+                                    {nombreCat !== 'Sin Categoría' && (
+                                      <View style={[styles.categoryHeader, {
+                                        backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+                                        borderLeftColor: theme.accent
+                                      }]}>
+                                        <Ionicons name="ribbon" size={18} color={theme.accent} />
+                                        <Text style={[styles.categoryTitle, { color: theme.text }]}>{nombreCat}</Text>
+                                        <View style={[styles.categoryBadge, { backgroundColor: theme.accent }]}>
+                                          <Text style={styles.categoryBadgeText}>{ponderacionCat} pts</Text>
+                                        </View>
+                                      </View>
+                                    )}
 
-                              {tarea.total_entregas > 0 && (
-                                <TouchableOpacity
-                                  style={[styles.tareaButton, { backgroundColor: theme.blue }]}
-                                  onPress={() => {
-                                    setTareaSeleccionada(tarea);
-                                    setShowModalEntregas(true);
-                                  }}
-                                >
-                                  <Ionicons name="document-text" size={14} color="#fff" />
-                                  <Text style={styles.tareaButtonText}>Ver Entregas ({tarea.total_entregas})</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  )}
+                                    {tareas.map((tarea) => (
+                                      <View key={tarea.id_tarea} style={[styles.tareaCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: theme.border }]}>
+                                        <Text style={[styles.tareaTitulo, { color: theme.text }]}>{tarea.titulo}</Text>
+                                        {tarea.descripcion && (
+                                          <Text style={[styles.tareaDescripcion, { color: theme.textMuted }]} numberOfLines={2}>
+                                            {tarea.descripcion}
+                                          </Text>
+                                        )}
+
+                                        <View style={styles.tareaInfo}>
+                                          <View style={styles.tareaInfoItem}>
+                                            <Ionicons name="time" size={12} color={theme.textMuted} />
+                                            <Text style={[styles.tareaInfoText, { color: theme.textMuted }]}>
+                                              {formatDateTime(tarea.fecha_limite)}
+                                            </Text>
+                                          </View>
+                                          <View style={styles.tareaInfoItem}>
+                                            <Ionicons name="checkmark-circle" size={12} color={theme.green} />
+                                            <Text style={[styles.tareaInfoText, { color: theme.green }]}>
+                                              {tarea.entregas_calificadas}/{tarea.total_entregas}
+                                            </Text>
+                                          </View>
+                                          <View style={styles.tareaInfoItem}>
+                                            <Ionicons name="alert-circle" size={12} color={theme.red} />
+                                            <Text style={[styles.tareaInfoText, { color: theme.red }]}>
+                                              {tarea.nota_maxima}pts | {tarea.ponderacion}%
+                                            </Text>
+                                          </View>
+                                        </View>
+
+                                        {/* Botones de acción */}
+                                        <View style={styles.tareaActions}>
+                                          <TouchableOpacity
+                                            style={[styles.tareaActionButton, { backgroundColor: theme.blue + '20', borderColor: theme.blue + '40' }]}
+                                            onPress={() => handleEditarTarea(tarea, modulo.id_modulo)}
+                                          >
+                                            <Ionicons name="pencil" size={14} color={theme.blue} />
+                                            <Text style={[styles.tareaActionText, { color: theme.blue }]}>Editar</Text>
+                                          </TouchableOpacity>
+
+                                          <TouchableOpacity
+                                            style={[styles.tareaActionButton, { backgroundColor: theme.red + '20', borderColor: theme.red + '40' }]}
+                                            onPress={() => handleEliminarTarea(tarea.id_tarea, modulo.id_modulo)}
+                                          >
+                                            <Ionicons name="trash" size={14} color={theme.red} />
+                                            <Text style={[styles.tareaActionText, { color: theme.red }]}>Eliminar</Text>
+                                          </TouchableOpacity>
+                                        </View>
+
+                                        {tarea.total_entregas > 0 && (
+                                          <TouchableOpacity
+                                            style={[styles.tareaButton, { backgroundColor: theme.blue }]}
+                                            onPress={() => {
+                                              setTareaSeleccionada(tarea);
+                                              setShowModalEntregas(true);
+                                            }}
+                                          >
+                                            <Ionicons name="document-text" size={14} color="#fff" />
+                                            <Text style={styles.tareaButtonText}>Ver Entregas ({tarea.total_entregas})</Text>
+                                          </TouchableOpacity>
+                                        )}
+                                      </View>
+                                    ))}
+                                  </View>
+                                );
+                              });
+                            })()}
+                          </View>
+                        )}
+
+                      </View>
+                    )
+                  }
                 </View>
               );
             })}
           </View>
-        )}
+        )
+        }
       </ScrollView>
 
       {/* Modales */}
@@ -584,6 +666,7 @@ export default function DetalleCursoDocenteScreen() {
           fetchModulos();
         }}
         id_curso={id_curso}
+        moduloEditar={moduloEditar}
       />
 
       <ModalTarea
@@ -606,25 +689,27 @@ export default function DetalleCursoDocenteScreen() {
         tareaEditar={tareaSeleccionada}
       />
 
-      {tareaSeleccionada && (
-        <ModalEntregas
-          visible={showModalEntregas}
-          onClose={() => {
-            setShowModalEntregas(false);
-            setTareaSeleccionada(null);
-          }}
-          onSuccess={() => {
-            if (tareaSeleccionada.id_modulo) {
-              fetchTareasModulo(tareaSeleccionada.id_modulo);
-            }
-          }}
-          id_tarea={tareaSeleccionada.id_tarea}
-          nombre_tarea={tareaSeleccionada.titulo}
-          nota_maxima={tareaSeleccionada.nota_maxima}
-          ponderacion={tareaSeleccionada.ponderacion}
-        />
-      )}
-    </View>
+      {
+        tareaSeleccionada && (
+          <ModalEntregas
+            visible={showModalEntregas}
+            onClose={() => {
+              setShowModalEntregas(false);
+              setTareaSeleccionada(null);
+            }}
+            onSuccess={() => {
+              if (tareaSeleccionada.id_modulo) {
+                fetchTareasModulo(tareaSeleccionada.id_modulo);
+              }
+            }}
+            id_tarea={tareaSeleccionada.id_tarea}
+            nombre_tarea={tareaSeleccionada.titulo}
+            nota_maxima={tareaSeleccionada.nota_maxima}
+            ponderacion={tareaSeleccionada.ponderacion}
+          />
+        )
+      }
+    </View >
   );
 }
 
@@ -632,47 +717,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
+  headerContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    marginBottom: -20,
+    zIndex: 10
+  },
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignSelf: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   backButtonText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#fff',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  headerIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerInfo: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
+    color: '#fff',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -759,6 +866,36 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 18,
   },
+
+  // Categorías
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    paddingHorizontal: 12,
+    borderLeftWidth: 4,
+    borderRadius: 8,
+    marginBottom: 10,
+    marginTop: 10,
+    gap: 10,
+  },
+  categoryTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
   moduloMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',

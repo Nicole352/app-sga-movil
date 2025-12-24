@@ -534,9 +534,7 @@ export default function CalificacionesEstudiante() {
                                                 </View>
                                               )}
 
-                                              {cal.ponderacion && (
-                                                <Text style={[styles.taskWeight, { color: theme.textMuted }]}>Peso: {cal.ponderacion}pts</Text>
-                                              )}
+
                                             </View>
 
                                             {cal.comentario_docente && (

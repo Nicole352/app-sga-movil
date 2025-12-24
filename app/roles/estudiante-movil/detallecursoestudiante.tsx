@@ -22,6 +22,8 @@ import { API_URL } from '../../../constants/config';
 import { getToken, storage, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
 import { useSocket } from '../../../hooks/useSocket';
+import { WebView } from 'react-native-webview';
+import { Image, Dimensions } from 'react-native';
 
 interface Modulo {
   id_modulo: number;
@@ -429,11 +431,28 @@ export default function DetalleCursoEstudiante() {
                       return (
                         <View key={catKey} style={styles.categoryGroup}>
                           {catNombre !== 'General' && (
-                            <View style={styles.categoryHeader}>
-                              <Ionicons name="bookmark" size={12} color={theme.accent} />
-                              <Text style={[styles.categoryTitle, { color: theme.textSecondary }]}>
-                                {catNombre} <Text style={{ fontSize: 10, opacity: 0.7 }}>({catPond} pts)</Text>
-                              </Text>
+                            <View style={[styles.categoryHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                <Ionicons name="bookmark" size={12} color={theme.accent} />
+                                <Text style={[styles.categoryTitle, { color: theme.textSecondary }]}>
+                                  {catNombre}
+                                </Text>
+                              </View>
+                              <View style={{
+                                backgroundColor: theme.accent,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                                borderRadius: 12,
+                                shadowColor: theme.accent,
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.2,
+                                shadowRadius: 3,
+                                elevation: 3
+                              }}>
+                                <Text style={{ fontSize: 10, color: '#fff', fontWeight: 'bold' }}>
+                                  {catPond} pts
+                                </Text>
+                              </View>
                             </View>
                           )}
 
@@ -469,7 +488,8 @@ export default function DetalleCursoEstudiante() {
                                 <View style={styles.taskMetaRow}>
                                   {/* RED DATE LOGIC: If late and not submitted, color is danger */}
                                   <Text style={[styles.metaText, { color: lateWarning ? theme.danger : theme.textMuted }]}>
-                                    <Ionicons name="calendar-outline" size={10} /> {new Date(tarea.fecha_limite).toLocaleDateString()}
+                                    <Ionicons name="calendar-outline" size={10} /> {new Date(tarea.fecha_limite).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })} •
+                                    {new Date(tarea.fecha_limite).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit', hour12: false })}
                                   </Text>
                                   <Text style={[styles.metaText, { color: theme.textMuted }]}>
                                     Max: {Number(tarea.nota_maxima).toFixed(2)} pts
@@ -563,17 +583,56 @@ export default function DetalleCursoEstudiante() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {previewFile?.action === 'upload' ? 'Confirmar Entrega' : 'Actualizar Archivo'}
+              {previewFile?.action === 'upload' ? 'Vista Previa de Entrega' : 'Vista Previa de Actualización'}
             </Text>
 
-            <View style={[styles.filePreviewCard, { backgroundColor: darkMode ? '#0f172a' : '#f1f5f9' }]}>
-              <Ionicons name="document-attach" size={32} color={theme.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.previewName, { color: theme.text }]}>{previewFile?.name}</Text>
-                <Text style={{ color: theme.textMuted, fontSize: 12 }}>{(previewFile?.size || 0) / 1024 > 1024 ? `${((previewFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB` : `${((previewFile?.size || 0) / 1024).toFixed(2)} KB`}</Text>
-              </View>
+            {/* Content Preview Container */}
+            <View style={{
+              height: Dimensions.get('window').height * 0.5,
+              backgroundColor: darkMode ? '#0f172a' : '#f1f5f9',
+              borderRadius: 12,
+              marginBottom: 16,
+              overflow: 'hidden',
+              borderWidth: 1,
+              borderColor: theme.border
+            }}>
+              {previewFile?.type.includes('image') ? (
+                <Image
+                  source={{ uri: previewFile.uri }}
+                  style={{ width: '100%', height: '100%', resizeMode: 'contain' }}
+                />
+              ) : previewFile?.type.includes('pdf') ? (
+                <WebView
+                  source={{ uri: previewFile.uri }}
+                  style={{ flex: 1 }}
+                  originWhitelist={['*']}
+                  nestedScrollEnabled
+                />
+              ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="document-text-outline" size={64} color={theme.textMuted} />
+                  <Text style={{ color: theme.textMuted, marginTop: 12, textAlign: 'center' }}>
+                    Vista previa no disponible para este tipo de archivo
+                  </Text>
+                  <Text style={{ color: theme.text, fontWeight: 'bold', marginTop: 8 }}>
+                    {previewFile?.name}
+                  </Text>
+                </View>
+              )}
             </View>
 
+            {/* File Info Mini Card */}
+            <View style={[styles.filePreviewCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc', marginBottom: 16 }]}>
+              <Ionicons name={previewFile?.type.includes('pdf') ? "document-text" : "image"} size={24} color={theme.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.previewName, { color: theme.text }]} numberOfLines={1}>{previewFile?.name}</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 12 }}>
+                  {(previewFile?.size || 0) / 1024 > 1024
+                    ? `${((previewFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB`
+                    : `${((previewFile?.size || 0) / 1024).toFixed(2)} KB`}
+                </Text>
+              </View>
+            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity onPress={() => setPreviewFile(null)} style={[styles.modalBtn, { backgroundColor: theme.border }]}>
                 <Text style={{ color: theme.textSecondary }}>Cancelar</Text>
