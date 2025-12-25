@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,13 @@ export default function AulaVirtual() {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const handleFocus = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
 
   const handleSubmit = async () => {
     if (!formData.identifier || !formData.password) {
@@ -103,7 +110,7 @@ export default function AulaVirtual() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="padding"
     >
       <StatusBar style="light" />
       <ImageBackground
@@ -114,6 +121,7 @@ export default function AulaVirtual() {
         <View style={styles.overlay} />
 
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -150,6 +158,7 @@ export default function AulaVirtual() {
                     onChangeText={(text) => setFormData({ ...formData, identifier: text.toLowerCase() })}
                     autoCapitalize="none"
                     autoCorrect={false}
+                    onFocus={handleFocus}
                   />
                 </View>
               </View>
@@ -166,6 +175,7 @@ export default function AulaVirtual() {
                     value={formData.password}
                     onChangeText={(text) => setFormData({ ...formData, password: text })}
                     secureTextEntry={!showPassword}
+                    onFocus={handleFocus}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -219,7 +229,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 150,
     paddingHorizontal: 20,
   },
   header: {

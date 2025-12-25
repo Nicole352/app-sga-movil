@@ -1,105 +1,156 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
+  FlatList,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
   Modal,
   RefreshControl,
-  ActivityIndicator,
+  Alert,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { storage } from '../../../services/storage';
-import { eventEmitter } from '../../../services/eventEmitter';
+import { useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import CompactPicker from './components/CompactPicker';
+import Pagination from './components/Pagination';
 import { API_URL } from '../../../constants/config';
+import { getToken, getDarkMode } from '../../../services/storage';
+import { eventEmitter } from '../../../services/eventEmitter';
+
+const { width } = Dimensions.get('window');
 
 interface Auditoria {
   id_auditoria: number;
   tabla_afectada: string;
   operacion: 'INSERT' | 'UPDATE' | 'DELETE';
   descripcion: string;
-  detalles: string;
+  detalles: string | any;
   usuario: {
     id: number;
     nombre: string;
     apellido: string;
     username: string;
     email: string;
+    cedula: string;
     rol: string;
   };
   fecha_operacion: string;
   ip_address: string | null;
+  user_agent: string | null;
+}
+
+interface Stats {
+  total: number;
+  hoy: number;
+  porTabla: { tabla: string; cantidad: number }[];
+  porUsuario: { usuario_id: number; nombre: string; apellido: string; cantidad: number }[];
 }
 
 export default function AuditoriaScreen() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [auditorias, setAuditorias] = useState<Auditoria[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterOperation, setFilterOperation] = useState('');
-  const [selectedAudit, setSelectedAudit] = useState<Auditoria | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [stats, setStats] = useState({ total: 0, hoy: 0 });
 
-  const theme = darkMode
-    ? {
-        bg: '#0a0a0a',
-        cardBg: 'rgba(18, 18, 18, 0.95)',
-        text: '#fff',
-        textSecondary: 'rgba(255, 255, 255, 0.7)',
-        textMuted: 'rgba(255, 255, 255, 0.5)',
-        border: 'rgba(239, 68, 68, 0.2)',
-        accent: '#ef4444',
-        inputBg: 'rgba(255, 255, 255, 0.06)',
-        inputBorder: 'rgba(255, 255, 255, 0.12)',
-      }
-    : {
-        bg: '#f8fafc',
-        cardBg: 'rgba(255, 255, 255, 0.95)',
-        text: '#1e293b',
-        textSecondary: 'rgba(30, 41, 59, 0.7)',
-        textMuted: 'rgba(30, 41, 59, 0.5)',
-        border: 'rgba(239, 68, 68, 0.2)',
-        accent: '#ef4444',
-        inputBg: 'rgba(0, 0, 0, 0.05)',
-        inputBorder: 'rgba(0, 0, 0, 0.15)',
-      };
+  // Datos
+  const [auditorias, setAuditorias] = useState<Auditoria[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    total: 0,
+    hoy: 0,
+    porTabla: [],
+    porUsuario: [],
+  });
+
+  // Filtros
+  const [filtros, setFiltros] = useState({
+    busqueda: '',
+    tabla: '',
+    operacion: '',
+    rol: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+  });
+
+  // Paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const limite = 15;
+
+  // Modal
+  const [modalDetalle, setModalDetalle] = useState<Auditoria | null>(null);
+
+  // Date Pickers
+  const [showDatePickerInicio, setShowDatePickerInicio] = useState(false);
+  const [showDatePickerFin, setShowDatePickerFin] = useState(false);
+
+  const theme = darkMode ? {
+    bg: '#0f172a',
+    cardBg: '#1e293b',
+    text: '#f8fafc',
+    textSecondary: '#cbd5e1',
+    textMuted: '#94a3b8',
+    border: '#334155',
+    primary: '#ef4444',
+    inputBg: '#334155',
+    success: '#10b981',
+    danger: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6',
+    purple: '#a855f7',
+  } : {
+    bg: '#f8fafc',
+    cardBg: '#ffffff',
+    text: '#0f172a',
+    textSecondary: '#475569',
+    textMuted: '#64748b',
+    border: '#e2e8f0',
+    primary: '#ef4444',
+    inputBg: '#ffffff',
+    success: '#059669',
+    danger: '#ef4444',
+    warning: '#d97706',
+    info: '#3b82f6',
+    purple: '#a855f7',
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [paginaActual, filtros])
+  );
 
   useEffect(() => {
-    const loadDarkMode = async () => {
-      const savedMode = await storage.getItem('dark_mode');
-      if (savedMode !== null) {
-        setDarkMode(savedMode === 'true');
-      }
-    };
-    loadDarkMode();
-
-    const handleDarkModeChange = (value: boolean) => {
-      setDarkMode(value);
-    };
-
-    eventEmitter.on('darkModeChanged', handleDarkModeChange);
-
-    return () => {
-      eventEmitter.off('darkModeChanged', handleDarkModeChange);
-    };
+    const themeHandler = (isDark: boolean) => setDarkMode(isDark);
+    eventEmitter.on('themeChanged', themeHandler);
+    getDarkMode().then(setDarkMode);
+    return () => { eventEmitter.off('themeChanged', themeHandler); };
   }, []);
 
-  const loadAuditorias = async () => {
+  const loadData = async () => {
     try {
-      const token = await storage.getItem('auth_token');
+      setLoading(true);
+      const token = await getToken();
       if (!token) return;
 
       const params = new URLSearchParams({
-        pagina: '1',
-        limite: '50',
+        pagina: paginaActual.toString(),
+        limite: limite.toString(),
       });
 
-      if (searchTerm) params.append('busqueda', searchTerm);
-      if (filterOperation) params.append('operacion', filterOperation);
+      if (filtros.busqueda) params.append('busqueda', filtros.busqueda);
+      if (filtros.tabla) params.append('tabla', filtros.tabla);
+      if (filtros.operacion) params.append('operacion', filtros.operacion);
+      if (filtros.rol) params.append('rol', filtros.rol);
+      if (filtros.fecha_inicio) params.append('fecha_inicio', filtros.fecha_inicio);
+      if (filtros.fecha_fin) params.append('fecha_fin', filtros.fecha_fin);
 
       const response = await fetch(
         `${API_URL}/auditoria/historial-completo?${params}`,
@@ -111,586 +162,504 @@ export default function AuditoriaScreen() {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setAuditorias(data.data.auditorias);
-          setStats({
-            total: data.data.total,
-            hoy: data.data.hoy || 0,
-          });
-        }
+      if (!response.ok) {
+        throw new Error('Error al cargar el historial');
       }
-    } catch (error) {
-      console.error('Error cargando auditorías:', error);
-    }
-  };
 
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await loadAuditorias();
+      const data = await response.json();
+
+      if (data.success) {
+        setAuditorias(data.data.auditorias);
+        setStats({
+          total: data.data.total,
+          hoy: data.data.hoy || 0,
+          porTabla: data.data.porTabla || [],
+          porUsuario: data.data.porUsuario || [],
+        });
+        setTotalPaginas(data.data.totalPaginas);
+      }
+    } catch (err: unknown) {
+      console.error('Error al cargar auditorías:', err);
+      Alert.alert('Error', 'No se pudo cargar el historial de auditoría');
+    } finally {
       setLoading(false);
-    };
-    init();
-  }, [searchTerm, filterOperation]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadAuditorias();
-    setRefreshing(false);
+      setRefreshing(false);
+    }
   };
 
   const formatearFecha = (fecha: string) => {
     return new Date(fecha).toLocaleString('es-EC', {
-      day: '2-digit',
-      month: '2-digit',
       year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
   const getOperacionBadge = (operacion: string) => {
-    const badges: Record<
-      string,
-      { bg: string; text: string; label: string; icon: string }
-    > = {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
       INSERT: {
-        bg: 'rgba(34, 197, 94, 0.2)',
-        text: '#4ade80',
-        label: 'CREACIÓN',
-        icon: 'add-circle',
+        bg: darkMode ? 'rgba(34, 197, 94, 0.2)' : '#d1fae5',
+        text: darkMode ? '#4ade80' : '#047857',
+        label: 'CREACIÓN'
       },
       UPDATE: {
-        bg: 'rgba(59, 130, 246, 0.2)',
-        text: '#60a5fa',
-        label: 'MODIFICACIÓN',
-        icon: 'create',
+        bg: darkMode ? 'rgba(59, 130, 246, 0.2)' : '#dbeafe',
+        text: darkMode ? '#60a5fa' : '#1d4ed8',
+        label: 'MODIFICACIÓN'
       },
       DELETE: {
-        bg: 'rgba(239, 68, 68, 0.25)',
-        text: '#f87171',
-        label: 'ELIMINACIÓN',
-        icon: 'trash',
+        bg: darkMode ? 'rgba(239, 68, 68, 0.25)' : '#fee2e2',
+        text: darkMode ? '#f87171' : '#b91c1c',
+        label: 'ELIMINACIÓN'
       },
     };
-    return (
-      badges[operacion] || {
-        bg: 'rgba(255, 255, 255, 0.1)',
-        text: 'rgba(255, 255, 255, 0.7)',
-        label: operacion,
-        icon: 'help-circle',
-      }
-    );
-  };
-
-  const getTablaIcon = (tabla: string): string => {
-    const iconMap: Record<string, string> = {
-      cursos: 'book-outline',
-      matriculas: 'school-outline',
-      pagos_mensuales: 'card-outline',
-      docentes: 'people-outline',
-      estudiantes: 'people-outline',
-      usuarios: 'person-outline',
-      sesiones_usuario: 'log-in-outline',
-      notificaciones: 'notifications-outline',
+    return badges[operacion] || {
+      bg: darkMode ? 'rgba(255, 255, 255, 0.1)' : '#f3f4f6',
+      text: darkMode ? 'rgba(255, 255, 255, 0.7)' : '#6b7280',
+      label: operacion
     };
-    return iconMap[tabla] || 'server-outline';
   };
 
-  if (loading) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.bg, justifyContent: 'center' },
-        ]}
-      >
-        <ActivityIndicator size="large" color={theme.accent} />
+  const limpiarFiltros = () => {
+    setFiltros({
+      busqueda: '',
+      tabla: '',
+      operacion: '',
+      rol: '',
+      fecha_inicio: '',
+      fecha_fin: '',
+    });
+    setPaginaActual(1);
+  };
+
+  const onDateChangeInicio = (event: any, selectedDate?: Date) => {
+    setShowDatePickerInicio(Platform.OS === 'ios');
+    if (selectedDate) {
+      setFiltros({ ...filtros, fecha_inicio: selectedDate.toISOString().split('T')[0] });
+      if (Platform.OS !== 'ios') setShowDatePickerInicio(false);
+    } else {
+      setShowDatePickerInicio(false);
+    }
+  };
+
+  const onDateChangeFin = (event: any, selectedDate?: Date) => {
+    setShowDatePickerFin(Platform.OS === 'ios');
+    if (selectedDate) {
+      setFiltros({ ...filtros, fecha_fin: selectedDate.toISOString().split('T')[0] });
+      if (Platform.OS !== 'ios') setShowDatePickerFin(false);
+    } else {
+      setShowDatePickerFin(false);
+    }
+  };
+
+  const renderStatCard = (
+    title: string,
+    value: string | number,
+    icon: keyof typeof Ionicons.glyphMap,
+    color: string
+  ) => (
+    <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+      <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon} size={18} color={color} />
       </View>
+      <View style={{ alignItems: 'center' }}>
+        <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
+        <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>{title}</Text>
+      </View>
+    </View>
+  );
+
+  const renderAuditoriaCard = ({ item }: { item: Auditoria }) => {
+    const badge = getOperacionBadge(item.operacion);
+
+    return (
+      <TouchableOpacity
+        style={[styles.auditoriaCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+        onPress={() => setModalDetalle(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <View style={[styles.operacionBadge, { backgroundColor: badge.bg }]}>
+            <Text style={[styles.operacionText, { color: badge.text }]}>{badge.label}</Text>
+          </View>
+          <Text style={[styles.fechaText, { color: theme.textMuted }]}>
+            {formatearFecha(item.fecha_operacion)}
+          </Text>
+        </View>
+
+        <Text style={[styles.tablaText, { color: theme.text }]}>{item.tabla_afectada}</Text>
+        <Text style={[styles.descripcionText, { color: theme.textSecondary }]} numberOfLines={2}>
+          {item.descripcion}
+        </Text>
+
+        <View style={styles.userRow}>
+          <Ionicons name="person-circle-outline" size={16} color={theme.textMuted} />
+          <Text style={[styles.userName, { color: theme.text }]}>
+            {item.usuario.nombre} {item.usuario.apellido}
+          </Text>
+          <Text style={[styles.userRol, { color: theme.textMuted }]}>
+            ({item.usuario.rol})
+          </Text>
+        </View>
+
+        <View style={styles.verMasRow}>
+          <Text style={[styles.verMasText, { color: theme.primary }]}>Ver detalles</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+        </View>
+      </TouchableOpacity>
     );
-  }
+  };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.accent}
-          />
+  const renderDetallesModal = () => {
+    if (!modalDetalle) return null;
+
+    let detallesObj = modalDetalle.detalles;
+    if (typeof detallesObj === 'string') {
+      try {
+        detallesObj = JSON.parse(detallesObj);
+      } catch (e) {
+        detallesObj = {};
+      }
+    }
+
+    const camposIgnorados = ['id', 'id_curso', 'id_estudiante', 'id_docente', 'password', 'token'];
+    const detallesFiltrados = Object.entries(detallesObj || {}).filter(([key]) => {
+      if (camposIgnorados.includes(key)) return false;
+      if (key.startsWith('id_')) return false;
+      return true;
+    });
+
+    const formatearNombreCampo = (campo: string) => {
+      return campo
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    };
+
+    const formatearValor = (valor: any) => {
+      if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+      if (typeof valor === 'number') return valor.toString();
+      if (valor === null || valor === undefined) return 'N/A';
+      if (typeof valor === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}/.test(valor)) {
+          try {
+            return new Date(valor).toLocaleDateString('es-EC', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+          } catch {
+            return valor;
+          }
         }
-      >
-        {/* Estadísticas */}
-        <View style={styles.statsContainer}>
-          <View
-            style={[
-              styles.statCard,
-              { backgroundColor: theme.cardBg, borderColor: theme.border },
-            ]}
+        return valor.charAt(0).toUpperCase() + valor.slice(1);
+      }
+      return String(valor);
+    };
+
+    const badge = getOperacionBadge(modalDetalle.operacion);
+
+    return (
+      <Modal visible={true} animationType="slide" onRequestClose={() => setModalDetalle(null)}>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.bg }]}>
+          <LinearGradient
+            colors={darkMode ? ['#1e293b', '#0f172a'] : ['#f8fafc', '#ffffff']}
+            style={styles.modalHeader}
           >
-            <Ionicons name="document-text" size={24} color={theme.accent} />
-            <Text style={[styles.statValue, { color: theme.text }]}>
-              {stats.total}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-              Total Registros
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statCard,
-              { backgroundColor: theme.cardBg, borderColor: theme.border },
-            ]}
-          >
-            <Ionicons name="today" size={24} color="#4ade80" />
-            <Text style={[styles.statValue, { color: theme.text }]}>
-              {stats.hoy}
-            </Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-              Hoy
-            </Text>
-          </View>
-        </View>
-
-        {/* Búsqueda y filtros */}
-        <View style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchBox,
-              { backgroundColor: theme.inputBg, borderColor: theme.inputBorder },
-            ]}
-          >
-            <Ionicons name="search" size={20} color={theme.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Buscar en auditoría..."
-              placeholderTextColor={theme.textMuted}
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-            />
-          </View>
-
-          <View style={styles.filterGrid}>
-            {[
-              { value: '', label: 'Todos', icon: 'apps' },
-              { value: 'INSERT', label: 'Creación', icon: 'add-circle' },
-              { value: 'UPDATE', label: 'Modificación', icon: 'create' },
-              { value: 'DELETE', label: 'Eliminación', icon: 'trash' },
-            ].map((filter) => (
-              <TouchableOpacity
-                key={filter.value || 'all'}
-                style={[
-                  styles.filterButton,
-                  {
-                    backgroundColor:
-                      filterOperation === filter.value ? theme.accent : theme.inputBg,
-                    borderColor:
-                      filterOperation === filter.value ? theme.accent : theme.inputBorder,
-                  },
-                ]}
-                onPress={() => setFilterOperation(filter.value)}
-              >
-                <Ionicons
-                  name={filter.icon as any}
-                  size={18}
-                  color={filterOperation === filter.value ? '#fff' : theme.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    {
-                      color: filterOperation === filter.value ? '#fff' : theme.text,
-                    },
-                  ]}
-                >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Lista de auditorías */}
-        <View style={styles.listContainer}>
-          {auditorias.map((audit) => {
-            const badge = getOperacionBadge(audit.operacion);
-            return (
-              <TouchableOpacity
-                key={audit.id_auditoria}
-                style={[
-                  styles.auditCard,
-                  { backgroundColor: theme.cardBg, borderColor: theme.border },
-                ]}
-                onPress={() => {
-                  setSelectedAudit(audit);
-                  setShowDetailModal(true);
-                }}
-              >
-                <View style={styles.auditHeader}>
-                  <View
-                    style={[
-                      styles.auditIcon,
-                      { backgroundColor: badge.bg, borderColor: badge.text },
-                    ]}
-                  >
-                    <Ionicons
-                      name={getTablaIcon(audit.tabla_afectada) as any}
-                      size={20}
-                      color={badge.text}
-                    />
-                  </View>
-                  <View style={styles.auditInfo}>
-                    <Text style={[styles.auditTable, { color: theme.text }]} numberOfLines={1}>
-                      {audit.tabla_afectada.replace(/_/g, ' ').toUpperCase()}
-                    </Text>
-                    <Text
-                      style={[styles.auditDescription, { color: theme.textSecondary }]}
-                      numberOfLines={2}
-                    >
-                      {audit.descripcion}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={[styles.operationBadge, { backgroundColor: badge.bg }]}>
-                  <Ionicons name={badge.icon as any} size={14} color={badge.text} />
-                  <Text style={[styles.operationBadgeText, { color: badge.text }]}>
-                    {badge.label}
-                  </Text>
-                </View>
-
-                <View style={styles.auditFooter}>
-                  <View style={styles.auditUser}>
-                    <Ionicons name="person" size={14} color={theme.textMuted} />
-                    <Text style={[styles.auditUserText, { color: theme.textMuted }]}>
-                      {audit.usuario.nombre} {audit.usuario.apellido}
-                    </Text>
-                  </View>
-                  <Text style={[styles.auditDate, { color: theme.textMuted }]}>
-                    {formatearFecha(audit.fecha_operacion)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Modal de detalles */}
-      <Modal
-        visible={showDetailModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowDetailModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: theme.cardBg, borderColor: theme.border },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>
-                Detalles de Auditoría
-              </Text>
-              <TouchableOpacity onPress={() => setShowDetailModal(false)}>
-                <Ionicons name="close" size={28} color={theme.text} />
+            <View style={styles.modalHeaderContent}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Detalle de Auditoría</Text>
+              <TouchableOpacity onPress={() => setModalDetalle(null)}>
+                <Ionicons name="close-circle" size={32} color={theme.text} />
               </TouchableOpacity>
             </View>
+          </LinearGradient>
 
-            <ScrollView style={styles.modalBody}>
-              {selectedAudit && (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+              {/* Operación Badge */}
+              <View style={[styles.operacionBadgeLarge, { backgroundColor: badge.bg }]}>
+                <Text style={[styles.operacionTextLarge, { color: badge.text }]}>{badge.label}</Text>
+              </View>
+
+              {/* Información Principal */}
+              <View style={[styles.infoSection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Tabla Afectada:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.tabla_afectada}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Fecha:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{formatearFecha(modalDetalle.fecha_operacion)}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Descripción:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.descripcion}</Text>
+                </View>
+              </View>
+
+              {/* Usuario */}
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Usuario</Text>
+              <View style={[styles.infoSection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Nombre:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {modalDetalle.usuario.nombre} {modalDetalle.usuario.apellido}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Email:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.email}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Rol:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.rol}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Cédula:</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.cedula}</Text>
+                </View>
+              </View>
+
+              {/* Detalles */}
+              {detallesFiltrados.length > 0 && (
                 <>
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Tabla:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {selectedAudit.tabla_afectada}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Operación:
-                    </Text>
-                    <Text
-                      style={[
-                        styles.detailValue,
-                        { color: getOperacionBadge(selectedAudit.operacion).text },
-                      ]}
-                    >
-                      {getOperacionBadge(selectedAudit.operacion).label}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Usuario:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {selectedAudit.usuario.nombre} {selectedAudit.usuario.apellido}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Rol:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {selectedAudit.usuario.rol}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Fecha:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {formatearFecha(selectedAudit.fecha_operacion)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted }]}>
-                      Email:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {selectedAudit.usuario.email}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.detailRow, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-                    <Text style={[styles.detailLabel, { color: theme.textMuted, marginBottom: 8 }]}>
-                      Descripción:
-                    </Text>
-                    <Text style={[styles.detailValue, { color: theme.text }]}>
-                      {selectedAudit.descripcion}
-                    </Text>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>Información Detallada</Text>
+                  <View style={[styles.infoSection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                    {detallesFiltrados.map(([key, value], index) => (
+                      <View
+                        key={key}
+                        style={[
+                          styles.infoRow,
+                          index < detallesFiltrados.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 12, marginBottom: 12 }
+                        ]}
+                      >
+                        <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{formatearNombreCampo(key)}:</Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>{formatearValor(value)}</Text>
+                      </View>
+                    ))}
                   </View>
                 </>
               )}
-            </ScrollView>
 
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: theme.accent }]}
-              onPress={() => setShowDetailModal(false)}
-            >
-              <Text style={styles.closeButtonText}>Cerrar</Text>
-            </TouchableOpacity>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+    );
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      {/* Standardized Header */}
+      <LinearGradient
+        colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>Historial de Auditoría</Text>
+        <Text style={styles.headerSubtitle}>Seguimiento completo de operaciones del sistema</Text>
+      </LinearGradient>
+
+      {/* Stats Cards */}
+      <View style={styles.statsGrid}>
+        {renderStatCard('Total', stats.total.toLocaleString(), 'shield-checkmark', theme.primary)}
+        {renderStatCard('Hoy', stats.hoy.toLocaleString(), 'trending-up', theme.success)}
+        {renderStatCard('Tablas', stats.porTabla.length, 'server', theme.info)}
+        {renderStatCard('Usuarios', stats.porUsuario.length, 'people', theme.purple)}
+      </View>
+
+      {/* Filters - Compact */}
+      <View style={styles.filtersSection}>
+        <View style={styles.filtersHeader}>
+          <Text style={[styles.filtersTitle, { color: theme.text }]}>Filtros</Text>
+          <TouchableOpacity onPress={limpiarFiltros}>
+            <Text style={[styles.clearButton, { color: theme.primary }]}>Limpiar</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.searchContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+          <Ionicons name="search" size={18} color={theme.textMuted} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Buscar..."
+            placeholderTextColor={theme.textMuted}
+            value={filtros.busqueda}
+            onChangeText={(text) => { setFiltros({ ...filtros, busqueda: text }); setPaginaActual(1); }}
+          />
+        </View>
+
+        <View style={styles.filtersRow}>
+          <View style={{ flex: 1 }}>
+            <CompactPicker
+              items={[
+                { label: 'Todas', value: '' },
+                { label: 'Creación', value: 'INSERT' },
+                { label: 'Modificación', value: 'UPDATE' },
+                { label: 'Eliminación', value: 'DELETE' },
+              ]}
+              selectedValue={filtros.operacion}
+              onValueChange={(val) => { setFiltros({ ...filtros, operacion: val }); setPaginaActual(1); }}
+              theme={theme}
+              placeholder="Operación"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <CompactPicker
+              items={[
+                { label: 'Todos', value: '' },
+                { label: 'Superadmin', value: 'superadmin' },
+                { label: 'Admin', value: 'administrador' },
+                { label: 'Docente', value: 'docente' },
+                { label: 'Estudiante', value: 'estudiante' },
+              ]}
+              selectedValue={filtros.rol}
+              onValueChange={(val) => { setFiltros({ ...filtros, rol: val }); setPaginaActual(1); }}
+              theme={theme}
+              placeholder="Rol"
+            />
           </View>
         </View>
-      </Modal>
+      </View>
+
+      {/* Content */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      ) : auditorias.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="document-text-outline" size={64} color={theme.textMuted} />
+          <Text style={[styles.emptyText, { color: theme.textMuted }]}>No se encontraron registros</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={auditorias}
+          renderItem={renderAuditoriaCard}
+          keyExtractor={item => item.id_auditoria.toString()}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={theme.primary} />
+          }
+          ListFooterComponent={
+            <Pagination
+              currentPage={paginaActual}
+              totalPages={totalPaginas}
+              totalItems={stats.total}
+              onPageChange={setPaginaActual}
+              theme={theme}
+              itemLabel="registros"
+            />
+          }
+        />
+      )}
+
+      {/* Modal Detalle */}
+      {renderDetallesModal()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  header: {
+    paddingTop: 25,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  statsContainer: {
+  headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+
+  // Stats Cards
+  statsGrid: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: -25,
+    gap: 10,
+    zIndex: 10,
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
     alignItems: 'center',
-    gap: 8,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  searchContainer: {
-    padding: 16,
-    gap: 12,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-  },
-  filterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  filterButton: {
-    flex: 1,
-    minWidth: '47%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  listContainer: {
-    padding: 16,
-    gap: 12,
-  },
-  auditCard: {
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  auditHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  auditIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    flexShrink: 0,
-  },
-  auditInfo: {
-    flex: 1,
-    gap: 4,
-    minWidth: 0,
-  },
-  auditTable: {
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  auditDescription: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  operationBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  statIconContainer: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  auditFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
-    marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    marginBottom: 6,
   },
-  auditUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  statLabel: { fontSize: 10, fontWeight: '600', marginBottom: 2 },
+  statValue: { fontSize: 14, fontWeight: '700' },
+
+  // Filters - Compact
+  filtersSection: { padding: 16, paddingTop: 16 },
+  filtersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  filtersTitle: { fontSize: 16, fontWeight: '700' },
+  clearButton: { fontSize: 13, fontWeight: '600' },
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, height: 42, gap: 6, marginBottom: 8
   },
-  auditUserText: {
-    fontSize: 12,
+  searchInput: { flex: 1, fontSize: 13 },
+  filtersRow: { flexDirection: 'row', gap: 8 },
+  filterLabel: { fontSize: 11, marginBottom: 4, fontWeight: '600' },
+
+  // List
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { marginTop: 12, fontSize: 14 },
+  listContent: { padding: 16, paddingTop: 0 },
+
+  // Auditoria Card
+  auditoriaCard: {
+    borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
   },
-  auditDate: {
-    fontSize: 11,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    borderWidth: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailValue: {
-    fontSize: 14,
-    flex: 1,
-    textAlign: 'right',
-  },
-  closeButton: {
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  operationBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  operacionBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  operacionText: { fontSize: 10, fontWeight: '700' },
+  fechaText: { fontSize: 10 },
+  tablaText: { fontSize: 15, fontWeight: '700', marginBottom: 6 },
+  descripcionText: { fontSize: 13, marginBottom: 10, lineHeight: 18 },
+  userRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
+  userName: { fontSize: 13, fontWeight: '600' },
+  userRol: { fontSize: 11 },
+  verMasRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+  verMasText: { fontSize: 13, fontWeight: '600' },
+
+  // Modal
+  modalContainer: { flex: 1 },
+  modalHeader: { paddingTop: 20, paddingBottom: 20, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.1)' },
+  modalHeaderContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  modalTitle: { fontSize: 20, fontWeight: '700' },
+  modalContent: { padding: 20 },
+  operacionBadgeLarge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 20 },
+  operacionTextLarge: { fontSize: 14, fontWeight: '700' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 20, marginBottom: 12 },
+  infoSection: { borderRadius: 12, borderWidth: 1, padding: 16, marginBottom: 12 },
+  infoRow: { marginBottom: 8 },
+  infoLabel: { fontSize: 12, marginBottom: 4 },
+  infoValue: { fontSize: 14, fontWeight: '600' },
 });

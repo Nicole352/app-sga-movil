@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, Switch, Modal, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { storage } from '../../../services/storage';
+import { storage, getToken, setUserData as saveUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import { API_URL } from '../../../constants/config';
 
 export default function SuperAdminLayout() {
   const router = useRouter();
-  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
-  const [userData, setUserData] = useState<any>(null);
   const insets = useSafeAreaInsets();
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
     loadUserData();
@@ -20,12 +22,29 @@ export default function SuperAdminLayout() {
 
   const loadUserData = async () => {
     try {
-      const userDataStr = await storage.getItem('user_data');
-      if (userDataStr) {
-        setUserData(JSON.parse(userDataStr));
+      const token = await getToken();
+      if (!token) {
+        const userDataStr = await storage.getItem('user_data');
+        if (userDataStr) setUserData(JSON.parse(userDataStr));
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(data);
+        await saveUserData(data);
+      } else {
+        const userDataStr = await storage.getItem('user_data');
+        if (userDataStr) setUserData(JSON.parse(userDataStr));
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+      const userDataStr = await storage.getItem('user_data');
+      if (userDataStr) setUserData(JSON.parse(userDataStr));
     }
   };
 
@@ -37,6 +56,136 @@ export default function SuperAdminLayout() {
       }
     } catch (error) {
       console.error('Error loading dark mode:', error);
+    }
+  };
+
+  const handlePhotoOptions = () => {
+    const options: any[] = [
+      { text: 'Tomar Foto', onPress: () => takePhoto() },
+      { text: 'Elegir de Galería', onPress: () => pickImage() },
+    ];
+    if (userData?.foto || userData?.foto_perfil || userData?.foto_perfil_url) {
+      options.push({ text: 'Eliminar Foto', onPress: () => deletePhoto(), style: 'destructive' });
+    }
+    options.push({ text: 'Cancelar', style: 'cancel' });
+
+    Alert.alert('Foto de Perfil', 'Selecciona una opción', options);
+  };
+
+  const deletePhoto = async () => {
+    Alert.alert(
+      'Eliminar foto',
+      '¿Estás seguro de que quieres eliminar tu foto de perfil?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await getToken();
+              if (!userData?.id_usuario && !userData?.id) return;
+              const userId = userData.id_usuario || userData.id;
+
+              const response = await fetch(`${API_URL}/usuarios/${userId}/foto-perfil`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (response.ok) {
+                await loadUserData(); // Recargar datos
+                Alert.alert('Éxito', 'Foto eliminada correctamente');
+              } else {
+                Alert.alert('Error', 'No se pudo eliminar la foto');
+              }
+            } catch (error) {
+              console.error('Error eliminando foto:', error);
+              Alert.alert('Error', 'Error al eliminar la foto');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso Denegado', 'Se necesita acceso a la cámara');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      uploadPhoto(result.assets[0].uri);
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso Denegado', 'Se necesita acceso a la galería');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      uploadPhoto(result.assets[0].uri);
+    }
+  };
+
+  const uploadPhoto = async (uri: string) => {
+    try {
+      const token = await getToken();
+      if (!userData?.id_usuario && !userData?.id) {
+        Alert.alert('Error', 'No se pudo obtener la información del usuario');
+        return;
+      }
+      const userId = userData.id_usuario || userData.id;
+
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('foto', {
+        uri,
+        name: filename,
+        type
+      } as any);
+
+      const response = await fetch(`${API_URL}/usuarios/${userId}/foto-perfil`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        await loadUserData(); // Recargar datos
+        Alert.alert('Éxito', 'Foto actualizada correctamente');
+      } else {
+        const errorText = await response.text();
+        console.error('Upload Error:', errorText);
+        Alert.alert('Error', 'No se pudo actualizar la foto');
+      }
+    } catch (error: any) {
+      console.error('Error subiendo foto:', error);
+      Alert.alert('Error', error?.message || 'No se pudo actualizar la foto');
     }
   };
 
@@ -78,7 +227,7 @@ export default function SuperAdminLayout() {
     tabInactive: 'rgba(255, 255, 255, 0.5)',
   } : {
     bg: '#f8fafc',
-    cardBg: 'rgba(255, 255, 255, 0.95)',
+    cardBg: '#ffffff',
     text: '#1e293b',
     textSecondary: 'rgba(30, 41, 59, 0.7)',
     border: 'rgba(239, 68, 68, 0.2)',
@@ -107,58 +256,80 @@ export default function SuperAdminLayout() {
             fontSize: 16,
             letterSpacing: 0.5,
           },
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => setShowProfileDrawer(true)}
-              style={styles.profileButton}
-            >
-              <Ionicons name="menu" size={28} color={theme.accent} />
-            </TouchableOpacity>
-          ),
-          tabBarStyle: {
-            backgroundColor: theme.tabBg,
-            borderTopWidth: 1,
-            borderTopColor: theme.border,
-            paddingBottom: insets.bottom,
-            height: 60 + insets.bottom,
+          headerRight: () => {
+            const initials = userData?.nombre && userData?.apellido
+              ? `${userData.nombre.charAt(0)}${userData.apellido.charAt(0)}`
+              : userData?.nombre?.charAt(0) || 'SA';
+
+            return (
+              <TouchableOpacity onPress={() => setShowProfileDrawer(true)} style={{ marginRight: 16 }}>
+                <View style={[styles.headerAvatar, { backgroundColor: theme.accent }]}>
+                  {userData?.foto || userData?.foto_perfil || userData?.foto_perfil_url ? (
+                    <Image source={{ uri: userData.foto || userData.foto_perfil || userData.foto_perfil_url }} style={styles.headerAvatarImg} />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                      {initials}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
           },
-          tabBarActiveTintColor: theme.tabActive,
-          tabBarInactiveTintColor: theme.tabInactive,
           tabBarShowLabel: false,
+          tabBarActiveTintColor: theme.accent,
+          tabBarInactiveTintColor: theme.tabInactive,
+          tabBarStyle: {
+            backgroundColor: theme.cardBg,
+            borderTopColor: theme.border,
+            borderTopWidth: 1,
+            height: 65,
+            paddingBottom: 10,
+            paddingTop: 10,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="stats-chart" size={size} color={color} />
+            title: 'Resumen',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={30} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="administradores"
           options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people" size={size} color={color} />
+            title: 'Admins',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "people" : "people-outline"} size={30} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="auditoria"
           options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="shield-checkmark" size={size} color={color} />
+            title: 'Auditoría',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={30} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="configuracion"
           options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
+            title: 'Ajustes',
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "settings" : "settings-outline"} size={30} color={color} />
             ),
           }}
         />
+
+        {/* Ocultar rutas extra explícitamente */}
+        <Tabs.Screen name="components/CompactPicker" options={{ href: null }} />
+        <Tabs.Screen name="components/Pagination" options={{ href: null }} />
       </Tabs>
 
       {/* Drawer lateral derecho para perfil */}
@@ -189,13 +360,24 @@ export default function SuperAdminLayout() {
 
               {/* Perfil */}
               <View style={[styles.profileSection, { borderBottomColor: theme.border }]}>
-                <View style={styles.avatarContainer}>
+                <TouchableOpacity onPress={handlePhotoOptions} style={styles.avatarContainer}>
                   <View style={[styles.avatar, { backgroundColor: theme.accent }]}>
-                    <Text style={styles.avatarText}>SA</Text>
+                    {userData?.foto || userData?.foto_perfil || userData?.foto_perfil_url ? (
+                      <Image source={{ uri: userData.foto || userData.foto_perfil || userData.foto_perfil_url }} style={[styles.avatar, { width: 80, height: 80, borderRadius: 40 }]} />
+                    ) : (
+                      <Text style={styles.avatarText}>
+                        {userData?.nombre && userData?.apellido
+                          ? `${userData.nombre.charAt(0)}${userData.apellido.charAt(0)}`
+                          : userData?.nombre?.charAt(0) || 'SA'}
+                      </Text>
+                    )}
+                    <View style={styles.editIconContainer}>
+                      <Ionicons name="camera" size={14} color="#fff" />
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
                 <Text style={[styles.profileName, { color: theme.text }]}>
-                  {userData?.nombre || 'Super Admin'}
+                  {userData?.nombre || 'Super Admin'} {userData?.apellido || ''}
                 </Text>
                 <Text style={[styles.profileEmail, { color: theme.textSecondary }]}>
                   {userData?.email || userData?.username || 'superadmin@belleza.com'}
@@ -239,9 +421,17 @@ export default function SuperAdminLayout() {
 }
 
 const styles = StyleSheet.create({
-  profileButton: {
-    marginRight: 16,
-    padding: 8,
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerAvatarImg: {
+    width: 33,
+    height: 33,
+    borderRadius: 16.5,
   },
   drawerOverlay: {
     flex: 1,
@@ -286,6 +476,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
+  },
+  bigAvatarText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    padding: 4,
+  },
+  drawerName: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   profileName: {
     fontSize: 20,
