@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -282,7 +283,10 @@ export default function ConfiguracionScreen() {
         <View style={[styles.profileCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
           <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
             {userData?.foto_perfil ? (
-              <Text>IMG</Text>
+              <Image
+                source={{ uri: userData.foto_perfil }}
+                style={{ width: '100%', height: '100%', borderRadius: 40 }}
+              />
             ) : (
               <Text style={styles.avatarText}>{getInitials()}</Text>
             )}
