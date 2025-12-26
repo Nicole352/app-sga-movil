@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,7 +55,14 @@ export default function EstudianteLayout() {
     try {
       const userDataStr = await storage.getItem('user_data');
       if (userDataStr) {
-        setUserData(JSON.parse(userDataStr));
+        const data = JSON.parse(userDataStr);
+        setUserData(data);
+        // Check local data first for immediate modal show
+        if (data.needs_password_reset) {
+          setShowPasswordModal(true);
+          setIsRequiredPasswordChange(true);
+          setIsFirstLogin(data.is_first_login !== false);
+        }
       }
       await fetchPerfil();
     } catch (error) {
@@ -108,6 +115,8 @@ export default function EstudianteLayout() {
           setShowPasswordModal(true);
           setIsRequiredPasswordChange(true);
           setIsFirstLogin(data.is_first_login !== false);
+          // Actualizar storage local con la info fresca
+          await storage.setItem('user_data', JSON.stringify(data));
         }
       }
     } catch (error) {
@@ -116,39 +125,34 @@ export default function EstudianteLayout() {
   };
 
   const handlePasswordChange = async () => {
-    if (!passwordData.password_nueva || !passwordData.confirmar_password) {
+    if ((!isRequiredPasswordChange && !passwordData.password_actual) || !passwordData.password_nueva || !passwordData.confirmar_password) {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
-
-    if (passwordData.password_nueva !== passwordData.confirmar_password) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
-      return;
-    }
-
-    if (passwordData.password_nueva.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    if (!isFirstLogin && !passwordData.password_actual) {
-      Alert.alert('Error', 'Debes ingresar tu contraseña actual');
+    if (passwordData.password_nueva.length < 8) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres');
       return;
     }
 
     try {
       const token = await getToken();
-      const response = await fetch(`${API_URL}/auth/cambiar-password`, {
-        method: 'POST',
+      const endpoint = isRequiredPasswordChange
+        ? `${API_URL}/auth/reset-password`
+        : `${API_URL}/usuarios/cambiar-password`;
+
+      const method = isRequiredPasswordChange ? 'POST' : 'PUT';
+
+      const body = isRequiredPasswordChange
+        ? { newPassword: passwordData.password_nueva, confirmPassword: passwordData.confirmar_password }
+        : { password_actual: passwordData.password_actual, password_nueva: passwordData.password_nueva };
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          password_actual: isFirstLogin ? undefined : passwordData.password_actual,
-          password_nueva: passwordData.password_nueva,
-          is_first_login: isFirstLogin
-        })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
@@ -661,7 +665,10 @@ export default function EstudianteLayout() {
           }
         }}
       >
-        <View style={styles.passwordModalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.passwordModalOverlay}
+        >
           <View style={[styles.passwordModalContent, { backgroundColor: theme.cardBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Header */}
@@ -710,7 +717,7 @@ export default function EstudianteLayout() {
                       value={passwordData.password_nueva}
                       onChangeText={(text: string) => setPasswordData({ ...passwordData, password_nueva: text })}
                       secureTextEntry={!showNewPassword}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres"
                       placeholderTextColor={theme.textMuted}
                     />
                     <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
@@ -741,7 +748,7 @@ export default function EstudianteLayout() {
                 <View style={[styles.passwordRequirements, { backgroundColor: darkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.05)', borderColor: theme.accent + '30' }]}>
                   <Ionicons name="information-circle" size={16} color={theme.accent} />
                   <Text style={[styles.passwordRequirementsText, { color: theme.textSecondary }]}>
-                    La contraseña debe tener al menos 6 caracteres
+                    La contraseña debe tener al menos 8 caracteres
                   </Text>
                 </View>
               </View>
@@ -769,7 +776,7 @@ export default function EstudianteLayout() {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -61,6 +61,12 @@ export default function AdminLayout() {
                 const data = await response.json();
                 setUserData(data);
                 await saveUserData(data);
+                // Verificar reset después de cargar/actualizar los datos
+                if (data.needs_password_reset) {
+                    setIsRequiredPasswordChange(true);
+                    setIsFirstLogin(data.is_first_login ?? true);
+                    setShowPasswordModal(true);
+                }
             }
         } catch (error) { console.error('Error cargando datos:', error); }
     };
@@ -75,9 +81,9 @@ export default function AdminLayout() {
     const checkPasswordReset = async () => {
         try {
             const data = await getUserData();
-            if (data?.requiere_cambio_password) {
+            if (data?.needs_password_reset) {
                 setIsRequiredPasswordChange(true);
-                setIsFirstLogin(data?.primer_login || false);
+                setIsFirstLogin(data?.is_first_login ?? true);
                 setShowPasswordModal(true);
             }
         } catch (error) { console.error('Error verificando pass:', error); }
@@ -220,12 +226,14 @@ export default function AdminLayout() {
     };
 
     const handleChangePassword = async () => {
-        if (!passwordData.password_actual || !passwordData.password_nueva || !passwordData.confirmar_password) {
+        const { password_actual, password_nueva, confirmar_password } = passwordData;
+
+        if ((!isRequiredPasswordChange && !password_actual) || !password_nueva || !confirmar_password) {
             Alert.alert('Error', 'Todos los campos son obligatorios'); return;
         }
 
-        if (passwordData.password_nueva.length < 6) {
-            Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+        if (passwordData.password_nueva.length < 8) {
+            Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres');
             return;
         }
 
@@ -235,13 +243,23 @@ export default function AdminLayout() {
 
         try {
             const token = await getToken();
-            const response = await fetch(`${API_URL}/usuarios/cambiar-password`, {
-                method: 'POST',
+            const endpoint = isRequiredPasswordChange
+                ? `${API_URL}/auth/reset-password`
+                : `${API_URL}/usuarios/cambiar-password`;
+
+            const method = isRequiredPasswordChange ? 'POST' : 'PUT';
+
+            const body = isRequiredPasswordChange
+                ? { newPassword: passwordData.password_nueva, confirmPassword: passwordData.confirmar_password }
+                : { password_actual: passwordData.password_actual, password_nueva: passwordData.password_nueva };
+
+            const response = await fetch(endpoint, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(passwordData),
+                body: JSON.stringify(body),
             });
 
             const data = await response.json();
@@ -256,7 +274,7 @@ export default function AdminLayout() {
                     confirmar_password: ''
                 });
 
-                const updatedUserData = { ...userData, requiere_cambio_password: false, primer_login: false };
+                const updatedUserData = { ...userData, needs_password_reset: false, is_first_login: false };
                 await saveUserData(updatedUserData);
                 setUserData(updatedUserData);
             } else {
@@ -498,7 +516,10 @@ export default function AdminLayout() {
                     }
                 }}
             >
-                <View style={styles.passwordModalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.passwordModalOverlay}
+                >
                     <View style={[styles.passwordModalContent, { backgroundColor: theme.cardBg }]}>
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.passwordModalHeader}>
@@ -517,23 +538,25 @@ export default function AdminLayout() {
                             </View>
 
                             <View style={styles.passwordForm}>
-                                <View style={styles.passwordField}>
-                                    <Text style={[styles.passwordLabel, { color: theme.text }]}>Contraseña Actual</Text>
-                                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                                        <Ionicons name="lock-closed-outline" size={20} color={theme.textMuted} />
-                                        <TextInput
-                                            style={[styles.passwordInput, { color: theme.text }]}
-                                            value={passwordData.password_actual}
-                                            onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_actual: text }))}
-                                            secureTextEntry={!showCurrentPassword}
-                                            placeholder="Ingresa tu contraseña actual"
-                                            placeholderTextColor={theme.textMuted}
-                                        />
-                                        <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
-                                            <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
-                                        </TouchableOpacity>
+                                {!isRequiredPasswordChange && (
+                                    <View style={styles.passwordField}>
+                                        <Text style={[styles.passwordLabel, { color: theme.text }]}>Contraseña Actual</Text>
+                                        <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                                            <Ionicons name="lock-closed-outline" size={20} color={theme.textMuted} />
+                                            <TextInput
+                                                style={[styles.passwordInput, { color: theme.text }]}
+                                                value={passwordData.password_actual}
+                                                onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_actual: text }))}
+                                                secureTextEntry={!showCurrentPassword}
+                                                placeholder="Ingresa tu contraseña actual"
+                                                placeholderTextColor={theme.textMuted}
+                                            />
+                                            <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                                                <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
-                                </View>
+                                )}
 
                                 <View style={styles.passwordField}>
                                     <Text style={[styles.passwordLabel, { color: theme.text }]}>Nueva Contraseña</Text>
@@ -544,7 +567,7 @@ export default function AdminLayout() {
                                             value={passwordData.password_nueva}
                                             onChangeText={(text) => setPasswordData(prev => ({ ...prev, password_nueva: text }))}
                                             secureTextEntry={!showNewPassword}
-                                            placeholder="Mínimo 6 caracteres"
+                                            placeholder="Mínimo 8 caracteres"
                                             placeholderTextColor={theme.textMuted}
                                         />
                                         <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
@@ -571,6 +594,14 @@ export default function AdminLayout() {
                                     </View>
                                 </View>
 
+                                {/* Requisitos */}
+                                <View style={[styles.passwordRequirements, { backgroundColor: darkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)', borderColor: '#ef444430' }]}>
+                                    <Ionicons name="information-circle" size={16} color="#ef4444" />
+                                    <Text style={[styles.passwordRequirementsText, { color: theme.textSecondary }]}>
+                                        La contraseña debe tener al menos 8 caracteres
+                                    </Text>
+                                </View>
+
                                 <TouchableOpacity
                                     style={[styles.passwordButton, { backgroundColor: theme.accent }]}
                                     onPress={handleChangePassword}
@@ -589,7 +620,7 @@ export default function AdminLayout() {
                             </View>
                         </ScrollView>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );
@@ -630,4 +661,17 @@ const styles = StyleSheet.create({
     passwordButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
     passwordCancelButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, marginTop: 12 },
     passwordCancelText: { fontSize: 16, fontWeight: '600' },
+    passwordRequirements: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginTop: 8,
+        gap: 8,
+    },
+    passwordRequirementsText: {
+        fontSize: 12,
+        flex: 1,
+    },
 });
