@@ -27,22 +27,22 @@ export default function NotificationBell({
 
   const getIconoTipo = (tipo: string) => {
     switch (tipo) {
-      case 'modulo': return 'book';
-      case 'tarea': return 'document-text';
+      case 'modulo': return 'library';
+      case 'tarea': return 'cloud-upload';
       case 'pago': return 'cash';
       case 'calificacion': return 'star';
-      case 'matricula': return 'school';
+      case 'matricula': return 'people';
       default: return 'notifications';
     }
   };
 
   const getColorTipo = (tipo: string) => {
     switch (tipo) {
-      case 'modulo': return '#3b82f6';
-      case 'tarea': return '#f59e0b';
-      case 'pago': return '#10b981';
-      case 'calificacion': return '#8b5cf6';
-      case 'matricula': return '#ec4899';
+      case 'modulo': return '#3b82f6'; // Blue
+      case 'tarea': return '#10b981'; // Green (matches web submission)
+      case 'pago': return '#10b981'; // Green
+      case 'calificacion': return '#8b5cf6'; // Purple
+      case 'matricula': return '#ec4899'; // Pink
       default: return '#6b7280';
     }
   };

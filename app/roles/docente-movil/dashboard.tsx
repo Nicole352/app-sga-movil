@@ -101,7 +101,11 @@ export default function DocenteDashboard() {
 
   useSocket({
     'curso_asignado': () => fetchCursos(),
+    'nueva_matricula_curso': () => fetchCursos(),
     'estudiante_matriculado': () => fetchCursos(),
+    'tarea_entregada_docente': () => fetchCursos(),
+    'tareas_por_calificar': () => fetchCursos(),
+    'nueva_entrega': () => fetchCursos(),
   }, userData?.id_usuario);
 
   const fetchCursos = async () => {

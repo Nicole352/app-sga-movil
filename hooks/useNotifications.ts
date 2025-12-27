@@ -258,19 +258,24 @@ export const useNotifications = (rol: RolUsuario) => {
 
   // Eventos para docentes
   if (rol === 'docente') {
-    events.nueva_entrega = (data: any) => {
+    const handlerEntrega = (data: any) => {
       const estudiante = data.estudiante_nombre ? `${data.estudiante_nombre}` : 'Un estudiante';
       const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
       agregarNotificacion({
         tipo: 'tarea',
         titulo: '📤 Nueva entrega recibida',
-        mensaje: `${estudiante} ha entregado: ${data.tarea_titulo}${curso}`,
+        mensaje: `${estudiante} ha entregado: ${data.tarea_titulo || data.titulo_tarea}${curso}`,
         link: '/roles/docente-movil/cursos',
         data
       });
     };
 
-    events.nueva_matricula = (data: any) => {
+    events.nueva_entrega = handlerEntrega;
+    events.tarea_entregada_docente = handlerEntrega;
+    events.tarea_entregada = handlerEntrega;
+    events.entrega_actualizada = handlerEntrega;
+
+    const handlerMatricula = (data: any) => {
       const estudiante = data.estudiante_nombre ? `${data.estudiante_nombre}` : 'Un estudiante';
       const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
       agregarNotificacion({
@@ -282,6 +287,9 @@ export const useNotifications = (rol: RolUsuario) => {
       });
     };
 
+    events.nueva_matricula = handlerMatricula;
+    events.nueva_matricula_curso = handlerMatricula;
+
     events.curso_asignado = (data: any) => {
       agregarNotificacion({
         tipo: 'general',
@@ -292,14 +300,37 @@ export const useNotifications = (rol: RolUsuario) => {
       });
     };
 
-    events.recordatorio_calificacion = (data: any) => {
-      const pendientes = data.entregas_pendientes || 0;
+    const handlerRecordatorio = (data: any) => {
+      const pendientes = data.entregas_pendientes || data.cantidad_entregas || 0;
       const curso = data.curso_nombre ? ` - ${data.curso_nombre}` : '';
       agregarNotificacion({
         tipo: 'calificacion',
         titulo: '⏰ Recordatorio de calificación',
         mensaje: `Tienes ${pendientes} entregas pendientes de calificar${curso}`,
         link: '/roles/docente-movil/calificaciones',
+        data
+      });
+    };
+
+    events.recordatorio_calificacion = handlerRecordatorio;
+    events.tareas_por_calificar = handlerRecordatorio;
+
+    events.modulo_creado = (data: any) => {
+      agregarNotificacion({
+        tipo: 'modulo',
+        titulo: '📚 Módulo creado',
+        mensaje: `Se ha creado un nuevo módulo: ${data.nombre_modulo}`,
+        link: '/roles/docente-movil/cursos',
+        data
+      });
+    };
+
+    events.nueva_tarea = (data: any) => {
+      agregarNotificacion({
+        tipo: 'tarea',
+        titulo: '📝 Tarea creada',
+        mensaje: `Se ha creado una nueva tarea: ${data.titulo_tarea}`,
+        link: '/roles/docente-movil/cursos',
         data
       });
     };

@@ -418,7 +418,6 @@ export default function PagosMensuales() {
           </View>
         ) : (
           cursosConPagos
-            .filter(curso => curso.curso_nombre.toString() !== "0" && curso.curso_nombre.toString().trim() !== "")
             .map((curso, index) => {
               const fechaInicioCobro = curso.fecha_inicio_cobro ? new Date(curso.fecha_inicio_cobro) : null;
               const decisionTomada = Boolean(curso.es_curso_promocional && curso.decision_estudiante && curso.decision_estudiante !== 'pendiente');

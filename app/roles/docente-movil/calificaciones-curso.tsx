@@ -9,15 +9,17 @@ import {
   Alert,
   Platform,
   Modal,
-  Dimensions
+  Dimensions,
+  RefreshControl
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { API_URL } from '../../../constants/config';
-import { getToken, getDarkMode } from '../../../services/storage';
+import { getToken, getDarkMode, getUserData } from '../../../services/storage';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSocket } from '../../../hooks/useSocket';
 
 const { width } = Dimensions.get('window');
 
@@ -109,7 +111,9 @@ export default function CalificacionesCursoScreen() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [userId, setUserId] = useState<number | undefined>();
   const theme = getTheme(darkMode);
 
   // Datos
@@ -123,11 +127,33 @@ export default function CalificacionesCursoScreen() {
   const [moduloActivo, setModuloActivo] = useState<string>("todos");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "aprobados" | "reprobados">("todos");
 
+  useEffect(() => {
+    getUserData().then(user => setUserId(user?.id_usuario));
+  }, []);
+
+  useSocket({
+    'calificacion_actualizada': () => loadData(true),
+    'entrega_calificada': () => loadData(true),
+    'tarea_calificada': () => loadData(true),
+    'nueva_entrega': () => loadData(true),
+    'tarea_entregada_docente': () => loadData(true),
+    'tarea_entregada': () => loadData(true),
+    'entrega_actualizada': () => loadData(true),
+    'nueva_matricula_curso': () => loadData(true),
+    'estudiante_matriculado': () => loadData(true),
+  }, userId);
+
   useEffect(() => { loadData(); }, [id_curso]);
 
-  const loadData = async () => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData(true);
+    setRefreshing(false);
+  };
+
+  const loadData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const token = await getToken();
       const isDark = await getDarkMode();
       setDarkMode(isDark);
@@ -193,7 +219,7 @@ export default function CalificacionesCursoScreen() {
     } catch (error) {
       console.error("Error loading:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -273,8 +299,18 @@ export default function CalificacionesCursoScreen() {
         </LinearGradient>
       </Animated.View>
 
-      {loading ? <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} /> : (
-        <View style={styles.content}>
+      {loading && !refreshing ? <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} /> : (
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
           {/* Filtros */}
           <View style={[styles.filtersCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -465,7 +501,7 @@ export default function CalificacionesCursoScreen() {
               </ScrollView>
             </View>
           </ScrollView>
-        </View>
+        </ScrollView>
       )}
     </View>
   );

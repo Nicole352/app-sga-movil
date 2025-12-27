@@ -8,6 +8,8 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -51,10 +53,7 @@ export default function ModalCalificaciones({
   }, [visible, estudiantes]);
 
   const handleNotaChange = (estudianteId: number, text: string) => {
-    // Reemplazar coma por punto para decimales
     let formattedText = text.replace(',', '.');
-
-    // Validar si es un número válido y aplicar clamping (tope máximo)
     const notaNum = parseFloat(formattedText);
 
     if (!isNaN(notaNum)) {
@@ -106,7 +105,6 @@ export default function ModalCalificaciones({
     });
 
     if (hasError) return;
-
     onSave(calificacionesArray);
     onClose();
   };
@@ -158,112 +156,117 @@ export default function ModalCalificaciones({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <View style={styles.headerInfo}>
-              <Text style={styles.modalTitle}>Calificar Tarea</Text>
-              <Text style={styles.tareaTitle}>{tarea?.titulo}</Text>
-              <Text style={styles.puntajeMax}>Puntaje máximo: {tarea?.puntaje}</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.headerInfo}>
+                <Text style={styles.modalTitle}>Calificar Tarea</Text>
+                <Text style={styles.tareaTitle}>{tarea?.titulo}</Text>
+                <Text style={styles.puntajeMax}>Puntaje máximo: {tarea?.puntaje}</Text>
+              </View>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.actionBar}>
-            <TouchableOpacity style={styles.actionButton} onPress={aplicarNotaATodos}>
-              <Ionicons name="copy-outline" size={18} color="#3b82f6" />
-              <Text style={styles.actionButtonText}>Aplicar a Todos</Text>
-            </TouchableOpacity>
-            <Text style={styles.estudiantesCount}>
-              {estudiantes.length} estudiantes
-            </Text>
-          </View>
+            <View style={styles.actionBar}>
+              <TouchableOpacity style={styles.actionButton} onPress={aplicarNotaATodos}>
+                <Ionicons name="copy-outline" size={18} color="#3b82f6" />
+                <Text style={styles.actionButtonText}>Aplicar a Todos</Text>
+              </TouchableOpacity>
+              <Text style={styles.estudiantesCount}>
+                {estudiantes.length} estudiantes
+              </Text>
+            </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            {estudiantes.map((estudiante) => {
-              const calif = calificaciones.get(estudiante.id) || { nota: '', comentario: '' };
-              const isExpanded = expandedStudent === estudiante.id;
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {estudiantes.map((estudiante) => {
+                const calif = calificaciones.get(estudiante.id) || { nota: '', comentario: '' };
+                const isExpanded = expandedStudent === estudiante.id;
 
-              return (
-                <View key={estudiante.id} style={styles.estudianteCard}>
-                  <TouchableOpacity
-                    style={styles.estudianteHeader}
-                    onPress={() => setExpandedStudent(isExpanded ? null : estudiante.id)}
-                  >
-                    <View style={styles.estudianteInfo}>
-                      <View style={styles.avatarCircle}>
-                        <Text style={styles.avatarText}>
-                          {estudiante.nombre[0]}{estudiante.apellido[0]}
-                        </Text>
-                      </View>
-                      <View style={styles.estudianteNombre}>
-                        <Text style={styles.nombreText}>
-                          {estudiante.nombre} {estudiante.apellido}
-                        </Text>
-                        {calif.nota && (
-                          <Text style={[styles.notaPreview, { color: getNotaColor(calif.nota) }]}>
-                            {calif.nota} / {tarea.puntaje}
+                return (
+                  <View key={estudiante.id} style={styles.estudianteCard}>
+                    <TouchableOpacity
+                      style={styles.estudianteHeader}
+                      onPress={() => setExpandedStudent(isExpanded ? null : estudiante.id)}
+                    >
+                      <View style={styles.estudianteInfo}>
+                        <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarText}>
+                            {estudiante.nombre[0]}{estudiante.apellido[0]}
                           </Text>
-                        )}
-                      </View>
-                    </View>
-                    <Ionicons
-                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                      size={20}
-                      color="#6b7280"
-                    />
-                  </TouchableOpacity>
-
-                  {isExpanded && (
-                    <View style={styles.estudianteBody}>
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Calificación</Text>
-                        <View style={styles.notaInputContainer}>
-                          <TextInput
-                            style={[styles.notaInput, { borderColor: getNotaColor(calif.nota) }]}
-                            value={calif.nota}
-                            onChangeText={(text) => handleNotaChange(estudiante.id, text.replace(',', '.'))}
-                            placeholder="0.00"
-                            placeholderTextColor="#999"
-                            keyboardType="decimal-pad"
-                          />
-                          <Text style={styles.notaMax}>/ {tarea.puntaje}</Text>
+                        </View>
+                        <View style={styles.estudianteNombre}>
+                          <Text style={styles.nombreText}>
+                            {estudiante.nombre} {estudiante.apellido}
+                          </Text>
+                          {calif.nota && (
+                            <Text style={[styles.notaPreview, { color: getNotaColor(calif.nota) }]}>
+                              {calif.nota} / {tarea.puntaje}
+                            </Text>
+                          )}
                         </View>
                       </View>
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color="#6b7280"
+                      />
+                    </TouchableOpacity>
 
-                      <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Comentario (opcional)</Text>
-                        <TextInput
-                          style={[styles.input, styles.textArea]}
-                          value={calif.comentario}
-                          onChangeText={(text) => handleComentarioChange(estudiante.id, text)}
-                          placeholder="Agrega un comentario..."
-                          placeholderTextColor="#999"
-                          multiline
-                          numberOfLines={3}
-                          textAlignVertical="top"
-                        />
+                    {isExpanded && (
+                      <View style={styles.estudianteBody}>
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>Calificación</Text>
+                          <View style={styles.notaInputContainer}>
+                            <TextInput
+                              style={[styles.notaInput, { borderColor: getNotaColor(calif.nota) }]}
+                              value={calif.nota}
+                              onChangeText={(text) => handleNotaChange(estudiante.id, text.replace(',', '.'))}
+                              placeholder="0.00"
+                              placeholderTextColor="#999"
+                              keyboardType="decimal-pad"
+                            />
+                            <Text style={styles.notaMax}>/ {tarea.puntaje}</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                          <Text style={styles.label}>Comentario (opcional)</Text>
+                          <TextInput
+                            style={[styles.input, styles.textArea]}
+                            value={calif.comentario}
+                            onChangeText={(text) => handleComentarioChange(estudiante.id, text)}
+                            placeholder="Agrega un comentario..."
+                            placeholderTextColor="#999"
+                            multiline
+                            numberOfLines={3}
+                            textAlignVertical="top"
+                          />
+                        </View>
                       </View>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
 
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Ionicons name="checkmark" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>Guardar Calificaciones</Text>
-            </TouchableOpacity>
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.saveButtonText}>Guardar Calificaciones</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getToken, getDarkMode } from '../../../services/storage';
+import { getToken, getDarkMode, getUserData } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
+import { useSocket } from '../../../hooks/useSocket';
 import ModalModulo from './ModalModulo';
 import ModalTarea from './ModalTarea';
 import ModalEntregas from './ModalEntregas';
@@ -47,6 +48,7 @@ export default function DetalleCursoDocenteScreen() {
 
   const [darkMode, setDarkMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
   const [curso, setCurso] = useState<Curso | null>(null);
   const [modulos, setModulos] = useState<Modulo[]>([]);
@@ -59,6 +61,74 @@ export default function DetalleCursoDocenteScreen() {
   const [tareaSeleccionada, setTareaSeleccionada] = useState<Tarea | null>(null);
   const [moduloEditar, setModuloEditar] = useState<Modulo | null>(null);
   const [tareaEditar, setTareaEditar] = useState<Tarea | null>(null);
+
+  useEffect(() => {
+    getUserData().then(user => setUserId(user?.id_usuario));
+  }, []);
+
+  useSocket({
+    'modulo_creado': () => fetchModulos(),
+    'nueva_tarea': (data: any) => {
+      fetchModulos(true);
+      if (data.id_modulo && modulosExpandidos[data.id_modulo]) {
+        fetchTareasModulo(data.id_modulo);
+      }
+    },
+    'tarea_entregada_docente': (data: any) => {
+      fetchModulos(true);
+      const targetModulo = data.id_modulo || data.modulo_id;
+      if (targetModulo && modulosExpandidos[targetModulo]) {
+        fetchTareasModulo(targetModulo);
+      } else {
+        Object.keys(modulosExpandidos).forEach(id => {
+          if (modulosExpandidos[parseInt(id)]) {
+            fetchTareasModulo(parseInt(id));
+          }
+        });
+      }
+    },
+    'tarea_entregada': (data: any) => {
+      fetchModulos(true);
+      const targetModulo = data.id_modulo || data.modulo_id;
+      if (targetModulo && modulosExpandidos[targetModulo]) {
+        fetchTareasModulo(targetModulo);
+      } else {
+        Object.keys(modulosExpandidos).forEach(id => {
+          if (modulosExpandidos[parseInt(id)]) {
+            fetchTareasModulo(parseInt(id));
+          }
+        });
+      }
+    },
+    'entrega_actualizada': (data: any) => {
+      fetchModulos(true);
+      const targetModulo = data.id_modulo || data.modulo_id;
+      if (targetModulo && modulosExpandidos[targetModulo]) {
+        fetchTareasModulo(targetModulo);
+      } else {
+        Object.keys(modulosExpandidos).forEach(id => {
+          if (modulosExpandidos[parseInt(id)]) {
+            fetchTareasModulo(parseInt(id));
+          }
+        });
+      }
+    },
+    'modulo_actualizado': () => fetchModulos(true),
+    'tarea_actualizada': (data: any) => {
+      fetchModulos(true);
+      if (data.id_modulo && modulosExpandidos[data.id_modulo]) {
+        fetchTareasModulo(data.id_modulo);
+      }
+    },
+    'modulo_eliminado': () => fetchModulos(true),
+    'tarea_eliminada': (data: any) => {
+      fetchModulos(true);
+      if (data.id_modulo && modulosExpandidos[data.id_modulo]) {
+        fetchTareasModulo(data.id_modulo);
+      }
+    },
+    'curso_asignado': () => loadData(),
+  }, userId);
 
   useEffect(() => {
     loadData();
@@ -95,9 +165,9 @@ export default function DetalleCursoDocenteScreen() {
     }
   };
 
-  const fetchModulos = async () => {
+  const fetchModulos = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const token = await getToken();
       const response = await fetch(`${API_URL}/modulos/curso/${id_curso}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -109,7 +179,7 @@ export default function DetalleCursoDocenteScreen() {
     } catch (error) {
       console.error('Error fetching modulos:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

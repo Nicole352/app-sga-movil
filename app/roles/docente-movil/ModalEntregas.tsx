@@ -13,7 +13,8 @@ import {
   Share,
   Platform,
   Image,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -443,7 +444,10 @@ export default function ModalEntregas({
 
           {/* === SUPERPOSICIÓN DE CALIFICACIÓN (z-index 100) === */}
           {showCalificarModal && (
-            <View style={[StyleSheet.absoluteFill, styles.modalOverlay, { zIndex: 100 }]}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={[StyleSheet.absoluteFill, styles.modalOverlay, { zIndex: 100 }]}
+            >
               <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
                 <View style={styles.modalHeader}>
                   <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -487,7 +491,7 @@ export default function ModalEntregas({
                   {calificando ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Guardar Calificación</Text>}
                 </TouchableOpacity>
               </View>
-            </View>
+            </KeyboardAvoidingView>
           )}
         </View>
       </Modal>

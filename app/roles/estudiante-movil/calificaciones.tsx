@@ -389,7 +389,7 @@ export default function CalificacionesEstudiante() {
                       <View style={styles.headerRight}>
                         <View style={styles.gradeContainer}>
                           <Text style={[styles.gradeValue, { color: gradeColor }]}>
-                            {modulos.every(m => m.promedios_publicados) ? promedio.toFixed(1) : 'Parcial'}
+                            {modulos.every(m => m.promedios_publicados) ? promedio.toFixed(2) : 'Parcial'}
                           </Text>
                           <Text style={[styles.gradeLabel, { color: theme.textMuted }]}>
                             {modulos.every(m => m.promedios_publicados) ? getGradeLabel(promedio) : 'Oculto'}
@@ -483,7 +483,7 @@ export default function CalificacionesEstudiante() {
                                         const esEntregaTardia = fueEntregada && fechaLimite && fechaEntrega && fechaEntrega > fechaLimite;
 
                                         return (
-                                          <View key={cal.id_calificacion} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
+                                          <View key={cal.id_calificacion || `tarea-${cal.id_tarea}`} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
                                             <View style={styles.taskHeader}>
                                               <Text style={[styles.taskTitle, { color: theme.textSecondary }]}>{cal.tarea_titulo}</Text>
                                               <Text style={[styles.taskDate, { color: theme.textMuted }]}>
