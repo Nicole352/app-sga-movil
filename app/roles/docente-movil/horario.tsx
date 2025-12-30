@@ -51,18 +51,18 @@ export default function HorarioDocente() {
   // Theme Config - TEACHER BLUE
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
       accent: '#3b82f6',
       accentGradient: ['#3b82f6', '#2563eb'] as const,
       activeTabBg: '#3b82f6',
       activeTabText: '#ffffff',
-      inactiveTabBg: 'rgba(255,255,255,0.05)',
-      inactiveTabText: '#94a3b8'
+      inactiveTabBg: '#141414',
+      inactiveTabText: '#71717a'
     }
     : {
       bg: '#f8fafc',

@@ -44,101 +44,62 @@ const CompactPicker = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
 
-  // Get current label
-  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || items[0]?.label;
+  // ANDROID: Use standard Picker (dropdown style)
+  if (Platform.OS === 'android') {
+    return (
+      <View style={[styles.pickerContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+        <Picker
+          selectedValue={selectedValue}
+          onValueChange={onValueChange}
+          style={[styles.picker, { color: theme.text }]}
+          dropdownIconColor={theme.text}
+        >
+          {items.map((item) => (
+            <Picker.Item key={item.value} label={item.label} value={item.value} />
+          ))}
+        </Picker>
+      </View>
+    );
+  }
 
-  const handleSelect = (value: string) => {
-    onValueChange(value);
-    if (Platform.OS === 'android') {
-      setShowModal(false);
-    }
-  };
+  // IOS: Use Custom Modal with Wheel Picker
+  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || items[0]?.label;
 
   return (
     <>
       <TouchableOpacity
         onPress={() => setShowModal(true)}
-        activeOpacity={0.7}
-        style={[
-          styles.pickerContainer,
-          { 
-            backgroundColor: theme.cardBg, 
-            borderColor: theme.border, 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            paddingHorizontal: 15,
-            height: 48 // Slightly taller for better touch target and visibility
-          }
-        ]}
+        style={[styles.pickerContainer, { backgroundColor: theme.cardBg, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 }]}
       >
-        <Text style={{ color: theme.text, fontSize: 14, fontWeight: '500', flex: 1 }} numberOfLines={1}>
+        <Text style={{ color: theme.text, fontSize: 13 }} numberOfLines={1}>
           {selectedLabel}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={theme.accent} />
+        <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
       </TouchableOpacity>
 
-      <Modal 
-        animationType="slide" 
-        transparent={true} 
-        visible={showModal} 
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingBottom: Platform.OS === 'ios' ? 40 : 20, maxHeight: '80%' }}>
+      <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 }}>
             {/* Toolbar */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Text style={{ color: theme.textMuted, fontSize: 16, fontWeight: '600' }}>Cancelar</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 16 }}>Cancelar</Text>
               </TouchableOpacity>
-              <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>Seleccionar</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Text style={{ color: theme.accent, fontWeight: '700', fontSize: 16 }}>Listo</Text>
               </TouchableOpacity>
             </View>
-
-            {Platform.OS === 'ios' ? (
-              /* IOS: Picker Wheel */
-              <Picker
-                selectedValue={selectedValue}
-                onValueChange={onValueChange}
-                style={{ height: 250, color: theme.text }}
-                itemStyle={{ color: theme.text, fontSize: 18 }}
-              >
-                {items.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              </Picker>
-            ) : (
-              /* ANDROID: Professional List */
-              <ScrollView style={{ paddingVertical: 10 }}>
-                {items.map((item) => (
-                  <TouchableOpacity
-                    key={item.value}
-                    style={{
-                      paddingVertical: 15,
-                      paddingHorizontal: 25,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      backgroundColor: selectedValue === item.value ? theme.accent + '15' : 'transparent'
-                    }}
-                    onPress={() => handleSelect(item.value)}
-                  >
-                    <Text style={{ 
-                      color: selectedValue === item.value ? theme.accent : theme.text, 
-                      fontSize: 16,
-                      fontWeight: selectedValue === item.value ? '700' : '400'
-                    }}>
-                      {item.label}
-                    </Text>
-                    {selectedValue === item.value && (
-                      <Ionicons name="checkmark-circle" size={22} color={theme.accent} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+            {/* Picker Wheel */}
+            <Picker
+              selectedValue={selectedValue}
+              onValueChange={onValueChange}
+              style={{ height: 200, color: theme.text }}
+              itemStyle={{ color: theme.text, fontSize: 16 }}
+            >
+              {items.map((item) => (
+                <Picker.Item key={item.value} label={item.label} value={item.value} />
+              ))}
+            </Picker>
           </View>
         </View>
       </Modal>
@@ -208,12 +169,12 @@ export default function MisEstudiantesScreen() {
 
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
       accent: '#3b82f6',
       primaryGradient: ['#3b82f6', '#2563eb'] as const,
       green: '#10b981',
@@ -543,14 +504,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   pickerContainer: {
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
-    height: 48,
+    height: 44,
     justifyContent: 'center',
   },
   picker: {
-    height: 48,
+    height: 44,
+    fontSize: 11,
+    transform: [{ scaleX: 0.95 }, { scaleY: 0.95 }], // Truco para reducir visualmente un poco más si el fontSize nativo tiene límites
   },
   scrollView: {
     flex: 1,

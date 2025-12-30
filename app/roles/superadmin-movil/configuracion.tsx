@@ -54,20 +54,20 @@ export default function ConfiguracionScreen() {
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
   const theme = darkMode ? {
-    bg: '#0f172a',
-    cardBg: '#1e293b',
-    text: '#f8fafc',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    border: '#334155',
+    bg: '#0a0a0a',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    textMuted: '#71717a',
+    border: '#27272a',
     primary: '#ef4444',
-    inputBg: '#334155',
+    inputBg: '#1a1a1a',
     success: '#10b981',
     info: '#3b82f6',
   } : {
     bg: '#f8fafc',
     cardBg: '#ffffff',
-    text: '#0f172a',
+    text: '#1e293b',
     textSecondary: '#475569',
     textMuted: '#64748b',
     border: '#e2e8f0',

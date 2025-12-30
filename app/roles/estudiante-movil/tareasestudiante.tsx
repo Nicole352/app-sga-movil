@@ -57,20 +57,28 @@ export default function TareasEstudiante() {
 
   const theme = darkMode ? {
     bg: '#0a0a0a',
-    cardBg: 'rgba(18, 18, 18, 0.95)',
-    text: '#fff',
-    textSecondary: 'rgba(255, 255, 255, 0.7)',
-    textMuted: 'rgba(255, 255, 255, 0.5)',
-    border: 'rgba(251, 191, 36, 0.2)',
-    accent: '#fbbf24',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    textMuted: '#71717a',
+    border: '#27272a',
+    accent: '#f59e0b',
+    primaryGradient: ['#f59e0b', '#d97706'] as const,
+    danger: '#ef4444',
+    success: '#10b981',
+    info: '#3b82f6'
   } : {
     bg: '#f8fafc',
-    cardBg: 'rgba(255, 255, 255, 0.95)',
-    text: '#1e293b',
-    textSecondary: 'rgba(30, 41, 59, 0.7)',
-    textMuted: 'rgba(30, 41, 59, 0.5)',
-    border: 'rgba(251, 191, 36, 0.2)',
+    cardBg: '#ffffff',
+    text: '#0f172a',
+    textSecondary: '#475569',
+    textMuted: '#64748b',
+    border: '#e2e8f0',
     accent: '#f59e0b',
+    primaryGradient: ['#fbbf24', '#f59e0b'] as const,
+    danger: '#dc2626',
+    success: '#059669',
+    info: '#2563eb'
   };
 
   useEffect(() => {
@@ -418,8 +426,8 @@ export default function TareasEstudiante() {
               </Text>
             </View>
           ) : (
-            modulosAgrupados.map((modulo, midx) => (
-              <View key={`mod-${modulo.orden}-${midx}`} style={[styles.moduloCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+            modulosAgrupados.map((modulo) => (
+              <View key={modulo.orden} style={[styles.moduloCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                 {/* Header del Módulo */}
                 <TouchableOpacity
                   style={[styles.moduloHeader, { backgroundColor: 'rgba(251, 146, 60, 0.1)' }]}
@@ -447,13 +455,13 @@ export default function TareasEstudiante() {
                 {/* Lista de Tareas */}
                 {modulosExpandidos[modulo.orden] && (
                   <View style={styles.tareasContainer}>
-                    {modulo.tareas.map((tarea, tidx) => {
+                    {modulo.tareas.map((tarea) => {
                       const estadoColor = getEstadoColor(tarea.estado_estudiante);
                       const isVencida = new Date(tarea.fecha_limite) < new Date() && tarea.estado_estudiante === 'pendiente';
 
                       return (
                         <View
-                          key={`tarea-${tarea.id_tarea || tidx}-${tidx}`}
+                          key={tarea.id_tarea}
                           style={[
                             styles.tareaCard,
                             { borderColor: isVencida ? 'rgba(239, 68, 68, 0.3)' : theme.border }

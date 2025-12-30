@@ -71,20 +71,20 @@ export default function CalificacionesEstudiante() {
   const [userData, setUserData] = useState<any>(null);
 
   const theme = darkMode ? {
-    bg: '#0f172a',
-    cardBg: '#1e293b',
-    text: '#f8fafc',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    border: '#334155',
-    accent: '#fbbf24',
+    bg: '#0a0a0a',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    textMuted: '#71717a',
+    border: '#27272a',
+    accent: '#f59e0b',
     success: '#10b981',
     warning: '#f59e0b',
     danger: '#ef4444',
     blue: '#3b82f6',
     gray: '#6b7280',
-    cardGradientStart: 'rgba(30, 41, 59, 0.8)',
-    cardGradientEnd: 'rgba(30, 41, 59, 1)',
+    cardGradientStart: '#141414',
+    cardGradientEnd: '#141414',
   } : {
     bg: '#f8fafc',
     cardBg: '#ffffff',
@@ -275,7 +275,7 @@ export default function CalificacionesEstudiante() {
         : ['rgba(251, 191, 36, 0.15)', 'rgba(255,255,255,0)'] as const;
     }
     return darkMode
-      ? ['#1e293b', '#0f172a'] as const
+      ? ['#141414', '#141414'] as const
       : ['#ffffff', '#f8fafc'] as const;
   };
 
@@ -360,12 +360,12 @@ export default function CalificacionesEstudiante() {
 
             return (
               <Animated.View
-                key={`curso-${curso.id_curso}-${index}`}
+                key={curso.id_curso}
                 entering={FadeInDown.delay(100 * index).duration(400)}
                 style={[styles.cardContainer, { shadowColor: theme.text }]}
               >
                 <LinearGradient
-                  colors={theme.bg === '#0f172a' ? ['#1e293b', '#0f172a'] : ['#ffffff', '#f8fafc']}
+                  colors={darkMode ? ['#141414', '#141414'] : ['#ffffff', '#f8fafc']}
                   style={[styles.card, { borderColor: theme.border }]}
                 >
                   <TouchableOpacity
@@ -420,7 +420,7 @@ export default function CalificacionesEstudiante() {
                         </View>
                       )}
 
-                      {modulos.map((modulo, midx) => {
+                      {modulos.map(modulo => {
                         const isModExpanded = expandedModulos[`${curso.id_curso}-${modulo.id_modulo}`];
                         const modGradeColor = getColorByGrade(modulo.promedio_ponderado);
 
@@ -429,7 +429,7 @@ export default function CalificacionesEstudiante() {
                         const groupKeys = Object.keys(taskGroups);
 
                         return (
-                          <View key={`modulo-${modulo.id_modulo}-${midx}`} style={[styles.moduleContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(241, 245, 249, 0.5)', borderColor: theme.border }]}>
+                          <View key={modulo.id_modulo} style={[styles.moduleContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(241, 245, 249, 0.5)', borderColor: theme.border }]}>
                             <TouchableOpacity
                               style={styles.moduleHeader}
                               onPress={() => toggleModulo(curso.id_curso, modulo.id_modulo)}
@@ -456,12 +456,12 @@ export default function CalificacionesEstudiante() {
 
                             {isModExpanded && (
                               <View style={styles.tasksList}>
-                                {groupKeys.map((key, kidx) => {
+                                {groupKeys.map(key => {
                                   const [catName, catWeight] = key.split('|');
                                   const tasks = taskGroups[key];
 
                                   return (
-                                    <View key={`cat-${key}-${kidx}`} style={styles.categoryGroup}>
+                                    <View key={key} style={styles.categoryGroup}>
                                       {catName !== 'Sin Categoría' && (
                                         <View style={styles.categoryHeader}>
                                           <Ionicons name="pricetag-outline" size={12} color={theme.accent} />
@@ -471,7 +471,7 @@ export default function CalificacionesEstudiante() {
                                         </View>
                                       )}
 
-                                      {tasks.map((cal, tidx) => {
+                                      {tasks.map((cal, calIdx) => {
                                         const nota = cal.nota !== null ? Number(cal.nota) : null;
                                         const max = Number(cal.nota_maxima || 10);
 
@@ -483,7 +483,7 @@ export default function CalificacionesEstudiante() {
                                         const esEntregaTardia = fueEntregada && fechaLimite && fechaEntrega && fechaEntrega > fechaLimite;
 
                                         return (
-                                          <View key={`tarea-${cal.id_calificacion || cal.id_tarea || tidx}-${tidx}`} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
+                                          <View key={cal.id_calificacion || cal.id_tarea || `task-${calIdx}`} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
                                             <View style={styles.taskHeader}>
                                               <Text style={[styles.taskTitle, { color: theme.textSecondary }]}>{cal.tarea_titulo}</Text>
                                               <Text style={[styles.taskDate, { color: theme.textMuted }]}>
@@ -546,7 +546,7 @@ export default function CalificacionesEstudiante() {
                                         );
                                       })}
                                     </View>
-                                  );
+                                  )
                                 })}
                               </View>
                             )}

@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getDarkMode } from '../../../services/storage';
 
 interface Estudiante {
   id: number;
@@ -38,6 +39,16 @@ export default function ModalCalificaciones({
 }: ModalCalificacionesProps) {
   const [calificaciones, setCalificaciones] = useState<Map<number, { nota: string; comentario: string }>>(new Map());
   const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    loadDarkMode();
+  }, []);
+
+  const loadDarkMode = async () => {
+    const mode = await getDarkMode();
+    setDarkMode(mode);
+  };
 
   useEffect(() => {
     if (visible && estudiantes) {
@@ -149,6 +160,17 @@ export default function ModalCalificaciones({
     );
   };
 
+  const theme = {
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    cardBg: darkMode ? '#141414' : '#ffffff',
+    text: darkMode ? '#ffffff' : '#1e293b',
+    textSecondary: darkMode ? '#a1a1aa' : '#4b5563',
+    textMuted: darkMode ? '#71717a' : '#6b7280',
+    border: darkMode ? '#27272a' : '#e5e7eb',
+    accent: '#3b82f6',
+    inputBg: darkMode ? '#1a1a1a' : '#f9fafb',
+  };
+
   return (
     <Modal
       visible={visible}
@@ -160,25 +182,25 @@ export default function ModalCalificaciones({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <View style={styles.headerInfo}>
-                <Text style={styles.modalTitle}>Calificar Tarea</Text>
-                <Text style={styles.tareaTitle}>{tarea?.titulo}</Text>
-                <Text style={styles.puntajeMax}>Puntaje máximo: {tarea?.puntaje}</Text>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Calificar Tarea</Text>
+                <Text style={[styles.tareaTitle, { color: theme.textSecondary }]}>{tarea?.titulo}</Text>
+                <Text style={[styles.puntajeMax, { color: theme.accent }]}>Puntaje máximo: {tarea?.puntaje}</Text>
               </View>
               <TouchableOpacity onPress={onClose}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.actionBar}>
-              <TouchableOpacity style={styles.actionButton} onPress={aplicarNotaATodos}>
-                <Ionicons name="copy-outline" size={18} color="#3b82f6" />
-                <Text style={styles.actionButtonText}>Aplicar a Todos</Text>
+            <View style={[styles.actionBar, { backgroundColor: theme.inputBg, borderBottomColor: theme.border }]}>
+              <TouchableOpacity style={[styles.actionButton, { backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff' }]} onPress={aplicarNotaATodos}>
+                <Ionicons name="copy-outline" size={18} color={theme.accent} />
+                <Text style={[styles.actionButtonText, { color: theme.accent }]}>Aplicar a Todos</Text>
               </TouchableOpacity>
-              <Text style={styles.estudiantesCount}>
+              <Text style={[styles.estudiantesCount, { color: theme.textSecondary }]}>
                 {estudiantes.length} estudiantes
               </Text>
             </View>
@@ -189,19 +211,19 @@ export default function ModalCalificaciones({
                 const isExpanded = expandedStudent === estudiante.id;
 
                 return (
-                  <View key={estudiante.id} style={styles.estudianteCard}>
+                  <View key={estudiante.id} style={[styles.estudianteCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                     <TouchableOpacity
                       style={styles.estudianteHeader}
                       onPress={() => setExpandedStudent(isExpanded ? null : estudiante.id)}
                     >
                       <View style={styles.estudianteInfo}>
-                        <View style={styles.avatarCircle}>
+                        <View style={[styles.avatarCircle, { backgroundColor: theme.accent }]}>
                           <Text style={styles.avatarText}>
                             {estudiante.nombre[0]}{estudiante.apellido[0]}
                           </Text>
                         </View>
                         <View style={styles.estudianteNombre}>
-                          <Text style={styles.nombreText}>
+                          <Text style={[styles.nombreText, { color: theme.text }]}>
                             {estudiante.nombre} {estudiante.apellido}
                           </Text>
                           {calif.nota && (
@@ -214,35 +236,35 @@ export default function ModalCalificaciones({
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={20}
-                        color="#6b7280"
+                        color={theme.textMuted}
                       />
                     </TouchableOpacity>
 
                     {isExpanded && (
-                      <View style={styles.estudianteBody}>
+                      <View style={[styles.estudianteBody, { borderTopColor: theme.border }]}>
                         <View style={styles.inputGroup}>
-                          <Text style={styles.label}>Calificación</Text>
+                          <Text style={[styles.label, { color: theme.textSecondary }]}>Calificación</Text>
                           <View style={styles.notaInputContainer}>
                             <TextInput
-                              style={[styles.notaInput, { borderColor: getNotaColor(calif.nota) }]}
+                              style={[styles.notaInput, { borderColor: getNotaColor(calif.nota), backgroundColor: theme.inputBg, color: theme.text }]}
                               value={calif.nota}
                               onChangeText={(text) => handleNotaChange(estudiante.id, text.replace(',', '.'))}
                               placeholder="0.00"
-                              placeholderTextColor="#999"
+                              placeholderTextColor={theme.textMuted}
                               keyboardType="decimal-pad"
                             />
-                            <Text style={styles.notaMax}>/ {tarea.puntaje}</Text>
+                            <Text style={[styles.notaMax, { color: theme.textSecondary }]}>/ {tarea.puntaje}</Text>
                           </View>
                         </View>
 
                         <View style={styles.inputGroup}>
-                          <Text style={styles.label}>Comentario (opcional)</Text>
+                          <Text style={[styles.label, { color: theme.textSecondary }]}>Comentario (opcional)</Text>
                           <TextInput
-                            style={[styles.input, styles.textArea]}
+                            style={[styles.input, styles.textArea, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
                             value={calif.comentario}
                             onChangeText={(text) => handleComentarioChange(estudiante.id, text)}
                             placeholder="Agrega un comentario..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.textMuted}
                             multiline
                             numberOfLines={3}
                             textAlignVertical="top"
@@ -255,11 +277,11 @@ export default function ModalCalificaciones({
               })}
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+              <TouchableOpacity style={[styles.cancelButton, { borderColor: theme.border }]} onPress={onClose}>
+                <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.accent }]} onPress={handleSave}>
                 <Ionicons name="checkmark" size={20} color="#fff" />
                 <Text style={styles.saveButtonText}>Guardar Calificaciones</Text>
               </TouchableOpacity>

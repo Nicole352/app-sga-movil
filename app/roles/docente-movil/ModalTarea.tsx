@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
+import { Picker } from '@react-native-picker/picker'; // Added import
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 
@@ -39,118 +39,75 @@ const CompactPicker = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
 
-  // Get current label
-  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || "Seleccione";
+  // ANDROID: Picker Nativo
+  if (Platform.OS === 'android') {
+    return (
+      <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.inputBg }]}>
+        <Picker
+          selectedValue={selectedValue}
+          onValueChange={onValueChange}
+          style={{ color: theme.text }}
+          dropdownIconColor={theme.text}
+        >
+          <Picker.Item label={placeholder || "Seleccione"} value="" style={{ color: theme.textMuted }} enabled={false} />
+          {items.map((item) => (
+            <Picker.Item key={item.value} label={item.label} value={item.value} style={{ fontSize: 14, color: theme.text }} />
+          ))}
+        </Picker>
+      </View>
+    );
+  }
 
-  const handleSelect = (value: string) => {
-    onValueChange(value);
-    if (Platform.OS === 'android') {
-      setShowModal(false);
-    }
-  };
+  // IOS: Modal con Wheel Picker
+  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || "Seleccione";
 
   return (
     <>
       <TouchableOpacity
         onPress={() => setShowModal(true)}
-        activeOpacity={0.7}
-        style={[
-          styles.pickerContainer,
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 15,
-            borderColor: theme.border,
-            backgroundColor: theme.inputBg,
-            height: 48 
-          }
-        ]}
+        style={[styles.pickerContainer, {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          borderColor: theme.border,
+          backgroundColor: theme.inputBg,
+          borderRadius: 8,
+          borderWidth: 1
+        }]}
       >
-        <Text style={{ color: selectedValue ? theme.text : theme.textMuted, fontSize: 14, fontWeight: '500', flex: 1 }} numberOfLines={1}>
+        <Text style={{ color: selectedValue ? theme.text : theme.textMuted, fontSize: 14 }} numberOfLines={1}>
           {selectedLabel}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={theme.accent} />
+        <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
       </TouchableOpacity>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showModal}
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingBottom: Platform.OS === 'ios' ? 40 : 20, maxHeight: '80%' }}>
-            {/* Toolbar */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+      <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border }}>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Text style={{ color: theme.textMuted, fontSize: 16, fontWeight: '600' }}>Cancelar</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 16 }}>Cancelar</Text>
               </TouchableOpacity>
-              <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>Seleccionar</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Text style={{ color: theme.accent, fontWeight: '700', fontSize: 16 }}>Listo</Text>
               </TouchableOpacity>
             </View>
-
-            {Platform.OS === 'ios' ? (
-              /* IOS: Picker Wheel */
-              <Picker
-                selectedValue={selectedValue}
-                onValueChange={onValueChange}
-                style={{ height: 250, color: theme.text }}
-                itemStyle={{ color: theme.text, fontSize: 18 }}
-              >
-                <Picker.Item label={placeholder || "Seleccione"} value="" />
-                {items.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              </Picker>
-            ) : (
-              /* ANDROID: Professional List */
-              <ScrollView style={{ paddingVertical: 10 }}>
-                <TouchableOpacity
-                  style={{
-                    paddingVertical: 15,
-                    paddingHorizontal: 25,
-                    backgroundColor: selectedValue === "" ? theme.accent + '15' : 'transparent'
-                  }}
-                  onPress={() => handleSelect("")}
-                >
-                  <Text style={{
-                    color: selectedValue === "" ? theme.accent : theme.textMuted,
-                    fontSize: 16,
-                    fontWeight: selectedValue === "" ? '700' : '400'
-                  }}>
-                    {placeholder || "Seleccione"}
-                  </Text>
-                </TouchableOpacity>
-                {items.map((item) => (
-                  <TouchableOpacity
-                    key={item.value}
-                    style={{
-                      paddingVertical: 15,
-                      paddingHorizontal: 25,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      backgroundColor: selectedValue === item.value ? theme.accent + '15' : 'transparent'
-                    }}
-                    onPress={() => handleSelect(item.value)}
-                  >
-                    <Text style={{
-                      color: selectedValue === item.value ? theme.accent : theme.text,
-                      fontSize: 16,
-                      fontWeight: selectedValue === item.value ? '700' : '400'
-                    }}>
-                      {item.label}
-                    </Text>
-                    {selectedValue === item.value && (
-                      <Ionicons name="checkmark-circle" size={22} color={theme.accent} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+            <Picker
+              selectedValue={selectedValue}
+              onValueChange={(val) => {
+                onValueChange(val);
+                // En iOS el picker es inmediato, no cierra el modal solo
+              }}
+              style={{ height: 200 }}
+              itemStyle={{ color: theme.text, fontSize: 16 }}
+            >
+              <Picker.Item label={placeholder || "Seleccione"} value="" />
+              {items.map((item) => (
+                <Picker.Item key={item.value} label={item.label} value={item.value} />
+              ))}
+            </Picker>
           </View>
         </View>
       </Modal>
@@ -400,14 +357,14 @@ export default function ModalTarea({ visible, onClose, onSuccess, id_modulo, tar
   };
 
   const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    cardBg: darkMode ? '#141414' : '#ffffff',
     text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
+    textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.7)',
+    textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+    border: darkMode ? '#27272a' : 'rgba(59, 130, 246, 0.3)',
     accent: '#3b82f6',
-    inputBg: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+    inputBg: darkMode ? '#1a1a1a' : 'rgba(0,0,0,0.05)',
   };
 
   return (
@@ -745,13 +702,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   pickerContainer: {
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     overflow: 'hidden',
-    height: 48,
-    justifyContent: 'center',
   },
   picker: {
-    height: 48,
+    // Android picker style adjustments if needed
+    height: 50,
   }
 });

@@ -42,14 +42,14 @@ export default function DashboardSuperAdmin() {
   const [recentLogs, setRecentLogs] = useState<LogEntry[]>([]);
 
   const theme = darkMode ? {
-    bg: '#0f172a',
-    cardBg: '#1e293b',
-    text: '#f8fafc',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    border: '#334155',
+    bg: '#0a0a0a',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    textMuted: '#71717a',
+    border: '#27272a',
     primary: '#ef4444',
-    inputBg: '#334155',
+    inputBg: '#1a1a1a',
   } : {
     bg: '#f8fafc',
     cardBg: '#ffffff',

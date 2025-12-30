@@ -48,15 +48,15 @@ export default function PerfilAdmin() {
     // RED THEME for Admin
     const theme = darkMode
         ? {
-            bg: '#0f172a',
-            cardBg: '#1e293b',
-            text: '#f8fafc',
-            textSecondary: '#cbd5e1',
-            textMuted: '#94a3b8',
-            border: '#334155',
+            bg: '#0a0a0a',
+            cardBg: '#141414',
+            text: '#ffffff',
+            textSecondary: '#a1a1aa',
+            textMuted: '#71717a',
+            border: '#27272a',
             accent: '#ef4444',
             primaryGradient: ['#ef4444', '#dc2626'] as const,
-            inputBg: '#334155',
+            inputBg: '#18181b',
             success: '#10b981',
         }
         : {

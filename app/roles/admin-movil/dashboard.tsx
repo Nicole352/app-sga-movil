@@ -82,12 +82,12 @@ export default function AdminDashboard() {
 
     // TEMA ADMIN (Rojo/Oscuro)
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444', // Rojo Admin
         primaryGradient: ['#ef4444', '#dc2626'] as const,
         success: '#10b981',
@@ -174,7 +174,16 @@ export default function AdminDashboard() {
 
     // Componentes de UI
     const renderStatsCard = (title: string, value: string | number, icon: any, color: string, delay: number, subtitle?: string) => (
-        <Animated.View entering={FadeInDown.delay(delay).duration(400)} style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+        <View
+            style={[
+                styles.statCard,
+                {
+                    backgroundColor: theme.cardBg,
+                    borderColor: theme.border,
+                    shadowColor: darkMode ? "#000" : "#cbd5e1"
+                }
+            ]}
+        >
             <View style={[styles.statHeader]}>
                 <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
                     <Ionicons name={icon} size={18} color={color} />
@@ -183,7 +192,7 @@ export default function AdminDashboard() {
             </View>
             <Text style={[styles.statValue, { color: theme.text }]}>{loading ? '...' : value}</Text>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>{title}</Text>
-        </Animated.View>
+        </View>
     );
 
     const renderActivityItem = (item: any, index: number) => {
@@ -262,26 +271,26 @@ export default function AdminDashboard() {
 
                 {/* --- TASA DE RETENCIÓN & APROBACIÓN --- */}
                 <View style={[styles.sectionContainer, { marginTop: 10 }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Indicadores Académicos</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Indicadores Académicos</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}>
-                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                            <Text style={{ color: theme.textMuted, fontSize: 12 }}>Tasa Aprobación</Text>
-                            <Text style={{ color: theme.primary, fontSize: 22, fontWeight: '700' }}>{estadisticasEstudiantes.tasa_aprobacion}%</Text>
-                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.primary}20` }]}>
+                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Tasa Aprobación</Text>
+                            <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_aprobacion}%</Text>
+                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.primary}20`, marginTop: 6 }]}>
                                 <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_aprobacion}%`, backgroundColor: theme.primary }]} />
                             </View>
                         </View>
-                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                            <Text style={{ color: theme.textMuted, fontSize: 12 }}>Tasa Retención</Text>
-                            <Text style={{ color: theme.purple, fontSize: 22, fontWeight: '700' }}>{estadisticasEstudiantes.tasa_retencion}%</Text>
-                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.purple}20` }]}>
+                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Tasa Retención</Text>
+                            <Text style={{ color: theme.purple, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_retencion}%</Text>
+                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.purple}20`, marginTop: 6 }]}>
                                 <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_retencion}%`, backgroundColor: theme.purple }]} />
                             </View>
                         </View>
-                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                            <Text style={{ color: theme.textMuted, fontSize: 12 }}>Ocupación</Text>
-                            <Text style={{ color: theme.info, fontSize: 22, fontWeight: '700' }}>{estadisticasEstudiantes.tasa_ocupacion}%</Text>
-                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.info}20` }]}>
+                        <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Ocupación</Text>
+                            <Text style={{ color: theme.info, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_ocupacion}%</Text>
+                            <View style={[styles.miniBarBG, { backgroundColor: `${theme.info}20`, marginTop: 6 }]}>
                                 <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_ocupacion}%`, backgroundColor: theme.info }]} />
                             </View>
                         </View>
@@ -333,7 +342,7 @@ export default function AdminDashboard() {
                 {/* --- MATRÍCULAS POR MES (Gráfico Barras) --- */}
                 <View style={styles.sectionContainer}>
                     <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Matrículas (Últimos 6 meses)</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20 }]}>
+                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20, borderColor: theme.border, borderWidth: 1 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 150, gap: 10 }}>
                             {matriculasPorMes.length > 0 ? matriculasPorMes.map((m, i) => (
                                 <View key={i} style={{ flex: 1, alignItems: 'center' }}>
@@ -378,7 +387,7 @@ export default function AdminDashboard() {
                 {/* --- ACTIVIDAD RECIENTE --- */}
                 <View style={styles.sectionContainer}>
                     <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Actividad Reciente</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, paddingVertical: 8 }]}>
+                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, paddingVertical: 8, borderColor: theme.border, borderWidth: 1 }]}>
                         {actividadReciente.length === 0 ? (
                             <Text style={{ padding: 20, textAlign: 'center', color: theme.textMuted }}>No hay actividad reciente</Text>
                         ) : (
@@ -422,11 +431,11 @@ const styles = StyleSheet.create({
     statValue: { fontSize: 18, fontWeight: '800', marginBottom: 2 },
     statLabel: { fontSize: 11, fontWeight: '500' },
 
-    sectionContainer: { marginBottom: 24 },
-    sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+    sectionContainer: { marginBottom: 16 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },
 
-    kpiCard: { width: 140, padding: 16, borderRadius: 16, borderWidth: 1, marginRight: 0 },
-    miniBarBG: { height: 4, width: '100%', borderRadius: 2, marginTop: 8 },
+    kpiCard: { width: 105, height: 85, padding: 10, borderRadius: 12, borderWidth: 1, marginRight: 0, justifyContent: 'space-between' },
+    miniBarBG: { height: 3, width: '100%', borderRadius: 1.5, marginTop: 6 },
     miniBarFill: { height: '100%', borderRadius: 2 },
 
     cardList: { borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },

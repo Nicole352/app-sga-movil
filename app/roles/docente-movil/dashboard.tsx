@@ -46,12 +46,12 @@ export default function DocenteDashboard() {
 
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
       accent: '#3b82f6',
       primaryGradient: ['#3b82f6', '#2563eb'] as const,
       success: '#10b981',
@@ -155,7 +155,7 @@ export default function DocenteDashboard() {
     <Animated.View
       entering={FadeInDown.delay(delay).duration(500)}
       style={[styles.statCardContainer, {
-        backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : '#ffffff',
+        backgroundColor: theme.cardBg,
         borderColor: theme.border
       }]}
     >

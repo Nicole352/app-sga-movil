@@ -13,11 +13,13 @@ import {
     ScrollView,
     Image,
     Dimensions,
-    Linking
+    Linking,
+    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { WebView } from 'react-native-webview';
 import CompactPicker from './components/CompactPicker';
 import Pagination from './components/Pagination';
 import { API_URL } from '../../../constants/config';
@@ -93,20 +95,28 @@ export default function AdminPagosScreen() {
     const [showRechazoModal, setShowRechazoModal] = useState(false);
     const [motivoRechazo, setMotivoRechazo] = useState('');
     const [procesando, setProcesando] = useState(false);
+    const [selectedCursoTab, setSelectedCursoTab] = useState<'todos' | number>('todos');
+
+    // Visor de Archivos
+    const [archivoPreview, setArchivoPreview] = useState<{
+        url: string;
+        titulo: string;
+        tipo: 'image' | 'pdf' | 'otro';
+    } | null>(null);
 
     // Selección de curso y cuota por estudiante
     const [selectedCurso, setSelectedCurso] = useState<{ [cedula: string]: number }>({});
     const [selectedCuota, setSelectedCuota] = useState<{ [key: string]: number }>({});
 
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444',
-        inputBg: '#334155',
+        inputBg: '#18181b',
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#ef4444',
@@ -269,13 +279,19 @@ export default function AdminPagosScreen() {
                 const data = await response.json();
                 if (data.success && data.comprobante_pago_url) {
                     const url = data.comprobante_pago_url;
-                    // Si es PDF, abrir en navegador
-                    if (url.toLowerCase().endsWith('.pdf')) {
-                        Linking.openURL(url);
-                    } else {
-                        setComprobanteUrl(url);
-                        setShowComprobanteModal(true);
+                    const titulo = `Comprobante: ${pago.numero_comprobante || 'S/N'}`;
+                    const extension = url.toLowerCase().split('.').pop()?.split('?')[0];
+                    let tipo: 'image' | 'pdf' | 'otro' = 'otro';
+
+                    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension || '')) {
+                        tipo = 'image';
+                    } else if (extension === 'pdf') {
+                        tipo = 'pdf';
                     }
+
+                    setSelectedPago(pago); // Asegurar que el pago esté seleccionado para las acciones del visor
+                    setShowDetailModal(false); // Cerrar el detalle para que el visor sea visible
+                    setArchivoPreview({ url, titulo, tipo });
                 } else {
                     Alert.alert('Error', 'Comprobante no disponible');
                 }
@@ -392,15 +408,45 @@ export default function AdminPagosScreen() {
         return curso.pagos.find(p => p.id_pago === idCuota) || curso.pagos[0] || null;
     };
 
+    const cursosDisponibles = useMemo(() => {
+        const map = new Map<string, { id: number; nombre: string }>();
+        estudiantes.forEach(est => {
+            est.cursos.forEach(curso => {
+                if (!map.has(curso.curso_nombre)) {
+                    map.set(curso.curso_nombre, {
+                        id: curso.id_curso,
+                        nombre: curso.curso_nombre
+                    });
+                }
+            });
+        });
+        return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [estudiantes]);
+
     const estudiantesFiltrados = useMemo(() => {
-        return estudiantes.filter(est => {
+        let result = estudiantes;
+
+        // Filtrar por búsqueda
+        result = result.filter(est => {
             const matchSearch =
                 est.estudiante_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 est.estudiante_apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 est.estudiante_cedula.includes(searchTerm);
             return matchSearch;
         });
-    }, [estudiantes, searchTerm]);
+
+        // Filtrar por pestaña de curso
+        if (selectedCursoTab !== 'todos') {
+            const cursoSeleccionado = cursosDisponibles.find(c => c.id === selectedCursoTab);
+            if (cursoSeleccionado) {
+                result = result.filter(est =>
+                    est.cursos.some(curso => curso.curso_nombre === cursoSeleccionado.nombre)
+                );
+            }
+        }
+
+        return result;
+    }, [estudiantes, searchTerm, selectedCursoTab, cursosDisponibles]);
 
     // Paginación
     const totalPages = Math.ceil(estudiantesFiltrados.length / itemsPerPage);
@@ -414,7 +460,13 @@ export default function AdminPagosScreen() {
     }, [searchTerm, filterEstado]);
 
     const renderEstudiante = ({ item }: { item: EstudianteAgrupado }) => {
-        const curso = getCursoSeleccionado(item);
+        // Si hay una pestaña de curso seleccionada, usamos ese curso
+        const cursoInfoSeleccionado = selectedCursoTab !== 'todos' ? cursosDisponibles.find(c => c.id === selectedCursoTab) : null;
+
+        const curso = cursoInfoSeleccionado
+            ? (item.cursos.find(c => c.curso_nombre === cursoInfoSeleccionado.nombre) || item.cursos[0])
+            : getCursoSeleccionado(item);
+
         if (!curso) return null;
 
         const pago = getPagoSeleccionado(item, curso);
@@ -423,64 +475,61 @@ export default function AdminPagosScreen() {
         const estadoColor = getEstadoColor(pago.estado);
         const estadoIcon = getEstadoIcon(pago.estado);
 
+        const showCourseSelector = selectedCursoTab === 'todos';
+
         return (
             <TouchableOpacity
-                style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                style={[styles.cardCompact, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                 onPress={() => {
                     setSelectedPago(pago);
                     setShowDetailModal(true);
                 }}
                 activeOpacity={0.8}
             >
-                {/* Header Estudiante */}
-                <View style={styles.cardHeader}>
+                {/* Header Estudiante Compacto */}
+                <View style={styles.cardHeaderCompact}>
                     <View style={{ flex: 1 }}>
-                        <Text style={[styles.studentName, { color: theme.text }]}>
+                        <Text style={[styles.studentNameCompact, { color: theme.text }]}>
                             {item.estudiante_apellido}, {item.estudiante_nombre}
                         </Text>
-                        <Text style={{ fontSize: 12, color: theme.textMuted }}>CI: {item.estudiante_cedula}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Text style={{ fontSize: 11, color: theme.textMuted }}>CI: {item.estudiante_cedula}</Text>
+                        </View>
                     </View>
-                    <View style={[styles.estadoBadge, { backgroundColor: estadoColor + '20', borderColor: estadoColor }]}>
-                        <Ionicons name={estadoIcon as any} size={14} color={estadoColor} />
-                        <Text style={[styles.estadoText, { color: estadoColor }]}>{pago.estado.toUpperCase()}</Text>
+                    <View style={[styles.estadoBadgeSmall, { backgroundColor: estadoColor + '15', borderColor: estadoColor + '40' }]}>
+                        <Ionicons name={estadoIcon as any} size={11} color={estadoColor} />
+                        <Text style={[styles.estadoTextSmall, { color: estadoColor }]}>{pago.estado.toUpperCase()}</Text>
                     </View>
                 </View>
 
-                <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                {/* Selectores en fila si es posible o muy compactos */}
+                <View style={{ marginTop: 8 }}>
+                    {showCourseSelector ? (
+                        <View style={{ marginBottom: 4 }}>
+                            <CompactPicker
+                                selectedValue={String(selectedCurso[item.estudiante_cedula])}
+                                onValueChange={(value) => {
+                                    setSelectedCurso(prev => ({ ...prev, [item.estudiante_cedula]: Number(value) }));
+                                }}
+                                items={item.cursos.map(c => ({
+                                    label: c.curso_nombre,
+                                    value: String(c.id_curso)
+                                }))}
+                                theme={theme}
+                            />
+                        </View>
+                    ) : (
+                        <View style={{ marginBottom: 4, padding: 8, backgroundColor: theme.primary + '08', borderRadius: 8, borderWidth: 1, borderColor: theme.primary + '15' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="book-outline" size={14} color={theme.primary} />
+                                    <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>{curso.curso_nombre}</Text>
+                                </View>
+                                <Text style={{ fontSize: 10, color: theme.textMuted, fontWeight: '600' }}>MAT: {curso.codigo_matricula}</Text>
+                            </View>
+                        </View>
+                    )}
 
-                {/* Selector de Curso (si tiene múltiples) */}
-                {item.cursos.length > 1 && (
-                    <View style={{ marginBottom: 10 }}>
-                        <Text style={{ fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>Curso:</Text>
-                        <CompactPicker
-                            selectedValue={String(selectedCurso[item.estudiante_cedula])}
-                            onValueChange={(value) => {
-                                setSelectedCurso(prev => ({ ...prev, [item.estudiante_cedula]: Number(value) }));
-                            }}
-                            items={item.cursos.map(c => ({
-                                label: c.curso_nombre,
-                                value: String(c.id_curso)
-                            }))}
-                            theme={theme}
-                        />
-                    </View>
-                )}
-
-                {/* Info Curso */}
-                <View style={styles.infoRow}>
-                    <Ionicons name="book-outline" size={14} color={theme.primary} />
-                    <Text style={{ fontSize: 13, color: theme.text, marginLeft: 6 }}>{curso.curso_nombre}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                    <Ionicons name="barcode-outline" size={14} color={theme.textMuted} />
-                    <Text style={{ fontSize: 12, color: theme.textMuted, marginLeft: 6 }}>{curso.codigo_matricula}</Text>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: theme.border }]} />
-
-                {/* Selector de Cuota */}
-                <View style={{ marginBottom: 10 }}>
-                    <Text style={{ fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>Cuota:</Text>
                     <CompactPicker
                         selectedValue={String(selectedCuota[`${item.estudiante_cedula}-${curso.id_curso}`])}
                         onValueChange={(value) => {
@@ -495,39 +544,34 @@ export default function AdminPagosScreen() {
                     />
                 </View>
 
-                {/* Info Pago */}
-                <View style={styles.pagoInfo}>
+                {/* Footer Info & Actions */}
+                <View style={[styles.cardFooterCompact, { borderTopColor: theme.border + '50' }]}>
                     <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 11, color: theme.textMuted }}>Monto</Text>
-                        <Text style={{ fontSize: 18, fontWeight: '700', color: theme.primary }}>{formatMonto(pago.monto)}</Text>
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: theme.primary }}>
+                            {formatMonto(pago.monto)}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: theme.textMuted }}>Vence: {formatDate(pago.fecha_vencimiento)}</Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 11, color: theme.textMuted }}>Vencimiento</Text>
-                        <Text style={{ fontSize: 12, color: theme.text }}>{formatDate(pago.fecha_vencimiento)}</Text>
-                    </View>
-                </View>
 
-                {/* Botones */}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                    {pago.comprobante_pago_url && (
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {pago.comprobante_pago_url && (
+                            <TouchableOpacity
+                                style={[styles.btnCircle, { backgroundColor: theme.primary + '15', borderColor: theme.primary + '30' }]}
+                                onPress={() => handleVerComprobante(pago)}
+                            >
+                                <Ionicons name="receipt-outline" size={18} color={theme.primary} />
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity
-                            style={[styles.actionBtn, { backgroundColor: theme.primary + '15', borderColor: theme.primary, flex: 1 }]}
-                            onPress={() => handleVerComprobante(pago)}
+                            style={[styles.btnCircle, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
+                            onPress={() => {
+                                setSelectedPago(pago);
+                                setShowDetailModal(true);
+                            }}
                         >
-                            <Ionicons name="document-text-outline" size={16} color={theme.primary} />
-                            <Text style={{ fontSize: 12, color: theme.primary, fontWeight: '600' }}>Comprobante</Text>
+                            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
                         </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: theme.cardBg, borderColor: theme.border, flex: 1 }]}
-                        onPress={() => {
-                            setSelectedPago(pago);
-                            setShowDetailModal(true);
-                        }}
-                    >
-                        <Ionicons name="eye-outline" size={16} color={theme.text} />
-                        <Text style={{ fontSize: 12, color: theme.text, fontWeight: '600' }}>Detalles</Text>
-                    </TouchableOpacity>
+                    </View>
                 </View>
             </TouchableOpacity>
         );
@@ -544,77 +588,118 @@ export default function AdminPagosScreen() {
                 <Text style={styles.headerSubtitle}>Verifica y administra los pagos mensuales</Text>
 
                 {/* Search */}
-                <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', marginTop: 15 }]}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginLeft: 10, opacity: 0.8 }} />
+                <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', marginTop: 10 }]}>
+                    <Ionicons name="search" size={18} color="#fff" style={{ marginLeft: 10, opacity: 0.8 }} />
                     <TextInput
                         placeholder="Buscar estudiante..."
-                        placeholderTextColor="rgba(255,255,255,0.7)"
+                        placeholderTextColor="rgba(255,255,255,0.6)"
                         style={styles.searchInput}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
                     {searchTerm.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 8 }}>
-                            <Ionicons name="close-circle" size={18} color="#fff" />
+                            <Ionicons name="close-circle" size={16} color="#fff" />
                         </TouchableOpacity>
                     )}
                 </View>
 
                 {/* Filtros Tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ paddingRight: 20 }}>
                     {['todos', 'pendiente', 'pagado', 'verificado', 'vencido'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
                                 styles.filterTab,
                                 filterEstado === f && styles.filterTabActive,
-                                { borderColor: filterEstado === f ? '#fff' : 'transparent' }
+                                { borderBottomColor: filterEstado === f ? '#fff' : 'transparent' }
                             ]}
-                            onPress={() => setFilterEstado(f)}
+                            onPress={() => {
+                                if (filterEstado !== f) {
+                                    setFilterEstado(f);
+                                }
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={0.7}
                         >
-                            <Text style={[styles.filterText, { fontWeight: filterEstado === f ? '700' : '400', opacity: filterEstado === f ? 1 : 0.7 }]}>
+                            <Text style={[
+                                styles.filterText,
+                                {
+                                    fontWeight: filterEstado === f ? '700' : '400',
+                                    opacity: filterEstado === f ? 1 : 0.7
+                                }
+                            ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+
+                {/* Pestañas de Cursos (Estilo Web) */}
+                {cursosDisponibles.length > 0 && (
+                    <View style={{ marginTop: 10 }}>
+                        <Text style={{ fontSize: 10, color: '#fff', opacity: 0.7, marginBottom: 6, fontWeight: '700' }}>CURSOS ACTIVOS:</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+                            {['todos', ...cursosDisponibles.map(c => c.id)].map((cursoId) => {
+                                const isAll = cursoId === 'todos';
+                                const cursoInfo = isAll ? { nombre: 'Todos' } : cursosDisponibles.find(c => c.id === cursoId);
+                                const isActive = selectedCursoTab === cursoId;
+
+                                return (
+                                    <TouchableOpacity
+                                        key={String(cursoId)}
+                                        onPress={() => setSelectedCursoTab(cursoId as any)}
+                                        style={[
+                                            styles.courseTab,
+                                            {
+                                                backgroundColor: isActive ? '#fff' : 'rgba(255,255,255,0.1)',
+                                                borderColor: isActive ? '#fff' : 'rgba(255,255,255,0.2)',
+                                            }
+                                        ]}
+                                    >
+                                        <Ionicons
+                                            name={isAll ? "apps-outline" : "book-outline"}
+                                            size={14}
+                                            color={isActive ? theme.primary : '#fff'}
+                                        />
+                                        <Text style={[
+                                            styles.courseTabText,
+                                            { color: isActive ? theme.primary : '#fff' }
+                                        ]}>
+                                            {cursoInfo?.nombre}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                )}
             </LinearGradient>
 
-            {/* Banner Pagos Por Verificar */}
+            {/* Banner Informativo Compacto */}
             {pagosPorVerificar > 0 ? (
                 <TouchableOpacity
-                    style={[styles.alertBanner, { backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#fee2e2', borderColor: theme.danger }]}
+                    style={[styles.alertBannerCompact, { backgroundColor: darkMode ? 'rgba(239,68,68,0.1)' : '#fee2e2', borderColor: theme.danger + '40' }]}
                     onPress={() => setFilterEstado('pagado')}
                     activeOpacity={0.7}
                 >
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <View style={[styles.alertIcon, { backgroundColor: theme.danger }]}>
-                            <Ionicons name="alert-circle" size={24} color="#fff" />
-                            <View style={styles.alertBadge}>
-                                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{pagosPorVerificar}</Text>
-                            </View>
+                        <View style={[styles.alertIconSmall, { backgroundColor: theme.danger }]}>
+                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{pagosPorVerificar}</Text>
                         </View>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={{ color: theme.danger, fontWeight: '700', fontSize: 15 }}>
-                                {pagosPorVerificar} {pagosPorVerificar === 1 ? 'pago pendiente' : 'pagos pendientes'} por verificar
-                            </Text>
-                            <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>Toca para ver los pagos que requieren verificación</Text>
-                        </View>
+                        <Text style={{ marginLeft: 10, fontWeight: '700', color: darkMode ? '#f87171' : '#b91c1c', fontSize: 13 }}>
+                            {pagosPorVerificar} pago(s) pendientes de verificar
+                        </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color={theme.danger} />
+                    <Ionicons name="chevron-forward" size={16} color={theme.danger} />
                 </TouchableOpacity>
             ) : (
-                <View style={[styles.alertBanner, { backgroundColor: darkMode ? 'rgba(16,185,129,0.15)' : '#d1fae5', borderColor: theme.success }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <View style={[styles.alertIcon, { backgroundColor: theme.success }]}>
-                            <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                            <Text style={{ color: theme.success, fontWeight: '700', fontSize: 15 }}>¡Al día! No hay pagos por verificar</Text>
-                            <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>Todos los pagos han sido verificados correctamente</Text>
-                        </View>
-                    </View>
-                    <Ionicons name="checkmark-done" size={24} color={theme.success} />
+                <View style={[styles.alertBannerCompact, { backgroundColor: darkMode ? 'rgba(16,185,129,0.08)' : '#ecfdf5', borderColor: theme.success + '30' }]}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.success} />
+                    <Text style={{ flex: 1, marginLeft: 8, fontWeight: '600', color: theme.success, fontSize: 13 }}>
+                        ¡Todo al día! Pagos verificados.
+                    </Text>
+                    <Ionicons name="checkmark-done" size={16} color={theme.success} style={{ opacity: 0.5 }} />
                 </View>
             )}
 
@@ -710,7 +795,7 @@ export default function AdminPagosScreen() {
 
                                 {/* Método de Pago */}
                                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Método de Pago</Text>
-                                <View style={{ padding: 12, borderRadius: 10, backgroundColor: darkMode ? '#334155' : '#f1f5f9', marginBottom: 15 }}>
+                                <View style={{ padding: 12, borderRadius: 10, backgroundColor: theme.inputBg, marginBottom: 15 }}>
                                     <Text style={{ color: theme.text, fontWeight: '600', marginBottom: 8 }}>{selectedPago.metodo_pago}</Text>
                                     {selectedPago.numero_comprobante && (
                                         <Text style={{ color: theme.textMuted, fontSize: 12 }}>Comprobante: <Text style={{ fontWeight: '700' }}>{selectedPago.numero_comprobante}</Text></Text>
@@ -791,6 +876,7 @@ export default function AdminPagosScreen() {
                                 <View style={{ height: 40 }} />
                             </ScrollView>
                         )}
+
                     </View>
                 </View>
             </Modal>
@@ -833,19 +919,90 @@ export default function AdminPagosScreen() {
                 </View>
             </Modal>
 
-            {/* MODAL COMPROBANTE */}
-            <Modal visible={showComprobanteModal} transparent onRequestClose={() => setShowComprobanteModal(false)}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
-                    <TouchableOpacity style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }} onPress={() => setShowComprobanteModal(false)}>
-                        <Ionicons name="close-circle" size={30} color="#fff" />
-                    </TouchableOpacity>
-                    {comprobanteUrl ? (
-                        <Image
-                            source={{ uri: comprobanteUrl }}
-                            style={{ width: width, height: 500 }}
-                            resizeMode="contain"
-                        />
-                    ) : null}
+            {/* VISOR DE ARCHIVOS INDEPENDIENTE (MODAL SUPERIOR) */}
+            <Modal
+                visible={!!archivoPreview}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setArchivoPreview(null)}
+            >
+                <View style={styles.absoluteVisor}>
+                    <View style={styles.visorHeader}>
+                        <TouchableOpacity onPress={() => setArchivoPreview(null)} style={styles.visorHeaderBtn}>
+                            <Ionicons name="close" size={28} color="#fff" />
+                        </TouchableOpacity>
+
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Text style={styles.visorTitle} numberOfLines={1}>
+                                {archivoPreview?.titulo}
+                            </Text>
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10 }}>Desliza o usa el botón para cerrar</Text>
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={() => archivoPreview && Linking.openURL(archivoPreview.url)}
+                            style={styles.visorHeaderBtn}
+                        >
+                            <Ionicons name="download-outline" size={24} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: '#000' }}>
+                        {archivoPreview?.tipo === 'image' ? (
+                            <Image
+                                source={{ uri: archivoPreview.url }}
+                                style={{ width: '100%', height: '100%' }}
+                                resizeMode="contain"
+                            />
+                        ) : archivoPreview?.tipo === 'pdf' ? (
+                            <WebView
+                                source={{ uri: archivoPreview.url }}
+                                style={{ flex: 1 }}
+                                scalesPageToFit
+                            />
+                        ) : (
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                                <Ionicons name="document-text" size={80} color="#334155" />
+                                <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20, fontSize: 16 }}>
+                                    La vista previa no está disponible.
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.visorActionBtn}
+                                    onPress={() => archivoPreview && Linking.openURL(archivoPreview.url)}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Abrir Externamente</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* ACCIONES DENTRO DEL VISOR */}
+                    {selectedPago?.estado === 'pagado' && (
+                        <View style={styles.visorActionsContainer}>
+                            <TouchableOpacity
+                                style={[styles.visorActionBtnLarge, { backgroundColor: '#10b981' }]}
+                                onPress={() => handleVerificarPago(selectedPago)}
+                                disabled={procesando}
+                            >
+                                {procesando ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="checkmark-circle" size={22} color="#fff" />
+                                        <Text style={styles.visorActionText}>Aprobar Pago</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.visorActionBtnLarge, { backgroundColor: '#ef4444' }]}
+                                onPress={() => handleRechazarPago(selectedPago)}
+                                disabled={procesando}
+                            >
+                                <Ionicons name="close-circle" size={22} color="#fff" />
+                                <Text style={styles.visorActionText}>Rechazar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </Modal>
         </View>
@@ -864,20 +1021,29 @@ const DetailItem = ({ label, value, theme, isCurrency }: any) => (
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        paddingTop: 25,
-        paddingBottom: 25,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5
+        paddingTop: 15,
+        paddingBottom: 12,
+        paddingHorizontal: 15,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+    headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+    headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: -2 },
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44 },
     searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },
-    filterTab: { paddingBottom: 4, borderBottomWidth: 2, marginRight: 15 },
-    filterTabActive: { borderBottomWidth: 2 },
-    filterText: { color: '#fff', fontSize: 13 },
+    filterTab: {
+        paddingBottom: 4,
+        borderBottomWidth: 2,
+        marginRight: 15,
+    },
+    filterTabActive: {
+        borderBottomWidth: 2,
+    },
+    filterText: {
+        fontSize: 13,
+        color: '#fff',
+    },
 
     alertBanner: {
         flexDirection: 'row',
@@ -908,7 +1074,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
 
-    listContent: { padding: 20, paddingBottom: 100 },
+    listContent: { padding: 15, paddingBottom: 10 },
     card: {
         borderRadius: 16,
         padding: 16,
@@ -940,4 +1106,121 @@ const styles = StyleSheet.create({
     docBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 15 },
     bigActionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
     textArea: { height: 100, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, paddingTop: 12, fontSize: 15, textAlignVertical: 'top', marginBottom: 20 },
+
+    // Absolute Visor Styles
+    absoluteVisor: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000',
+        zIndex: 9999,
+    },
+    visorHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 15,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+    },
+    visorHeaderBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.1)'
+    },
+    visorTitle: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    visorActionBtn: {
+        marginTop: 20,
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 25,
+        paddingVertical: 12,
+        borderRadius: 25,
+    },
+    visorActionsContainer: {
+        flexDirection: 'row',
+        padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        gap: 12,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    },
+    visorActionBtnLarge: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 12,
+        gap: 8,
+    },
+    visorActionText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
+
+    // Course Tabs Styles
+    courseTab: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        marginRight: 8,
+        borderWidth: 1,
+        gap: 6
+    },
+    courseTabText: {
+        fontSize: 12,
+        fontWeight: '700'
+    },
+    alertBannerCompact: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        marginHorizontal: 15,
+        marginVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1
+    },
+    alertIconSmall: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    cardCompact: {
+        borderRadius: 14,
+        padding: 12,
+        borderWidth: 1,
+        marginBottom: 10,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2
+    },
+    cardHeaderCompact: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+    studentNameCompact: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
+    estadoBadgeSmall: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, gap: 3 },
+    estadoTextSmall: { fontSize: 9, fontWeight: '800' },
+    cardFooterCompact: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 10,
+        paddingTop: 8,
+        borderTopWidth: 1
+    },
+    btnCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1
+    }
 });

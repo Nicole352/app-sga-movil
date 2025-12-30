@@ -133,13 +133,13 @@ export default function MiAulaEstudiante() {
 
   const theme = darkMode
     ? {
-      bg: '#0f172a', // Slate 900
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
-      accent: '#fbbf24', // Amber 400
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
+      accent: '#f59e0b',
       primaryGradient: ['#f59e0b', '#d97706'] as const,
       danger: '#ef4444',
       success: '#10b981',
@@ -147,13 +147,13 @@ export default function MiAulaEstudiante() {
       purple: '#8b5cf6'
     }
     : {
-      bg: '#f8fafc', // Slate 50
+      bg: '#f8fafc',
       cardBg: '#ffffff',
       text: '#0f172a',
       textSecondary: '#475569',
       textMuted: '#64748b',
       border: '#e2e8f0',
-      accent: '#f59e0b', // Amber 500
+      accent: '#f59e0b',
       primaryGradient: ['#fbbf24', '#f59e0b'] as const,
       danger: '#dc2626',
       success: '#059669',
@@ -283,7 +283,7 @@ export default function MiAulaEstudiante() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
               {proximasClases.map((curso, index) => (
                 <TouchableOpacity
-                  key={`next-${curso.id_curso}-${index}`}
+                  key={`next-${curso.id_curso}`}
                   style={[styles.nextClassCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                   activeOpacity={0.8}
                   onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
@@ -323,7 +323,7 @@ export default function MiAulaEstudiante() {
           <Text style={[styles.sectionTitle, { color: theme.text, marginHorizontal: 16, marginBottom: 12 }]}>Mis Cursos</Text>
           <View style={{ gap: 16, paddingHorizontal: 16 }}>
             {cursos.map((curso, index) => (
-              <Animated.View key={`curso-${curso.id_curso}-${index}`} entering={FadeInDown.delay(400 + (index * 100)).duration(500)}>
+              <Animated.View key={curso.id_curso} entering={FadeInDown.delay(400 + (index * 100)).duration(500)}>
                 <TouchableOpacity
                   style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                   activeOpacity={0.9}

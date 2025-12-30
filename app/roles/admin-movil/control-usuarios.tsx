@@ -113,14 +113,14 @@ export default function ControlUsuariosScreen() {
     const [credenciales, setCredenciales] = useState<{ username: string, password_temporal: string } | null>(null);
 
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444',
-        inputBg: '#334155',
+        inputBg: '#18181b',
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#ef4444',

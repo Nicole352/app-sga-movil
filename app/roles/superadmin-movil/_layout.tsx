@@ -193,7 +193,7 @@ export default function SuperAdminLayout() {
     setDarkMode(value);
     await storage.setItem('dark_mode', value.toString());
     // Emitir evento para que otras pantallas se actualicen
-    eventEmitter.emit('darkModeChanged', value);
+    eventEmitter.emit('themeChanged', value);
   };
 
   const handleLogout = () => {
@@ -217,24 +217,24 @@ export default function SuperAdminLayout() {
 
   const theme = darkMode ? {
     bg: '#0a0a0a',
-    cardBg: 'rgba(18, 18, 18, 0.95)',
-    text: '#fff',
-    textSecondary: 'rgba(255, 255, 255, 0.7)',
-    border: 'rgba(239, 68, 68, 0.2)',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    border: '#27272a',
     accent: '#ef4444',
-    tabBg: 'rgba(0, 0, 0, 0.95)',
+    tabBg: '#141414',
     tabActive: '#ef4444',
-    tabInactive: 'rgba(255, 255, 255, 0.5)',
+    tabInactive: '#71717a',
   } : {
     bg: '#f8fafc',
     cardBg: '#ffffff',
     text: '#1e293b',
     textSecondary: 'rgba(30, 41, 59, 0.7)',
-    border: 'rgba(239, 68, 68, 0.2)',
+    border: 'rgba(239, 68, 68, 0.15)',
     accent: '#ef4444',
-    tabBg: 'rgba(255, 255, 255, 0.95)',
+    tabBg: '#ffffff',
     tabActive: '#ef4444',
-    tabInactive: 'rgba(30, 41, 59, 0.5)',
+    tabInactive: 'rgba(30, 41, 59, 0.4)',
   };
 
   return (
@@ -282,9 +282,9 @@ export default function SuperAdminLayout() {
             backgroundColor: theme.cardBg,
             borderTopColor: theme.border,
             borderTopWidth: 1,
-            height: 60 + insets.bottom,
-            paddingTop: 12,
-            paddingBottom: insets.bottom > 0 ? insets.bottom - 5 : 0,
+            height: 65,
+            paddingBottom: 10,
+            paddingTop: 10,
             elevation: 0,
             shadowOpacity: 0,
           },

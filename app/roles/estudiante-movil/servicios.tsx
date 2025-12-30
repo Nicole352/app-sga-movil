@@ -30,14 +30,14 @@ export default function ServiciosEstudiante() {
 
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
-      accent: '#fbbf24',
+      bg: '#0a0a0a',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
+      accent: '#f59e0b',
       accentGradient: ['#f59e0b', '#d97706'] as const,
-      cardGradient: ['#b45309', '#78350f'] as const, // Darker gold for dark mode
+      cardGradient: ['#141414', '#141414'] as const,
       success: '#10b981',
     }
     : {
@@ -48,7 +48,7 @@ export default function ServiciosEstudiante() {
       border: '#e2e8f0',
       accent: '#f59e0b',
       accentGradient: ['#fbbf24', '#f59e0b'] as const,
-      cardGradient: ['#fbbf24', '#f59e0b'] as const, // Bright gold for light mode
+      cardGradient: ['#fbbf24', '#f59e0b'] as const,
       success: '#059669',
     };
 

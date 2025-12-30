@@ -244,15 +244,15 @@ export default function ModalEntregas({
   const stats = calcularEstadisticas();
 
   const theme = {
-    bg: darkMode ? '#0f172a' : '#f8fafc',
-    card: darkMode ? '#1e293b' : '#ffffff',
-    text: darkMode ? '#f8fafc' : '#0f172a',
-    textMuted: darkMode ? '#94a3b8' : '#64748b',
-    border: darkMode ? '#334155' : '#e2e8f0',
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    card: darkMode ? '#141414' : '#ffffff',
+    text: darkMode ? '#ffffff' : '#0f172a',
+    textMuted: darkMode ? '#71717a' : '#64748b',
+    border: darkMode ? '#27272a' : '#e2e8f0',
     primary: '#3b82f6',
     success: '#10b981',
     warning: '#f59e0b',
-    inputBg: darkMode ? 'rgba(255,255,255,0.05)' : '#f1f5f9'
+    inputBg: darkMode ? '#1a1a1a' : '#f1f5f9'
   };
 
   return (

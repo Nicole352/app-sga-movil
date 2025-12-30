@@ -44,17 +44,17 @@ export default function HistorialAcademico() {
   const [vistaActual, setVistaActual] = useState<'activos' | 'finalizados'>('activos');
 
   const theme = darkMode ? {
-    bg: '#0f172a',
-    cardBg: '#1e293b',
-    text: '#f8fafc',
-    textSecondary: '#cbd5e1',
-    textMuted: '#94a3b8',
-    border: '#334155',
-    accent: '#fbbf24',
+    bg: '#0a0a0a',
+    cardBg: '#141414',
+    text: '#ffffff',
+    textSecondary: '#a1a1aa',
+    textMuted: '#71717a',
+    border: '#27272a',
+    accent: '#f59e0b',
     success: '#10b981',
     warning: '#f59e0b',
-    cardGradientStart: 'rgba(30, 41, 59, 0.8)',
-    cardGradientEnd: 'rgba(30, 41, 59, 1)',
+    cardGradientStart: '#141414',
+    cardGradientEnd: '#141414',
   } : {
     bg: '#f8fafc',
     cardBg: '#ffffff',
@@ -148,7 +148,7 @@ export default function HistorialAcademico() {
         style={[styles.cardContainer, { shadowColor: theme.text }]}
       >
         <LinearGradient
-          colors={darkMode ? ['#1e293b', '#0f172a'] : ['#ffffff', '#f8fafc']}
+          colors={darkMode ? ['#141414', '#141414'] : ['#ffffff', '#f8fafc']}
           style={[styles.card, { borderColor: theme.border }]}
         >
           {/* Header Gradient Stripe */}

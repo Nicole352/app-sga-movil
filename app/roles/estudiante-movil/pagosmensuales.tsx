@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions, KeyboardAvoidingView } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -112,19 +112,19 @@ export default function PagosMensuales() {
 
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
-      accent: '#fbbf24',
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
+      accent: '#f59e0b',
       accentGradient: ['#f59e0b', '#d97706'] as const,
       success: '#10b981',
       danger: '#ef4444',
       warning: '#f59e0b',
       info: '#3b82f6',
-      inputBg: 'rgba(255,255,255,0.05)',
+      inputBg: '#1e1e1e',
     }
     : {
       bg: '#f8fafc',
@@ -800,7 +800,10 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
         <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
           {/* Header */}
           <View style={styles.modalHeader}>
@@ -937,7 +940,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

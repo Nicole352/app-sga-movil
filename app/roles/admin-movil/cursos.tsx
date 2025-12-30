@@ -83,14 +83,14 @@ export default function AdminCursosScreen() {
     const [showPickerFin, setShowPickerFin] = useState(false);
 
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444',
-        inputBg: '#334155',
+        inputBg: '#18181b',
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#ef4444',
@@ -430,7 +430,7 @@ export default function AdminCursosScreen() {
                     </View>
 
                     <View style={styles.footerItem}>
-                        <View style={{ width: 60, height: 4, backgroundColor: darkMode ? '#334155' : '#e2e8f0', borderRadius: 2, marginRight: 6 }}>
+                        <View style={{ width: 60, height: 4, backgroundColor: theme.border, borderRadius: 2, marginRight: 6 }}>
                             <View style={{ width: `${capacityPercent}%`, height: '100%', backgroundColor: theme.primary, borderRadius: 2 }} />
                         </View>
                         <Text style={{ fontSize: 10, color: theme.textMuted }}>{capacityPercent}%</Text>

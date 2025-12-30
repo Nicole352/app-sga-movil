@@ -25,19 +25,19 @@ const { width } = Dimensions.get('window');
 
 // --- TEMA ---
 const getTheme = (isDark: boolean) => ({
-  primary: '#2563eb',
-  secondary: '#3b82f6',
-  background: isDark ? '#000000' : '#f8fafc',
-  cardBg: isDark ? '#1a1a1a' : '#ffffff',
+  primary: '#3b82f6',
+  secondary: '#2563eb',
+  background: isDark ? '#0a0a0a' : '#f8fafc',
+  cardBg: isDark ? '#141414' : '#ffffff',
   text: isDark ? '#ffffff' : '#1e293b',
-  textMuted: isDark ? 'rgba(255,255,255,0.6)' : '#64748b',
-  border: isDark ? 'rgba(59, 130, 246, 0.2)' : '#e2e8f0',
+  textMuted: isDark ? '#71717a' : '#64748b',
+  border: isDark ? '#27272a' : '#e2e8f0',
   success: '#10b981',
   error: '#ef4444',
   warning: '#f59e0b',
   primaryGradient: ['#3b82f6', '#2563eb'] as const,
-  tableHeaderBg: isDark ? '#1e3a8a' : '#eff6ff',
-  categoryHeaderBg: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+  tableHeaderBg: isDark ? '#1e1e1e' : '#eff6ff',
+  categoryHeaderBg: isDark ? 'rgba(59, 130, 246, 0.1)' : '#f1f5f9',
   stickyColShadow: isDark ? '#000000' : '#e2e8f0'
 });
 
@@ -69,116 +69,34 @@ interface Estudiante {
 
 // --- PICKER COMPONENT ---
 interface PickerItem { label: string; value: string; }
-const CompactPicker = ({
-  items,
-  selectedValue,
-  onValueChange,
-  placeholder,
-  theme
-}: {
-  items: PickerItem[],
-  selectedValue: string,
-  onValueChange: (val: string) => void,
-  placeholder?: string,
-  theme: any
-}) => {
+const CompactPicker = ({ items, selectedValue, onValueChange, placeholder, theme }: any) => {
   const [showModal, setShowModal] = useState(false);
-
-  // Get current label
-  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || items[0]?.label;
-
-  const handleSelect = (value: string) => {
-    onValueChange(value);
-    if (Platform.OS === 'android') {
-      setShowModal(false);
-    }
-  };
-
+  if (Platform.OS === 'android') {
+    return (
+      <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.cardBg }]}>
+        <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={[styles.picker, { color: theme.text }]} dropdownIconColor={theme.text}>
+          {items.map((item: any) => <Picker.Item key={item.value} label={item.label} value={item.value} style={{ fontSize: 13, color: '#000' }} />)}
+        </Picker>
+      </View>
+    );
+  }
+  const selectedLabel = items.find((i: any) => i.value === selectedValue)?.label || placeholder || items[0]?.label;
   return (
     <>
-      <TouchableOpacity
-        onPress={() => setShowModal(true)}
-        activeOpacity={0.7}
-        style={[
-          styles.pickerContainer,
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 15,
-            borderColor: theme.border,
-            backgroundColor: theme.cardBg,
-            height: 48 // Taller for better visibility
-          }
-        ]}
-      >
-        <Text style={{ color: theme.text, fontSize: 13, fontWeight: '500', flex: 1 }} numberOfLines={1}>
-          {selectedLabel}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color={theme.primary} />
+      <TouchableOpacity onPress={() => setShowModal(true)} style={[styles.pickerContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, borderColor: theme.border, backgroundColor: theme.cardBg }]}>
+        <Text style={{ color: theme.text, fontSize: 12, fontWeight: '500' }} numberOfLines={1}>{selectedLabel}</Text>
+        <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
       </TouchableOpacity>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showModal}
-        onRequestClose={() => setShowModal(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingBottom: Platform.OS === 'ios' ? 40 : 20, maxHeight: '80%' }}>
-            {/* Toolbar */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Text style={{ color: theme.textMuted, fontSize: 16, fontWeight: '600' }}>Cancelar</Text>
-              </TouchableOpacity>
-              <Text style={{ color: theme.text, fontSize: 17, fontWeight: '700' }}>Seleccionar</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 16 }}>Listo</Text>
-              </TouchableOpacity>
+      <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 34 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+              <TouchableOpacity onPress={() => setShowModal(false)}><Text style={{ color: theme.textMuted, fontSize: 16 }}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowModal(false)}><Text style={{ color: theme.primary, fontWeight: '700', fontSize: 16 }}>Confirmar</Text></TouchableOpacity>
             </View>
-
-            {Platform.OS === 'ios' ? (
-              /* IOS: Picker Wheel */
-              <Picker
-                selectedValue={selectedValue}
-                onValueChange={onValueChange}
-                style={{ height: 250, color: theme.text }}
-                itemStyle={{ color: theme.text, fontSize: 18 }}
-              >
-                {items.map((item) => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              </Picker>
-            ) : (
-              /* ANDROID: Professional List */
-              <ScrollView style={{ paddingVertical: 10 }}>
-                {items.map((item) => (
-                  <TouchableOpacity
-                    key={item.value}
-                    style={{
-                      paddingVertical: 15,
-                      paddingHorizontal: 25,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      backgroundColor: selectedValue === item.value ? theme.primary + '15' : 'transparent'
-                    }}
-                    onPress={() => handleSelect(item.value)}
-                  >
-                    <Text style={{
-                      color: selectedValue === item.value ? theme.primary : theme.text,
-                      fontSize: 16,
-                      fontWeight: selectedValue === item.value ? '700' : '400'
-                    }}>
-                      {item.label}
-                    </Text>
-                    {selectedValue === item.value && (
-                      <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+            <Picker selectedValue={selectedValue} onValueChange={onValueChange} style={{ height: 216 }} itemStyle={{ color: theme.text, fontSize: 18 }}>
+              {items.map((item: any) => <Picker.Item key={item.value} label={item.label} value={item.value} />)}
+            </Picker>
           </View>
         </View>
       </Modal>
@@ -411,7 +329,7 @@ export default function CalificacionesCursoScreen() {
                 <Text style={[styles.label, { color: theme.textMuted }]}>Estado</Text>
                 <CompactPicker
                   items={[{ label: "Todos", value: "todos" }, { label: "Aprobados", value: "aprobados" }, { label: "Reprobados", value: "reprobados" }]}
-                  selectedValue={filtroEstado} onValueChange={(val) => setFiltroEstado(val as any)} theme={theme}
+                  selectedValue={filtroEstado} onValueChange={setFiltroEstado} theme={theme}
                 />
               </View>
             </View>
@@ -522,7 +440,7 @@ export default function CalificacionesCursoScreen() {
                           showsHorizontalScrollIndicator={false}
                           contentContainerStyle={{ alignItems: 'center', paddingLeft: 12, paddingRight: 8 }}
                         >
-                          <Text style={{ fontSize: 10, fontWeight: '600', color: theme.text }}>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: theme.text }}>
                             {est.apellido}, {est.nombre}
                           </Text>
                         </ScrollView>
@@ -601,8 +519,8 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
   filtersCard: { borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
   label: { fontSize: 11, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  pickerContainer: { borderRadius: 12, borderWidth: 1, height: 48, justifyContent: 'center' },
-  picker: { height: 48, width: '100%' },
+  pickerContainer: { borderRadius: 10, borderWidth: 1, height: 42, justifyContent: 'center' },
+  picker: { height: 42, width: '100%' },
 
   statsSummary: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
   statItem: { flexDirection: 'row', alignItems: 'center' },

@@ -203,14 +203,14 @@ export default function ModalModulo({
   };
 
   const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    cardBg: darkMode ? '#141414' : '#ffffff',
     text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.9)' : 'rgba(30,41,59,0.9)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+    textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.9)',
+    textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+    border: darkMode ? '#27272a' : 'rgba(0,0,0,0.1)',
     accent: '#3b82f6',
-    inputBg: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+    inputBg: darkMode ? '#1a1a1a' : 'rgba(0,0,0,0.05)',
   };
 
   return (

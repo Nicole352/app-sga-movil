@@ -72,13 +72,13 @@ export default function CalificacionesScreen() {
   };
 
   const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    cardBg: darkMode ? '#141414' : '#ffffff',
     text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.8)' : 'rgba(30,41,59,0.8)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.6)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
-    primary: '#2563eb',
+    textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.8)',
+    textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.6)',
+    border: darkMode ? '#27272a' : 'rgba(59, 130, 246, 0.3)',
+    primary: '#3b82f6',
     accent: '#3b82f6',
     primaryGradient: ['#3b82f6', '#2563eb'] as const,
   };

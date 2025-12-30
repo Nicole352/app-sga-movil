@@ -53,18 +53,18 @@ export default function HorarioEstudiante() {
   // Theme Config
   const theme = darkMode
     ? {
-      bg: '#0f172a',
-      cardBg: '#1e293b',
-      text: '#f8fafc',
-      textSecondary: '#cbd5e1',
-      textMuted: '#94a3b8',
-      border: '#334155',
-      accent: '#fbbf24',
+      bg: '#0a0a0a',
+      cardBg: '#141414',
+      text: '#ffffff',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      border: '#27272a',
+      accent: '#f59e0b',
       accentGradient: ['#f59e0b', '#d97706'] as const,
-      activeTabBg: '#fbbf24',
-      activeTabText: '#0f172a',
-      inactiveTabBg: 'rgba(255,255,255,0.05)',
-      inactiveTabText: '#94a3b8'
+      activeTabBg: '#f59e0b',
+      activeTabText: '#ffffff',
+      inactiveTabBg: '#1a1a1a',
+      inactiveTabText: '#71717a'
     }
     : {
       bg: '#f8fafc',
@@ -256,7 +256,7 @@ export default function HorarioEstudiante() {
 
                 {/* Card Content */}
                 <LinearGradient
-                  colors={darkMode ? ['rgba(251, 191, 36, 0.15)', 'rgba(217, 119, 6, 0.15)'] : ['#ffffff', '#fffbeb']}
+                  colors={darkMode ? ['rgba(245, 158, 11, 0.15)', 'rgba(217, 119, 6, 0.15)'] : ['#ffffff', '#fffbeb']}
                   style={[styles.classCard, { borderColor: theme.accent + '40' }]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}

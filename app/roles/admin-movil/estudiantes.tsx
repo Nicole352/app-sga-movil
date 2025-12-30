@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { WebView } from 'react-native-webview';
 import Pagination from './components/Pagination';
 import { API_URL } from '../../../constants/config';
 import { getToken, getDarkMode } from '../../../services/storage';
@@ -86,19 +87,26 @@ export default function AdminEstudiantesScreen() {
     const [actionType, setActionType] = useState<'activar' | 'desactivar' | null>(null);
     const [processingAction, setProcessingAction] = useState(false);
 
+    // Visor de Archivos
+    const [archivoPreview, setArchivoPreview] = useState<{
+        url: string;
+        titulo: string;
+        tipo: 'image' | 'pdf' | 'otro';
+    } | null>(null);
+
     // TEMA
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444',
         success: '#10b981',
         danger: '#ef4444',
         warning: '#f59e0b',
-        inputBg: '#334155',
+        inputBg: '#18181b',
     } : {
         bg: '#f8fafc',
         cardBg: '#ffffff',
@@ -253,8 +261,18 @@ export default function AdminEstudiantesScreen() {
         if (email) Linking.openURL(`mailto:${email}`);
     };
 
-    const handleViewDocument = (url?: string) => {
-        if (url) Linking.openURL(url).catch(() => Alert.alert('Error', 'No se pudo abrir el documento'));
+    const handleViewDocument = (url?: string, titulo: string = 'Documento') => {
+        if (!url) return;
+        const extension = url.toLowerCase().split('.').pop()?.split('?')[0];
+        let tipo: 'image' | 'pdf' | 'otro' = 'otro';
+
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension || '')) {
+            tipo = 'image';
+        } else if (extension === 'pdf') {
+            tipo = 'pdf';
+        }
+
+        setArchivoPreview({ url, titulo, tipo });
     };
 
     const formatDate = (dateString?: string) => {
@@ -522,7 +540,7 @@ export default function AdminEstudiantesScreen() {
                                                 value="Ver Documento"
                                                 theme={theme}
                                                 isLink
-                                                onPress={() => handleViewDocument(selectedEst.documento_identificacion_url)}
+                                                onPress={() => handleViewDocument(selectedEst.documento_identificacion_url, selectedEst.tipo_documento === 'extranjero' ? 'Pasaporte' : 'Cédula')}
                                             />
                                         ) : <Text style={{ color: theme.textMuted, fontStyle: 'italic' }}>Sin identificación</Text>}
 
@@ -532,7 +550,7 @@ export default function AdminEstudiantesScreen() {
                                                 value="Ver Archivo"
                                                 theme={theme}
                                                 isLink
-                                                onPress={() => handleViewDocument(selectedEst.documento_estatus_legal_url)}
+                                                onPress={() => handleViewDocument(selectedEst.documento_estatus_legal_url, 'Estatus Legal')}
                                             />
                                         )}
 
@@ -542,7 +560,7 @@ export default function AdminEstudiantesScreen() {
                                                 value="Ver Archivo"
                                                 theme={theme}
                                                 isLink
-                                                onPress={() => handleViewDocument(selectedEst.certificado_cosmetologia_url)}
+                                                onPress={() => handleViewDocument(selectedEst.certificado_cosmetologia_url, 'Certificado')}
                                             />
                                         )}
                                     </View>
@@ -570,6 +588,59 @@ export default function AdminEstudiantesScreen() {
 
                                 <View style={{ height: 40 }} />
                             </ScrollView>
+                        )}
+
+                        {/* VISOR DE ARCHIVOS INTEGRADO */}
+                        {archivoPreview && (
+                            <View style={[styles.absoluteVisor, { borderTopLeftRadius: 24, borderTopRightRadius: 24 }]}>
+                                <View style={styles.visorHeader}>
+                                    <TouchableOpacity onPress={() => setArchivoPreview(null)} style={styles.visorHeaderBtn}>
+                                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                                    </TouchableOpacity>
+
+                                    <View style={{ flex: 1, alignItems: 'center' }}>
+                                        <Text style={styles.visorTitle} numberOfLines={1}>
+                                            {archivoPreview.titulo}
+                                        </Text>
+                                    </View>
+
+                                    <TouchableOpacity
+                                        onPress={() => Linking.openURL(archivoPreview.url)}
+                                        style={styles.visorHeaderBtn}
+                                    >
+                                        <Ionicons name="download-outline" size={24} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={{ flex: 1, backgroundColor: '#000' }}>
+                                    {archivoPreview.tipo === 'image' ? (
+                                        <Image
+                                            source={{ uri: archivoPreview.url }}
+                                            style={{ width: '100%', height: '100%' }}
+                                            resizeMode="contain"
+                                        />
+                                    ) : archivoPreview.tipo === 'pdf' ? (
+                                        <WebView
+                                            source={{ uri: archivoPreview.url }}
+                                            style={{ flex: 1 }}
+                                            scalesPageToFit
+                                        />
+                                    ) : (
+                                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                                            <Ionicons name="document-text" size={80} color={theme.border} />
+                                            <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20, fontSize: 16 }}>
+                                                La vista previa no está disponible.
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.visorActionBtn}
+                                                onPress={() => Linking.openURL(archivoPreview.url)}
+                                            >
+                                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Abrir Externamente</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
                         )}
                     </View>
                 </View>
@@ -720,5 +791,41 @@ const styles = StyleSheet.create({
     },
     pageInfo: {
         alignItems: 'center',
+    },
+
+    // Absolute Visor Styles
+    absoluteVisor: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000',
+        zIndex: 9999,
+    },
+    visorHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingTop: Platform.OS === 'ios' ? 20 : 10,
+        paddingBottom: 15,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+    },
+    visorHeaderBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.1)'
+    },
+    visorTitle: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    visorActionBtn: {
+        marginTop: 20,
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 25,
+        paddingVertical: 12,
+        borderRadius: 25,
     },
 });

@@ -321,17 +321,17 @@ export default function DocenteLayout() {
   };
 
   const theme = {
-    bg: darkMode ? '#000000' : '#f8fafc',
-    cardBg: darkMode ? '#1a1a1a' : '#ffffff',
+    bg: darkMode ? '#0a0a0a' : '#f8fafc',
+    cardBg: darkMode ? '#141414' : '#ffffff',
     text: darkMode ? '#ffffff' : '#1e293b',
-    textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-    textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)',
+    textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.7)',
+    textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+    border: darkMode ? '#27272a' : 'rgba(59, 130, 246, 0.3)',
     accent: '#3b82f6',
     tabActive: '#3b82f6',
-    tabInactive: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-    tabBg: darkMode ? '#000000' : '#ffffff',
-    headerBg: darkMode ? '#000000' : '#ffffff',
+    tabInactive: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+    tabBg: darkMode ? '#141414' : '#ffffff',
+    headerBg: darkMode ? '#141414' : '#ffffff',
   };
 
   const getInitials = () => {
@@ -684,7 +684,10 @@ export default function DocenteLayout() {
                 </View>
 
                 {/* Requisitos */}
-                <View style={[styles.passwordRequirements, { backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)', borderColor: '#3b82f630' }]}>
+                <View style={[styles.passwordRequirements, {
+                  backgroundColor: theme.cardBg,
+                  borderColor: theme.border
+                }]}>
                   <Ionicons name="information-circle" size={16} color="#3b82f6" />
                   <Text style={[styles.passwordRequirementsText, { color: theme.textSecondary }]}>
                     La contraseña debe tener al menos 8 caracteres

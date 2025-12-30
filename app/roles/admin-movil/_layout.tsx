@@ -294,16 +294,16 @@ export default function AdminLayout() {
 
     // TEMA ADMIN (Rojo)
     const theme = {
-        bg: darkMode ? '#000000' : '#f8fafc',
-        cardBg: darkMode ? '#1a1a1a' : '#ffffff',
+        bg: darkMode ? '#0a0a0a' : '#f8fafc',
+        cardBg: darkMode ? '#141414' : '#ffffff',
         text: darkMode ? '#ffffff' : '#1e293b',
-        textSecondary: darkMode ? 'rgba(255,255,255,0.7)' : 'rgba(30,41,59,0.7)',
-        textMuted: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-        border: darkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.2)', // Rojo Border
+        textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.7)',
+        textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+        border: darkMode ? '#27272a' : 'rgba(239, 68, 68, 0.2)', // Rojo Border
         accent: '#ef4444', // Rojo Admin
         tabActive: '#ef4444',
-        tabInactive: darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(30,41,59,0.5)',
-        tabBg: darkMode ? '#000000' : '#ffffff',
+        tabInactive: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
+        tabBg: darkMode ? '#141414' : '#ffffff',
     };
 
     const getInitials = () => {

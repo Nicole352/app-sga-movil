@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { WebView } from 'react-native-webview';
 import Pagination from './components/Pagination';
 import { API_URL } from '../../../constants/config';
 import { getToken, getDarkMode } from '../../../services/storage';
@@ -82,17 +83,24 @@ export default function AdminMatriculasScreen() {
     const [processing, setProcessing] = useState(false);
     const [inputObservacion, setInputObservacion] = useState('');
     const [showActionModal, setShowActionModal] = useState(false);
-    const [actionType, setActionType] = useState<'aprobado' | 'rechazado' | 'observaciones' | null>(null);
+    const [actionType, setActionType] = useState<'aprobado' | 'rechazado' | null>(null);
+
+    // Visor de Archivos
+    const [archivoPreview, setArchivoPreview] = useState<{
+        url: string;
+        titulo: string;
+        tipo: 'image' | 'pdf' | 'otro';
+    } | null>(null);
 
     const theme = darkMode ? {
-        bg: '#0f172a',
-        cardBg: '#1e293b',
-        text: '#f8fafc',
-        textSecondary: '#cbd5e1',
-        textMuted: '#94a3b8',
-        border: '#334155',
+        bg: '#0a0a0a',
+        cardBg: '#141414',
+        text: '#ffffff',
+        textSecondary: '#a1a1aa',
+        textMuted: '#71717a',
+        border: '#27272a',
         primary: '#ef4444',
-        inputBg: '#334155',
+        inputBg: '#18181b',
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#ef4444',
@@ -200,7 +208,7 @@ export default function AdminMatriculasScreen() {
         }
     };
 
-    const handleAction = (type: 'aprobado' | 'rechazado' | 'observaciones') => {
+    const handleAction = (type: 'aprobado' | 'rechazado') => {
         setActionType(type);
         setInputObservacion('');
         setShowActionModal(true);
@@ -261,11 +269,18 @@ export default function AdminMatriculasScreen() {
         return `${nombre?.charAt(0) || ''}${apellido?.charAt(0) || ''}`.toUpperCase();
     };
 
-    const handleViewFile = (url: string) => {
+    const handleViewFile = (url: string, titulo: string = 'Documento') => {
         if (!url) return;
-        // Simplificación: Abrir todo en el navegador/visor del sistema
-        // Esto arregla problemas de zoom, descarga y formatos no soportados
-        Linking.openURL(url).catch(err => Alert.alert('Error', 'No se pudo abrir el archivo'));
+        const extension = url.split('.').pop()?.split('?')[0].toLowerCase();
+        let tipo: 'image' | 'pdf' | 'otro' = 'otro';
+
+        if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension || '')) {
+            tipo = 'image';
+        } else if (extension === 'pdf') {
+            tipo = 'pdf';
+        }
+
+        setArchivoPreview({ url, titulo, tipo });
     };
 
     const formatDate = (d?: string) => {
@@ -364,18 +379,30 @@ export default function AdminMatriculasScreen() {
                 </View>
 
                 {/* Filtros Tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }}>
-                    {['pendiente', 'aprobado', 'rechazado', 'observaciones', 'todos'].map((f) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ paddingRight: 20 }}>
+                    {['todos', 'pendiente', 'aprobado', 'rechazado'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
                                 styles.filterTab,
                                 filterEstado === f && styles.filterTabActive,
-                                { borderColor: filterEstado === f ? '#fff' : 'transparent' }
+                                { borderBottomColor: filterEstado === f ? '#fff' : 'transparent' }
                             ]}
-                            onPress={() => setFilterEstado(f)}
+                            onPress={() => {
+                                if (filterEstado !== f) {
+                                    setFilterEstado(f);
+                                }
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            activeOpacity={0.7}
                         >
-                            <Text style={[styles.filterText, { fontWeight: filterEstado === f ? '700' : '400', opacity: filterEstado === f ? 1 : 0.7 }]}>
+                            <Text style={[
+                                styles.filterText,
+                                {
+                                    fontWeight: filterEstado === f ? '700' : '400',
+                                    opacity: filterEstado === f ? 1 : 0.7
+                                }
+                            ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
@@ -487,10 +514,6 @@ export default function AdminMatriculasScreen() {
                                             <Ionicons name="close-circle" size={24} color={theme.danger} />
                                             <Text style={{ fontSize: 11, color: theme.danger, marginTop: 4, fontWeight: 'bold' }}>Rechazar</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity style={[styles.quickBtn, { backgroundColor: theme.warning + '20' }]} onPress={() => handleAction('observaciones')}>
-                                            <Ionicons name="eye" size={24} color={theme.warning} />
-                                            <Text style={{ fontSize: 11, color: theme.warning, marginTop: 4, fontWeight: 'bold' }}>Observar</Text>
-                                        </TouchableOpacity>
                                     </View>
                                 )}
 
@@ -524,14 +547,14 @@ export default function AdminMatriculasScreen() {
                                     </View>
 
                                     {/* COMPROBANTE BOX - CONDICIONAL SEGÚN MÉTODO */}
-                                    <View style={{ marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: darkMode ? '#334155' : '#f1f5f9' }}>
-                                        <Text style={{ color: theme.textMuted, fontSize: 12, marginBottom: 8, fontWeight: '600' }}>Detalle Transacción</Text>
+                                    <View style={{ marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: theme.inputBg }}>
+                                        <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 8, fontWeight: '600' }}>Detalle Transacción</Text>
 
                                         {/* Número de Comprobante (siempre) */}
                                         {selectedSolicitud.numero_comprobante && (
                                             <View style={{ marginBottom: 8 }}>
-                                                <Text style={{ color: theme.textMuted, fontSize: 11, marginBottom: 2 }}>Número de Comprobante</Text>
-                                                <View style={{ backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#fee2e2', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }}>
+                                                <Text style={{ color: theme.textSecondary, fontSize: 11, marginBottom: 2 }}>Número de Comprobante</Text>
+                                                <View style={{ backgroundColor: theme.danger + '20', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: theme.danger + '30' }}>
                                                     <Text style={{ color: theme.danger, fontWeight: '700' }}>{selectedSolicitud.numero_comprobante}</Text>
                                                 </View>
                                             </View>
@@ -540,9 +563,9 @@ export default function AdminMatriculasScreen() {
                                         {/* Si es EFECTIVO: mostrar Recibido Por */}
                                         {selectedSolicitud.metodo_pago === 'efectivo' && (selectedSolicitud as any).recibido_por && (
                                             <View>
-                                                <Text style={{ color: theme.textMuted, fontSize: 11, marginBottom: 2 }}>Recibido por</Text>
-                                                <View style={{ backgroundColor: darkMode ? 'rgba(180,83,9,0.2)' : '#fef3c7', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(180,83,9,0.3)' }}>
-                                                    <Text style={{ color: '#b45309', fontWeight: '700' }}>{(selectedSolicitud as any).recibido_por}</Text>
+                                                <Text style={{ color: theme.textSecondary, fontSize: 11, marginBottom: 2 }}>Recibido por</Text>
+                                                <View style={{ backgroundColor: theme.warning + '20', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: theme.warning + '30' }}>
+                                                    <Text style={{ color: theme.warning, fontWeight: '700' }}>{(selectedSolicitud as any).recibido_por}</Text>
                                                 </View>
                                             </View>
                                         )}
@@ -552,13 +575,13 @@ export default function AdminMatriculasScreen() {
                                             <View style={{ flexDirection: 'row', gap: 10 }}>
                                                 {selectedSolicitud.banco_comprobante && (
                                                     <View style={{ flex: 1 }}>
-                                                        <Text style={{ color: theme.textMuted, fontSize: 11, marginBottom: 2 }}>Banco</Text>
+                                                        <Text style={{ color: theme.textSecondary, fontSize: 11, marginBottom: 2 }}>Banco</Text>
                                                         <Text style={{ color: theme.text, fontWeight: '600' }}>{selectedSolicitud.banco_comprobante}</Text>
                                                     </View>
                                                 )}
                                                 {selectedSolicitud.fecha_transferencia && (
                                                     <View style={{ flex: 1 }}>
-                                                        <Text style={{ color: theme.textMuted, fontSize: 11, marginBottom: 2 }}>Fecha</Text>
+                                                        <Text style={{ color: theme.textSecondary, fontSize: 11, marginBottom: 2 }}>Fecha</Text>
                                                         <Text style={{ color: theme.text, fontWeight: '600' }}>{formatDate(selectedSolicitud.fecha_transferencia)}</Text>
                                                     </View>
                                                 )}
@@ -573,28 +596,40 @@ export default function AdminMatriculasScreen() {
                                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Evidencias</Text>
                                 <View style={styles.docsContainer}>
                                     {selectedSolicitud.comprobante_pago_url ? (
-                                        <TouchableOpacity style={[styles.docBtn, { borderColor: theme.success, backgroundColor: theme.success + '10' }]} onPress={() => handleViewFile(selectedSolicitud.comprobante_pago_url!)}>
+                                        <TouchableOpacity
+                                            style={[styles.docBtn, { borderColor: theme.success, backgroundColor: theme.success + '10' }]}
+                                            onPress={() => handleViewFile(selectedSolicitud.comprobante_pago_url!, `Comprobante: ${selectedSolicitud.numero_comprobante || 'S/N'}`)}
+                                        >
                                             <Ionicons name="receipt-outline" size={20} color={theme.success} />
                                             <Text style={{ color: theme.success, fontWeight: '600' }}>Ver Comprobante</Text>
                                         </TouchableOpacity>
                                     ) : <Text style={{ color: theme.textMuted }}>No hay comprobante</Text>}
 
                                     {selectedSolicitud.documento_identificacion_url ? (
-                                        <TouchableOpacity style={[styles.docBtn, { borderColor: '#3b82f6', backgroundColor: '#3b82f610' }]} onPress={() => handleViewFile(selectedSolicitud.documento_identificacion_url!)}>
+                                        <TouchableOpacity
+                                            style={[styles.docBtn, { borderColor: '#3b82f6', backgroundColor: '#3b82f610' }]}
+                                            onPress={() => handleViewFile(selectedSolicitud.documento_identificacion_url!, 'Identificación')}
+                                        >
                                             <Ionicons name="card-outline" size={20} color="#3b82f6" />
                                             <Text style={{ color: '#3b82f6', fontWeight: '600' }}>Identificación</Text>
                                         </TouchableOpacity>
                                     ) : <Text style={{ color: theme.textMuted }}>No hay identificación</Text>}
 
                                     {selectedSolicitud.documento_estatus_legal_url && (
-                                        <TouchableOpacity style={[styles.docBtn, { borderColor: '#8b5cf6', backgroundColor: '#8b5cf610' }]} onPress={() => handleViewFile(selectedSolicitud.documento_estatus_legal_url!)}>
+                                        <TouchableOpacity
+                                            style={[styles.docBtn, { borderColor: '#8b5cf6', backgroundColor: '#8b5cf610' }]}
+                                            onPress={() => handleViewFile(selectedSolicitud.documento_estatus_legal_url!, 'Estatus Legal')}
+                                        >
                                             <Ionicons name="document-text-outline" size={20} color="#8b5cf6" />
                                             <Text style={{ color: '#8b5cf6', fontWeight: '600' }}>Estatus Legal</Text>
                                         </TouchableOpacity>
                                     )}
 
                                     {selectedSolicitud.certificado_cosmetologia_url && (
-                                        <TouchableOpacity style={[styles.docBtn, { borderColor: '#ec4899', backgroundColor: '#ec489910' }]} onPress={() => handleViewFile(selectedSolicitud.certificado_cosmetologia_url!)}>
+                                        <TouchableOpacity
+                                            style={[styles.docBtn, { borderColor: '#ec4899', backgroundColor: '#ec489910' }]}
+                                            onPress={() => handleViewFile(selectedSolicitud.certificado_cosmetologia_url!, 'Certificado')}
+                                        >
                                             <Ionicons name="ribbon-outline" size={20} color="#ec4899" />
                                             <Text style={{ color: '#ec4899', fontWeight: '600' }}>Certificado</Text>
                                         </TouchableOpacity>
@@ -611,6 +646,62 @@ export default function AdminMatriculasScreen() {
                                 <View style={{ height: 40 }} />
                             </ScrollView>
                         )}
+
+                        {/* VISOR DE ARCHIVOS INTEGRADO (PARA ESTAR ENCIMA DEL CONTENIDO DEL MODAL) */}
+                        {archivoPreview && (
+                            <View style={[styles.absoluteVisor, { borderTopLeftRadius: 24, borderTopRightRadius: 24 }]}>
+                                <View style={styles.visorHeader}>
+                                    <TouchableOpacity onPress={() => setArchivoPreview(null)} style={styles.visorHeaderBtn}>
+                                        <Ionicons name="close" size={28} color="#fff" />
+                                    </TouchableOpacity>
+
+                                    <View style={{ flex: 1, alignItems: 'center' }}>
+                                        <Text style={styles.visorTitle} numberOfLines={1}>
+                                            {archivoPreview.titulo}
+                                        </Text>
+                                        {archivoPreview.titulo.includes('Comprobante') && (
+                                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10 }}>Desliza o usa el botón para cerrar</Text>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        onPress={() => Linking.openURL(archivoPreview.url)}
+                                        style={styles.visorHeaderBtn}
+                                    >
+                                        <Ionicons name="download-outline" size={24} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={{ flex: 1, backgroundColor: '#000' }}>
+                                    {archivoPreview.tipo === 'image' ? (
+                                        <Image
+                                            source={{ uri: archivoPreview.url }}
+                                            style={{ width: '100%', height: '100%' }}
+                                            resizeMode="contain"
+                                        />
+                                    ) : archivoPreview.tipo === 'pdf' ? (
+                                        <WebView
+                                            source={{ uri: archivoPreview.url }}
+                                            style={{ flex: 1 }}
+                                            scalesPageToFit
+                                        />
+                                    ) : (
+                                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+                                            <Ionicons name="document-text" size={80} color={theme.border} />
+                                            <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20, fontSize: 16 }}>
+                                                La vista previa no está disponible.
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.visorActionBtn}
+                                                onPress={() => Linking.openURL(archivoPreview.url)}
+                                            >
+                                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Abrir Externamente</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -620,7 +711,7 @@ export default function AdminMatriculasScreen() {
                 <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }]}>
                     <View style={[styles.modalCard, { backgroundColor: theme.cardBg, height: 'auto', padding: 30, borderRadius: 20 }]}>
                         <Text style={[styles.modalTitle, { color: theme.text, textAlign: 'center', marginBottom: 15 }]}>
-                            {actionType === 'aprobado' ? '¿Aprobar Matrícula?' : actionType === 'rechazado' ? 'Rechazar Matrícula' : 'Agregar Observación'}
+                            {actionType === 'aprobado' ? '¿Aprobar Matrícula?' : 'Rechazar Matrícula'}
                         </Text>
 
                         {actionType !== 'aprobado' && (
@@ -650,6 +741,7 @@ export default function AdminMatriculasScreen() {
                     </View>
                 </View>
             </Modal>
+
         </View>
     );
 }
@@ -670,9 +762,18 @@ const styles = StyleSheet.create({
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
     searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },
 
-    filterTab: { paddingBottom: 4, borderBottomWidth: 2, marginRight: 15 },
-    filterTabActive: { borderBottomWidth: 2 },
-    filterText: { color: '#fff', fontSize: 13 },
+    filterTab: {
+        paddingBottom: 4,
+        borderBottomWidth: 2,
+        marginRight: 15,
+    },
+    filterTabActive: {
+        borderBottomWidth: 2,
+    },
+    filterText: {
+        fontSize: 13,
+        color: '#fff',
+    },
 
     listContent: { padding: 20, paddingBottom: 100 },
     card: {
@@ -726,5 +827,41 @@ const styles = StyleSheet.create({
 
     textArea: { height: 100, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, paddingTop: 12, fontSize: 15, textAlignVertical: 'top' },
 
-    miniActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderRadius: 25 }
+    miniActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderRadius: 25 },
+
+    // Absolute Visor Styles
+    absoluteVisor: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#000',
+        zIndex: 9999, // Super alto para estar encima de modales
+    },
+    visorHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 15,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+    },
+    visorHeaderBtn: {
+        width: 44,
+        height: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.1)'
+    },
+    visorTitle: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    visorActionBtn: {
+        marginTop: 20,
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 25,
+        paddingVertical: 12,
+        borderRadius: 25,
+    }
 });
