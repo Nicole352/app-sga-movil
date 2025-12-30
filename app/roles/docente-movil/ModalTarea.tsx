@@ -39,50 +39,103 @@ const CompactPicker = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
 
-  // ANDROID: Picker Nativo
+  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || "Seleccione";
+
+  // UI Trigger (Shared)
+  const trigger = (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={() => setShowModal(true)}
+      style={[styles.pickerTrigger, {
+        backgroundColor: theme.inputBg,
+        borderColor: theme.border
+      }]}
+    >
+      <View style={{ flex: 1, marginRight: 8 }}>
+        <Text style={{ color: theme.textMuted, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', marginBottom: 2 }}>
+          {placeholder || 'Seleccionar'}
+        </Text>
+        <Text style={{ color: theme.text, fontSize: 13, fontWeight: '500' }} numberOfLines={1}>
+          {selectedLabel}
+        </Text>
+      </View>
+      <View style={[styles.pickerIcon, { backgroundColor: theme.accent + '15' }]}>
+        <Ionicons name="chevron-down" size={16} color={theme.accent} />
+      </View>
+    </TouchableOpacity>
+  );
+
   if (Platform.OS === 'android') {
     return (
-      <View style={[styles.pickerContainer, { borderColor: theme.border, backgroundColor: theme.inputBg }]}>
-        <Picker
-          selectedValue={selectedValue}
-          onValueChange={onValueChange}
-          style={{ color: theme.text }}
-          dropdownIconColor={theme.text}
+      <>
+        {trigger}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showModal}
+          onRequestClose={() => setShowModal(false)}
         >
-          <Picker.Item label={placeholder || "Seleccione"} value="" style={{ color: theme.textMuted }} enabled={false} />
-          {items.map((item) => (
-            <Picker.Item key={item.value} label={item.label} value={item.value} style={{ fontSize: 14, color: theme.text }} />
-          ))}
-        </Picker>
-      </View>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setShowModal(false)}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalContentPremium, { backgroundColor: theme.cardBg }]}>
+              <View style={[styles.modalIndicator, { backgroundColor: theme.border }]} />
+
+              <View style={styles.modalHeaderPremium}>
+                <View>
+                  <Text style={[styles.modalTitlePremium, { color: theme.text }]}>Seleccionar Opción</Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 12 }}>Elige una de las opciones de la lista</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowModal(false)} style={styles.modalCloseBtn}>
+                  <Ionicons name="close" size={24} color={theme.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                {items.map((item) => {
+                  const isSelected = item.value === selectedValue;
+                  return (
+                    <TouchableOpacity
+                      key={item.value}
+                      onPress={() => {
+                        onValueChange(item.value);
+                        setShowModal(false);
+                      }}
+                      style={[
+                        styles.optionItem,
+                        { borderBottomColor: theme.border + '50' },
+                        isSelected && { backgroundColor: theme.accent + '15', borderColor: theme.accent }
+                      ]}
+                    >
+                      <View style={styles.optionInfo}>
+                        <Text style={[
+                          styles.optionText,
+                          { color: isSelected ? theme.accent : theme.text },
+                          isSelected && { fontWeight: '700' }
+                        ]}>
+                          {item.label}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={22} color={theme.accent} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </>
     );
   }
 
-  // IOS: Modal con Wheel Picker
-  const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || "Seleccione";
-
+  // IOS: WHEEL
   return (
     <>
-      <TouchableOpacity
-        onPress={() => setShowModal(true)}
-        style={[styles.pickerContainer, {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 12,
-          paddingVertical: 12,
-          borderColor: theme.border,
-          backgroundColor: theme.inputBg,
-          borderRadius: 8,
-          borderWidth: 1
-        }]}
-      >
-        <Text style={{ color: selectedValue ? theme.text : theme.textMuted, fontSize: 14 }} numberOfLines={1}>
-          {selectedLabel}
-        </Text>
-        <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
-      </TouchableOpacity>
-
+      {trigger}
       <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 }}>
@@ -96,14 +149,10 @@ const CompactPicker = ({
             </View>
             <Picker
               selectedValue={selectedValue}
-              onValueChange={(val) => {
-                onValueChange(val);
-                // En iOS el picker es inmediato, no cierra el modal solo
-              }}
+              onValueChange={(itemValue) => onValueChange(itemValue as string)}
               style={{ height: 200 }}
-              itemStyle={{ color: theme.text, fontSize: 16 }}
+              itemStyle={{ color: theme.text, fontSize: 18 }}
             >
-              <Picker.Item label={placeholder || "Seleccione"} value="" />
               {items.map((item) => (
                 <Picker.Item key={item.value} label={item.label} value={item.value} />
               ))}
@@ -701,13 +750,66 @@ const styles = StyleSheet.create({
   alertText: {
     fontSize: 12,
   },
-  pickerContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
+  pickerTrigger: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    height: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    marginBottom: 8,
   },
-  picker: {
-    // Android picker style adjustments if needed
-    height: 50,
-  }
+  pickerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContentPremium: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '80%',
+  },
+  modalIndicator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+    opacity: 0.3,
+  },
+  modalHeaderPremium: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitlePremium: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  optionInfo: {
+    flex: 1,
+  },
+  optionText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
 });

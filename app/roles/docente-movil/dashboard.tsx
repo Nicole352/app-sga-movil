@@ -11,9 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
 import { storage, getToken, getUserData, getDarkMode } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -72,8 +72,13 @@ export default function DocenteDashboard() {
       purple: '#7c3aed',
     };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   useEffect(() => {
-    loadData();
     const themeHandler = (isDark: boolean) => setDarkMode(isDark);
     const profileHandler = async () => {
       const user = await getUserData();
@@ -152,11 +157,11 @@ export default function DocenteDashboard() {
     color: string,
     delay: number
   ) => (
-    <Animated.View
-      entering={FadeInDown.delay(delay).duration(500)}
+    <View
       style={[styles.statCardContainer, {
         backgroundColor: theme.cardBg,
-        borderColor: theme.border
+        borderColor: theme.border,
+        shadowColor: darkMode ? "#000" : "#cbd5e1"
       }]}
     >
       <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
@@ -166,12 +171,12 @@ export default function DocenteDashboard() {
         <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
         <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>{title}</Text>
       </View>
-    </Animated.View>
+    </View>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -213,13 +218,16 @@ export default function DocenteDashboard() {
           </LinearGradient>
         </View>
 
-        {/* STATS ROW - 4 CARDS (Like miaula.tsx) */}
-        <View style={styles.statsGrid}>
+        {/* STATS ROW - 4 CARDS (Envolviendo en un solo Animated.View para evitar bugs en iOS) */}
+        <Animated.View
+          entering={FadeInDown.delay(100).duration(600)}
+          style={styles.statsGrid}
+        >
           {renderStatsCard('Activos', cursosActivos, 'book', theme.accent, 100)}
           {renderStatsCard('Alumnos', totalEstudiantes, 'people', theme.success, 200)}
           {renderStatsCard('Ocupación', `${promedioOcupacion}%`, 'stats-chart', theme.warning, 300)}
           {renderStatsCard('Capacidad', capacidadTotal, 'easel', theme.purple, 400)}
-        </View>
+        </Animated.View>
 
         {/* QUICK ACCESS */}
         <View style={styles.sectionHeader}>
