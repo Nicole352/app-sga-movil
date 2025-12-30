@@ -360,7 +360,7 @@ export default function CalificacionesEstudiante() {
 
             return (
               <Animated.View
-                key={curso.id_curso}
+                key={`curso-${curso.id_curso}-${index}`}
                 entering={FadeInDown.delay(100 * index).duration(400)}
                 style={[styles.cardContainer, { shadowColor: theme.text }]}
               >
@@ -420,7 +420,7 @@ export default function CalificacionesEstudiante() {
                         </View>
                       )}
 
-                      {modulos.map(modulo => {
+                      {modulos.map((modulo, midx) => {
                         const isModExpanded = expandedModulos[`${curso.id_curso}-${modulo.id_modulo}`];
                         const modGradeColor = getColorByGrade(modulo.promedio_ponderado);
 
@@ -429,7 +429,7 @@ export default function CalificacionesEstudiante() {
                         const groupKeys = Object.keys(taskGroups);
 
                         return (
-                          <View key={modulo.id_modulo} style={[styles.moduleContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(241, 245, 249, 0.5)', borderColor: theme.border }]}>
+                          <View key={`modulo-${modulo.id_modulo}-${midx}`} style={[styles.moduleContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(241, 245, 249, 0.5)', borderColor: theme.border }]}>
                             <TouchableOpacity
                               style={styles.moduleHeader}
                               onPress={() => toggleModulo(curso.id_curso, modulo.id_modulo)}
@@ -456,12 +456,12 @@ export default function CalificacionesEstudiante() {
 
                             {isModExpanded && (
                               <View style={styles.tasksList}>
-                                {groupKeys.map(key => {
+                                {groupKeys.map((key, kidx) => {
                                   const [catName, catWeight] = key.split('|');
                                   const tasks = taskGroups[key];
 
                                   return (
-                                    <View key={key} style={styles.categoryGroup}>
+                                    <View key={`cat-${key}-${kidx}`} style={styles.categoryGroup}>
                                       {catName !== 'Sin Categoría' && (
                                         <View style={styles.categoryHeader}>
                                           <Ionicons name="pricetag-outline" size={12} color={theme.accent} />
@@ -471,7 +471,7 @@ export default function CalificacionesEstudiante() {
                                         </View>
                                       )}
 
-                                      {tasks.map(cal => {
+                                      {tasks.map((cal, tidx) => {
                                         const nota = cal.nota !== null ? Number(cal.nota) : null;
                                         const max = Number(cal.nota_maxima || 10);
 
@@ -483,7 +483,7 @@ export default function CalificacionesEstudiante() {
                                         const esEntregaTardia = fueEntregada && fechaLimite && fechaEntrega && fechaEntrega > fechaLimite;
 
                                         return (
-                                          <View key={cal.id_calificacion || `tarea-${cal.id_tarea}`} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
+                                          <View key={`tarea-${cal.id_calificacion || cal.id_tarea || tidx}-${tidx}`} style={[styles.taskItem, { borderLeftColor: nota !== null ? getColorByGrade((nota / max) * 10) : theme.border }]}>
                                             <View style={styles.taskHeader}>
                                               <Text style={[styles.taskTitle, { color: theme.textSecondary }]}>{cal.tarea_titulo}</Text>
                                               <Text style={[styles.taskDate, { color: theme.textMuted }]}>
@@ -546,7 +546,7 @@ export default function CalificacionesEstudiante() {
                                         );
                                       })}
                                     </View>
-                                  )
+                                  );
                                 })}
                               </View>
                             )}

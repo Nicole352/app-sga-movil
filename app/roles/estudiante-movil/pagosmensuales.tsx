@@ -598,10 +598,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
   const [loading, setLoading] = useState(false);
 
   const bancos = [
-    'Banco Pichincha', 'Banco del Guayaquil', 'Banco del Pacífico', 'Produbanco',
-    'Banco Internacional', 'Banco Bolivariano', 'Banco de Machala', 'Banco ProCredit',
-    'Banco Solidario', 'Banco Capital', 'Banco Comercial de Manabí', 'Banco Coopnacional',
-    'Banco D-MIRO', 'Banco Finca', 'Banco General Rumiñahui', 'Banco Loja', 'Banco VisionFund Ecuador'
+    'Banco Pichincha', 'Banco del Pacífico', 'Produbanco'
   ];
 
   const getFechaEcuador = () => {

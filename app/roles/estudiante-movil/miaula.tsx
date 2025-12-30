@@ -283,7 +283,7 @@ export default function MiAulaEstudiante() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
               {proximasClases.map((curso, index) => (
                 <TouchableOpacity
-                  key={`next-${curso.id_curso}`}
+                  key={`next-${curso.id_curso}-${index}`}
                   style={[styles.nextClassCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                   activeOpacity={0.8}
                   onPress={() => router.push(`/roles/estudiante-movil/detallecursoestudiante?id=${curso.id_curso}`)}
@@ -323,7 +323,7 @@ export default function MiAulaEstudiante() {
           <Text style={[styles.sectionTitle, { color: theme.text, marginHorizontal: 16, marginBottom: 12 }]}>Mis Cursos</Text>
           <View style={{ gap: 16, paddingHorizontal: 16 }}>
             {cursos.map((curso, index) => (
-              <Animated.View key={curso.id_curso} entering={FadeInDown.delay(400 + (index * 100)).duration(500)}>
+              <Animated.View key={`curso-${curso.id_curso}-${index}`} entering={FadeInDown.delay(400 + (index * 100)).duration(500)}>
                 <TouchableOpacity
                   style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                   activeOpacity={0.9}

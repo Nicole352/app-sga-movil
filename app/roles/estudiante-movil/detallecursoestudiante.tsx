@@ -399,7 +399,7 @@ export default function DetalleCursoEstudiante() {
         ) : (
           modulos.map((modulo, index) => (
             <Animated.View
-              key={modulo.id_modulo}
+              key={`mod-${modulo.id_modulo}-${index}`}
               entering={FadeInDown.delay(100 * index).duration(400)}
               style={[styles.moduleCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
             >
@@ -429,7 +429,7 @@ export default function DetalleCursoEstudiante() {
                     Object.entries(groupTareasByCategoria(tareasPorModulo[modulo.id_modulo])).map(([catKey, tareas]) => {
                       const [catNombre, catPond] = catKey.split('|');
                       return (
-                        <View key={catKey} style={styles.categoryGroup}>
+                        <View key={`cat-${catKey}-${index}`} style={styles.categoryGroup}>
                           {catNombre !== 'General' && (
                             <View style={[styles.categoryHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
@@ -456,7 +456,7 @@ export default function DetalleCursoEstudiante() {
                             </View>
                           )}
 
-                          {tareas.map(tarea => {
+                          {tareas.map((tarea, tIdx) => {
                             const isExpired = new Date(tarea.fecha_limite) < new Date();
                             const isSubmitted = !!tarea.entrega;
                             const isGraded = !!tarea.entrega?.calificacion;
@@ -464,7 +464,7 @@ export default function DetalleCursoEstudiante() {
                             const lateWarning = !isSubmitted && isExpired;
 
                             return (
-                              <View key={tarea.id_tarea} style={[styles.taskCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc', borderColor: theme.border }]}>
+                              <View key={`tarea-${tarea.id_tarea || tIdx}-${tIdx}`} style={[styles.taskCard, { backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : '#f8fafc', borderColor: theme.border }]}>
                                 <View style={styles.taskHeader}>
                                   <Text style={[styles.taskTitle, { color: theme.text }]}>{tarea.titulo}</Text>
                                   {/* Status Badge */}

@@ -418,8 +418,8 @@ export default function TareasEstudiante() {
               </Text>
             </View>
           ) : (
-            modulosAgrupados.map((modulo) => (
-              <View key={modulo.orden} style={[styles.moduloCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+            modulosAgrupados.map((modulo, midx) => (
+              <View key={`mod-${modulo.orden}-${midx}`} style={[styles.moduloCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                 {/* Header del Módulo */}
                 <TouchableOpacity
                   style={[styles.moduloHeader, { backgroundColor: 'rgba(251, 146, 60, 0.1)' }]}
@@ -447,13 +447,13 @@ export default function TareasEstudiante() {
                 {/* Lista de Tareas */}
                 {modulosExpandidos[modulo.orden] && (
                   <View style={styles.tareasContainer}>
-                    {modulo.tareas.map((tarea) => {
+                    {modulo.tareas.map((tarea, tidx) => {
                       const estadoColor = getEstadoColor(tarea.estado_estudiante);
                       const isVencida = new Date(tarea.fecha_limite) < new Date() && tarea.estado_estudiante === 'pendiente';
 
                       return (
                         <View
-                          key={tarea.id_tarea}
+                          key={`tarea-${tarea.id_tarea || tidx}-${tidx}`}
                           style={[
                             styles.tareaCard,
                             { borderColor: isVencida ? 'rgba(239, 68, 68, 0.3)' : theme.border }
