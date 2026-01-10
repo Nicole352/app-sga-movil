@@ -341,8 +341,8 @@ export default function MisCursosScreen() {
                         style={[styles.cursoActionPrimary, { backgroundColor: color1 }]}
                         onPress={() => router.push(`/roles/docente-movil/detallecursodocente?id=${curso.id_curso}` as any)}
                       >
-                        <Ionicons name="eye" size={16} color="#fff" />
-                        <Text style={styles.cursoActionPrimaryText}>Ver Detalles</Text>
+                        <Ionicons name="book" size={16} color="#fff" />
+                        <Text style={styles.cursoActionPrimaryText}>Gestión de Módulos</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -350,7 +350,7 @@ export default function MisCursosScreen() {
                         onPress={() => router.push(`/roles/docente-movil/calificaciones?id=${curso.id_curso}` as any)}
                       >
                         <Ionicons name="stats-chart" size={16} color={color1} />
-                        <Text style={[styles.cursoActionSecondaryText, { color: color1 }]}>Calificaciones</Text>
+                        <Text style={[styles.cursoActionSecondaryText, { color: color1 }]}>Calificaciones del Curso</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   cursoActionPrimaryText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
   },
   cursoActionSecondary: {
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   cursoActionSecondaryText: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
   },
 });

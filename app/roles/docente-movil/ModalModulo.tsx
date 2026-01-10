@@ -264,6 +264,7 @@ export default function ModalModulo({
                 placeholderTextColor={theme.textMuted}
                 value={formData.nombre}
                 onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+                autoCapitalize="characters"
               />
             </View>
 

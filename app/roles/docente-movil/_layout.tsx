@@ -248,8 +248,15 @@ export default function DocenteLayout() {
       return;
     }
 
-    if (passwordData.password_nueva.length < 8) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres');
+    // Validaciones dinámicas
+    const hasMinLength = passwordData.password_nueva.length >= 8;
+    const hasUppercase = /[A-Z]/.test(passwordData.password_nueva);
+    const hasLowercase = /[a-z]/.test(passwordData.password_nueva);
+    const hasNumber = /[0-9]/.test(passwordData.password_nueva);
+    const isPasswordSecure = hasMinLength && hasUppercase && hasLowercase && hasNumber;
+
+    if (!isPasswordSecure) {
+      Alert.alert('Error', 'La contraseña no cumple con todos los requisitos de seguridad');
       return;
     }
 
@@ -663,6 +670,28 @@ export default function DocenteLayout() {
                       <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={20} color={theme.textMuted} />
                     </TouchableOpacity>
                   </View>
+
+                  {/* Password Strength Checklist */}
+                  {passwordData.password_nueva.length > 0 && (
+                    <View style={{ marginTop: 10, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={passwordData.password_nueva.length >= 8 ? "checkmark-circle" : "ellipse-outline"} size={14} color={passwordData.password_nueva.length >= 8 ? '#10b981' : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: passwordData.password_nueva.length >= 8 ? '#10b981' : theme.textMuted }}>Mínimo 8 caracteres</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[A-Z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[A-Z]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[A-Z]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted }}>Una mayúscula</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[a-z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[a-z]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[a-z]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted }}>Una minúscula</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[0-9]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[0-9]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[0-9]/.test(passwordData.password_nueva) ? '#10b981' : theme.textMuted }}>Un número</Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.passwordField}>

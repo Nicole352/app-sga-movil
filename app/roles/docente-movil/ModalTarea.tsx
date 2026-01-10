@@ -447,6 +447,7 @@ export default function ModalTarea({ visible, onClose, onSuccess, id_modulo, tar
               placeholderTextColor={theme.textMuted}
               value={formData.titulo}
               onChangeText={(text) => setFormData({ ...formData, titulo: text })}
+              autoCapitalize="characters"
             />
 
             {/* Descripción */}

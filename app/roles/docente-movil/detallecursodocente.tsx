@@ -19,6 +19,7 @@ interface Modulo {
   estado: string;
   total_tareas: number;
   promedios_publicados: boolean;
+  categorias?: Array<{ id_categoria: number; nombre: string; ponderacion: number }>;
 }
 
 interface Tarea {
@@ -339,10 +340,15 @@ export default function DetalleCursoDocenteScreen() {
     setShowModalTarea(true);
   };
 
-  const handleEliminarTarea = async (id_tarea: number, id_modulo: number) => {
+  const handleEliminarTarea = async (tarea: Tarea, id_modulo: number) => {
+    if (tarea.total_entregas > 0) {
+      Alert.alert('No se puede eliminar', 'No se puede eliminar una tarea que ya tiene entregas de alumnos.');
+      return;
+    }
+
     Alert.alert(
       'Eliminar tarea',
-      'Se eliminarán todas las entregas asociadas. Esta acción no se puede deshacer.',
+      'Esta acción no se puede deshacer.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -351,7 +357,7 @@ export default function DetalleCursoDocenteScreen() {
           onPress: async () => {
             try {
               const token = await getToken();
-              const response = await fetch(`${API_URL}/tareas/${id_tarea}`, {
+              const response = await fetch(`${API_URL}/tareas/${tarea.id_tarea}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
               });
@@ -495,6 +501,12 @@ export default function DetalleCursoDocenteScreen() {
               const estadoColor = getEstadoColor(modulo.estado);
               const isExpanded = modulosExpandidos[modulo.id_modulo];
 
+              // Cálculo de categorías faltantes
+              const categoriasConfiguradas = modulo.categorias || [];
+              const tareasModulo = tareasPorModulo[modulo.id_modulo] || [];
+              const categoriasConTareas = new Set(tareasModulo.map(t => (t as any).categoria_nombre).filter(Boolean));
+              const categoriasFaltantes = categoriasConfiguradas.filter(cat => !categoriasConTareas.has(cat.nombre));
+
               return (
                 <View key={modulo.id_modulo} style={[styles.moduloCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                   {/* Header del Módulo */}
@@ -540,6 +552,21 @@ export default function DetalleCursoDocenteScreen() {
                       color={theme.textMuted}
                     />
                   </TouchableOpacity>
+
+                  {/* Aviso de Categorías Faltantes */}
+                  {categoriasFaltantes.length > 0 && (
+                    <View style={styles.alertPillContainer}>
+                      <View style={[styles.alertPill, {
+                        backgroundColor: darkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+                        borderColor: darkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)'
+                      }]}>
+                        <Ionicons name="alert-circle" size={14} color={theme.accent} />
+                        <Text style={[styles.alertPillText, { color: theme.accent }]}>
+                          PENDIENTE: Ponderación total debe ser 10 pts. Falta crear tareas para: {categoriasFaltantes.map(c => c.nombre).join(', ')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
 
                   {/* Botones de Acción del Módulo */}
                   <View style={styles.moduloActions}>
@@ -688,7 +715,7 @@ export default function DetalleCursoDocenteScreen() {
 
                                           <TouchableOpacity
                                             style={[styles.tareaActionButton, { backgroundColor: theme.red + '20', borderColor: theme.red + '40' }]}
-                                            onPress={() => handleEliminarTarea(tarea.id_tarea, modulo.id_modulo)}
+                                            onPress={() => handleEliminarTarea(tarea, modulo.id_modulo)}
                                           >
                                             <Ionicons name="trash" size={14} color={theme.red} />
                                             <Text style={[styles.tareaActionText, { color: theme.red }]}>Eliminar</Text>
@@ -722,13 +749,13 @@ export default function DetalleCursoDocenteScreen() {
                 </View>
               );
             })}
-          </View>
+          </View >
         )
         }
-      </ScrollView>
+      </ScrollView >
 
       {/* Modales */}
-      <ModalModulo
+      < ModalModulo
         visible={showModalModulo}
         onClose={() => setShowModalModulo(false)}
         onSuccess={() => {
@@ -1134,5 +1161,27 @@ const styles = StyleSheet.create({
   tareaActionText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  alertPillContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: -4,
+    paddingHorizontal: 14,
+  },
+  alertPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  alertPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+    flexShrink: 1,
   },
 });

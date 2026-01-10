@@ -32,7 +32,6 @@ interface UserProfile {
 interface Stats {
   totalAdmins: number;
   activeAdmins: number;
-  sessionsToday: number;
 }
 
 interface Activity {
@@ -49,7 +48,6 @@ export default function ConfiguracionScreen() {
   const [stats, setStats] = useState<Stats>({
     totalAdmins: 0,
     activeAdmins: 0,
-    sessionsToday: 0,
   });
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
 
@@ -128,24 +126,7 @@ export default function ConfiguracionScreen() {
         }));
       }
 
-      const today = new Date().toISOString().split('T')[0];
-      const auditRes = await fetch(
-        `${API_URL}/auditoria/historial-completo?fecha_inicio=${today}&fecha_fin=${today}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
 
-      if (auditRes.ok) {
-        const auditData = await auditRes.json();
-        const sessions =
-          auditData.data?.auditorias?.filter(
-            (a: any) => a.tabla_afectada === 'sesiones_usuario' && a.operacion === 'INSERT'
-          ).length || 0;
-
-        setStats((prev) => ({
-          ...prev,
-          sessionsToday: sessions,
-        }));
-      }
     } catch (error) {
       console.error('Error cargando estadísticas:', error);
     }
@@ -262,15 +243,7 @@ export default function ConfiguracionScreen() {
           </View>
         </View>
 
-        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-          <View style={[styles.statIconContainer, { backgroundColor: `${theme.success}15` }]}>
-            <Ionicons name="checkmark-circle" size={18} color={theme.success} />
-          </View>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={[styles.statValue, { color: theme.text }]}>{stats.sessionsToday}</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>Hoy</Text>
-          </View>
-        </View>
+
       </View>
 
       <ScrollView

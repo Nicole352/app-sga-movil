@@ -60,7 +60,7 @@ export default function ServiciosEstudiante() {
       icon: 'card-outline',
       status: 'available',
       schedule: '24/7 Online',
-      contact: 'pagos@sgabelleza.edu.ec',
+      contact: 'escuelajessicavelez@gmail.com',
       action: 'Gestionar Pagos',
       features: [
         { text: 'Historial de pagos', icon: 'calendar-outline' }
@@ -83,7 +83,7 @@ export default function ServiciosEstudiante() {
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Servicios</Text>
+              <Text style={styles.headerTitle}>Pagos</Text>
               <Text style={styles.headerSubtitle}>Estudiantiles</Text>
             </View>
             <View style={styles.headerIconContainer}>
