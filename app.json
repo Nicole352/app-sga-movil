@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "movil-sga-belleza",
+    "name": "SGA Belleza Móvil",
     "slug": "movil-sga-belleza",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,20 +12,13 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSCameraUsageDescription": "Esta aplicación necesita acceso a tu cámara para tomar fotos de perfil.",
-        "NSPhotoLibraryUsageDescription": "Esta aplicación necesita acceso a tu galería para seleccionar fotos de perfil."
-      }
-    },
     "android": {
+      "package": "com.sgabelleza.movil",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -39,17 +32,16 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "Esta aplicación necesita acceso a tu galería para seleccionar fotos de perfil.",
-          "cameraPermission": "Esta aplicación necesita acceso a tu cámara para tomar fotos de perfil."
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1e4de5a3-11e2-4e8c-869c-9fedb137e153"
+      }
     }
   }
 }
