@@ -605,6 +605,7 @@ export default function TomarAsistenciaScreen() {
                         value={fecha}
                         mode="date"
                         display="default"
+                        maximumDate={new Date()}
                         onChange={handleFechaChange}
                     />
                 )}

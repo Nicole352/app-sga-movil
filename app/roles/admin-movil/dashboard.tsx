@@ -253,7 +253,7 @@ export default function AdminDashboard() {
                             </Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                                 <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                                    <Text style={[styles.userRole, { color: theme.primary, fontWeight: '700' }]}>Administrador</Text>
+                                    <Text style={[styles.userRole, { color: theme.primary, fontWeight: '700' }]}>Administrativo</Text>
                                 </View>
                             </View>
                         </View>

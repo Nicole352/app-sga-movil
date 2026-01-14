@@ -529,7 +529,7 @@ export default function ControlUsuariosScreen() {
                     <Ionicons name="search" size={20} color={theme.textMuted} />
                     <TextInput
                         style={[styles.searchInput, { color: theme.text }]}
-                        placeholder="Buscar por nombre, cédula o email..."
+                        placeholder="Buscar por nombre, identificación o email..."
                         placeholderTextColor={theme.textMuted}
                         value={search}
                         onChangeText={(text) => {
@@ -598,15 +598,16 @@ export default function ControlUsuariosScreen() {
                                 cargarUsuarios();
                             }} tintColor={theme.primary} />
                         }
-                    />
-
-                    <Pagination
-                        currentPage={page}
-                        totalPages={totalPages}
-                        totalItems={totalItems}
-                        onPageChange={setPage}
-                        theme={theme}
-                        itemLabel="usuarios"
+                        ListFooterComponent={
+                            <Pagination
+                                currentPage={page}
+                                totalPages={totalPages}
+                                totalItems={totalItems}
+                                onPageChange={setPage}
+                                theme={theme}
+                                itemLabel="usuarios"
+                            />
+                        }
                     />
                 </>
             )}
@@ -840,13 +841,13 @@ export default function ControlUsuariosScreen() {
                         </Text>
 
                         <TouchableOpacity
-                            style={[styles.confirmModalButton, { backgroundColor: theme.primary, marginTop: 20, width: '100%' }]}
+                            style={[styles.confirmModalButton, { backgroundColor: theme.primary, marginTop: 20, width: '100%', flex: 0 }]}
                             onPress={() => {
                                 setShowCredencialesModal(false);
                                 setCredenciales(null);
                             }}
                         >
-                            <Text style={[styles.confirmModalButtonText, { color: '#fff' }]}>Entendido</Text>
+                            <Text style={[styles.confirmModalButtonText, { color: '#fff' }]}>Confirmar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -868,9 +869,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        marginBottom: 8,
-        paddingTop: 25,
-        paddingBottom: 25,
+        marginBottom: 4,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,

@@ -134,7 +134,12 @@ export default function AdminPagosScreen() {
         danger: '#ef4444',
     };
 
-    const [viewMode, setViewMode] = useState<'detail' | 'reject'>('detail');
+    const [viewMode, setViewMode] = useState<'detail' | 'reject' | 'verify'>('detail');
+
+    // Estado para Verificación Masiva (Smart Verification)
+    const [showVerificationModal, setShowVerificationModal] = useState(false);
+    const [pagoAVerificar, setPagoAVerificar] = useState<Pago | null>(null);
+    const [cuotasAVerificar, setCuotasAVerificar] = useState<number[]>([]);
 
     useFocusEffect(
         useCallback(() => {
@@ -304,54 +309,61 @@ export default function AdminPagosScreen() {
     };
 
     const handleVerificarPago = async (pago: Pago) => {
-        Alert.alert(
-            'Verificar Pago',
-            `¿Confirmar verificación de la cuota ${pago.numero_cuota} de ${pago.estudiante_nombre} ${pago.estudiante_apellido}?`,
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Verificar',
-                    onPress: async () => {
-                        try {
-                            setProcesando(true);
-                            const token = await getToken();
+        console.log("Iniciando verificación para:", pago.id_pago);
+        setArchivoPreview(null); // Cerrar el visor si está abierto
+        setPagoAVerificar(pago);
+        setCuotasAVerificar([pago.id_pago]); // Por defecto seleccionar la actual
+        setViewMode('verify');
+        setShowDetailModal(true); // Asegurar que el modal principal esté visible
+    };
 
-                            // Obtener ID del usuario actual
-                            const meRes = await fetch(`${API_URL}/auth/me`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
-                            const userData = await meRes.json();
+    const confirmarVerificacionMasiva = async () => {
+        if (!pagoAVerificar || cuotasAVerificar.length === 0) return;
 
-                            const response = await fetch(`${API_URL}/admin/pagos/${pago.id_pago}/verificar`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    Authorization: `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ verificado_por: userData.id_usuario })
-                            });
+        try {
+            setProcesando(true);
+            const token = await getToken();
 
-                            if (response.ok) {
-                                Alert.alert('Éxito', 'Pago verificado correctamente');
-                                setShowDetailModal(false);
-                                setArchivoPreview(null);
-                                await loadData();
-                            } else {
-                                Alert.alert('Error', 'No se pudo verificar el pago');
-                            }
-                        } catch (error) {
-                            Alert.alert('Error', 'Error de red');
-                        } finally {
-                            setProcesando(false);
-                        }
-                    }
+            // Obtener ID del usuario actual
+            const meRes = await fetch(`${API_URL}/auth/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const userData = await meRes.json();
+
+            // Verificar cada cuota seleccionada
+            for (const id_pago of cuotasAVerificar) {
+                const response = await fetch(`${API_URL}/admin/pagos/${id_pago}/verificar`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ verificado_por: userData.id_usuario })
+                });
+
+                if (!response.ok) {
+                    console.error(`Error verificando pago ${id_pago}`);
+                    // Opcional: mostrar alerta si falla uno específico, o continuar
                 }
-            ]
-        );
+            }
+
+            Alert.alert('Éxito', `${cuotasAVerificar.length} cuota(s) verificada(s) correctamente`);
+            Alert.alert('Éxito', `${cuotasAVerificar.length} cuota(s) verificada(s) correctamente`);
+            setShowDetailModal(false); // Cerrar todo el modal
+            setPagoAVerificar(null);
+            setCuotasAVerificar([]);
+            await loadData(); // Recargar datos
+
+        } catch (error) {
+            Alert.alert('Error', 'Ocurrió un error al procesar la verificación');
+            console.error(error);
+        } finally {
+            setProcesando(false);
+        }
     };
 
     const handleRechazarPago = (pago: Pago) => {
-        // Cambiar al modo rechazo dentro del mismo modal
+        if (pago) setSelectedPago(pago); // Asegurar que selectedPago esté seteado
         setMotivoRechazo('');
         setViewMode('reject');
     };
@@ -496,7 +508,7 @@ export default function AdminPagosScreen() {
                             {item.estudiante_apellido}, {item.estudiante_nombre}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <Text style={{ fontSize: 11, color: theme.textMuted }}>CI: {item.estudiante_cedula}</Text>
+                            <Text style={{ fontSize: 11, color: theme.textMuted }}>ID: {item.estudiante_cedula}</Text>
                         </View>
                     </View>
                     <View style={[styles.estadoBadgeSmall, { backgroundColor: estadoColor + '15', borderColor: estadoColor + '40' }]}>
@@ -615,28 +627,29 @@ export default function AdminPagosScreen() {
                 </View>
 
                 {/* Filtros Tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ paddingRight: 20 }}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterRow}
+                    style={{ marginTop: 10 }}
+                >
                     {['todos', 'pendiente', 'pagado', 'verificado', 'vencido'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
-                                styles.filterTab,
-                                filterEstado === f && styles.filterTabActive,
-                                { borderBottomColor: filterEstado === f ? theme.primary : 'transparent' }
-                            ]}
-                            onPress={() => {
-                                if (filterEstado !== f) {
-                                    setFilterEstado(f);
+                                styles.filterButton,
+                                {
+                                    backgroundColor: filterEstado === f ? theme.primary : theme.inputBg,
+                                    borderColor: filterEstado === f ? theme.primary : theme.border,
                                 }
-                            }}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            activeOpacity={0.7}
+                            ]}
+                            onPress={() => setFilterEstado(f)}
                         >
                             <Text style={[
-                                styles.filterText,
+                                styles.filterButtonText,
                                 {
-                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
-                                    fontWeight: filterEstado === f ? '700' : '500'
+                                    color: filterEstado === f ? '#fff' : theme.text,
+                                    fontWeight: filterEstado === f ? '700' : '600'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -749,7 +762,7 @@ export default function AdminPagosScreen() {
 
             {/* MODAL DETALLE / RECHAZO */}
             <Modal visible={showDetailModal} animationType="slide" transparent onRequestClose={() => {
-                if (viewMode === 'reject') {
+                if (viewMode === 'reject' || viewMode === 'verify') {
                     setViewMode('detail');
                 } else {
                     setShowDetailModal(false);
@@ -759,16 +772,16 @@ export default function AdminPagosScreen() {
                     <View style={[styles.modalCard, { backgroundColor: theme.cardBg }]}>
                         <View style={styles.modalHeader}>
                             <TouchableOpacity onPress={() => {
-                                if (viewMode === 'reject') {
+                                if (viewMode === 'reject' || viewMode === 'verify') {
                                     setViewMode('detail');
                                 } else {
                                     setShowDetailModal(false);
                                 }
                             }}>
-                                <Ionicons name="arrow-back" size={24} color={theme.textMuted} style={{ marginRight: 10, display: viewMode === 'reject' ? 'flex' : 'none' }} />
+                                <Ionicons name="arrow-back" size={24} color={theme.textMuted} style={{ marginRight: 10, display: viewMode === 'detail' ? 'none' : 'flex' }} />
                             </TouchableOpacity>
                             <Text style={[styles.modalTitle, { color: theme.text }]}>
-                                {viewMode === 'reject' ? 'Rechazar Pago' : 'Detalle de Pago'}
+                                {viewMode === 'reject' ? 'Rechazar Pago' : viewMode === 'verify' ? 'Verificar Pago' : 'Detalle de Pago'}
                             </Text>
                             <TouchableOpacity onPress={() => setShowDetailModal(false)}>
                                 <Ionicons name="close" size={24} color={theme.textMuted} />
@@ -944,6 +957,129 @@ export default function AdminPagosScreen() {
                             </View>
                         )}
 
+                        {/* VISTA DE VERIFICACIÓN MASIVA (Smart Verification) */}
+                        {pagoAVerificar && viewMode === 'verify' && (
+                            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 10 }}>
+                                <Text style={{ color: theme.textSecondary, marginBottom: 15, fontSize: 13 }}>
+                                    {pagoAVerificar.estudiante_nombre} {pagoAVerificar.estudiante_apellido}
+                                </Text>
+
+                                {/* Resumen del Pago */}
+                                <View style={{ backgroundColor: theme.success + '10', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.success + '20', marginBottom: 20 }}>
+                                    <View style={styles.infoRow}>
+                                        <Text style={{ fontSize: 13, color: theme.textMuted, width: 100 }}>Monto Total:</Text>
+                                        <Text style={{ fontSize: 15, fontWeight: '700', color: theme.success }}>
+                                            {(() => {
+                                                const estudianteActual = estudiantes.find(e => e.estudiante_cedula === pagoAVerificar.estudiante_cedula);
+                                                const cursoActual = estudianteActual?.cursos.find(c => c.id_curso === pagoAVerificar.id_curso);
+                                                // Sumar cuotas seleccionadas (solo las que existen y son pagado)
+                                                let total = 0;
+                                                cuotasAVerificar.forEach(id => {
+                                                    const p = cursoActual?.pagos.find(x => x.id_pago === id);
+                                                    if (p) total += Number(p.monto);
+                                                });
+                                                return formatMonto(total);
+                                            })()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                        <Text style={{ fontSize: 13, color: theme.textMuted, width: 100 }}>Cuotas:</Text>
+                                        <Text style={{ fontSize: 13, color: theme.text, fontWeight: '600' }}>
+                                            {cuotasAVerificar.length} cuota(s) seleccionada(s)
+                                        </Text>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                        <Text style={{ fontSize: 13, color: theme.textMuted, width: 100 }}>Comprobante:</Text>
+                                        <Text style={{ fontSize: 13, color: theme.text, fontWeight: '600' }}>{pagoAVerificar.numero_comprobante || 'N/A'}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Selector de Cuotas */}
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: theme.text, marginBottom: 10 }}>
+                                    ¿Cuántas cuotas desea verificar?
+                                </Text>
+                                <View style={{ backgroundColor: theme.inputBg, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: theme.border }}>
+                                    {(() => {
+                                        const estudianteActual = estudiantes.find(e => e.estudiante_cedula === pagoAVerificar.estudiante_cedula);
+                                        const cursoActual = estudianteActual?.cursos.find(c => c.id_curso === pagoAVerificar.id_curso);
+
+                                        const cuotasDisponibles = cursoActual?.pagos
+                                            .filter(p => p.numero_cuota >= pagoAVerificar.numero_cuota && p.estado === 'pagado')
+                                            .sort((a, b) => a.numero_cuota - b.numero_cuota) || [];
+
+                                        if (cuotasDisponibles.length === 0) {
+                                            return <Text style={{ color: theme.textMuted, textAlign: 'center' }}>No hay más cuotas pendientes por verificar.</Text>;
+                                        }
+
+                                        return cuotasDisponibles.map((cuota) => {
+                                            const isSelected = cuotasAVerificar.includes(cuota.id_pago);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={cuota.id_pago}
+                                                    onPress={() => {
+                                                        if (isSelected) {
+                                                            setCuotasAVerificar(prev => prev.filter(id => id !== cuota.id_pago));
+                                                        } else {
+                                                            setCuotasAVerificar(prev => [...prev, cuota.id_pago]);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        padding: 12,
+                                                        borderBottomWidth: 1,
+                                                        borderBottomColor: theme.border,
+                                                        backgroundColor: isSelected ? theme.success + '08' : 'transparent'
+                                                    }}
+                                                >
+                                                    <View style={{
+                                                        width: 20, height: 20, borderRadius: 6, borderWidth: 1.5,
+                                                        borderColor: isSelected ? theme.success : theme.textMuted,
+                                                        backgroundColor: isSelected ? theme.success : 'transparent',
+                                                        marginRight: 10,
+                                                        alignItems: 'center', justifyContent: 'center'
+                                                    }}>
+                                                        {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={{ fontSize: 14, fontWeight: '600', color: theme.text }}>
+                                                            {cuota.modalidad_pago === 'clases' ? `Clase ${cuota.numero_cuota}` : `Cuota ${cuota.numero_cuota}`}
+                                                        </Text>
+                                                        <Text style={{ fontSize: 11, color: theme.textMuted }}>
+                                                            {formatMonto(cuota.monto)} - {formatDate(cuota.fecha_vencimiento)}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            );
+                                        });
+                                    })()}
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 15, paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.border }}>
+                                    <TouchableOpacity
+                                        onPress={() => setViewMode('detail')}
+                                        disabled={procesando}
+                                        style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: theme.inputBg, borderWidth: 1, borderColor: theme.border, alignItems: 'center' }}
+                                    >
+                                        <Text style={{ color: theme.textSecondary, fontWeight: '600' }}>Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={confirmarVerificacionMasiva}
+                                        disabled={procesando || cuotasAVerificar.length === 0}
+                                        style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: theme.success, alignItems: 'center', opacity: (procesando || cuotasAVerificar.length === 0) ? 0.6 : 1 }}
+                                    >
+                                        {procesando ? <ActivityIndicator color="#fff" size="small" /> : (
+                                            <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                                                Verificar {cuotasAVerificar.length > 0 ? `(${cuotasAVerificar.length})` : ''}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={{ height: 40 }} />
+                            </ScrollView>
+
+                        )}
+
                     </View>
                 </View>
             </Modal>
@@ -1037,10 +1173,13 @@ export default function AdminPagosScreen() {
                         </View>
                     )}
                 </View>
-            </Modal>
-        </View>
-    );
+            </Modal >
+
+        </View >
+    )
 }
+
+
 
 const DetailItem = ({ label, value, theme, isCurrency }: any) => (
     <View style={{ marginBottom: 10 }}>
@@ -1054,8 +1193,8 @@ const DetailItem = ({ label, value, theme, isCurrency }: any) => (
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        paddingTop: 15,
-        paddingBottom: 12,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 15,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
@@ -1065,18 +1204,16 @@ const styles = StyleSheet.create({
     headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: -2 },
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44 },
     searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },
-    filterTab: {
-        paddingBottom: 4,
-        borderBottomWidth: 2,
-        marginRight: 15,
+    filterRow: { flexDirection: 'row', gap: 6, paddingRight: 20 },
+    filterButton: {
+        paddingHorizontal: 13,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        minWidth: 90,
+        alignItems: 'center'
     },
-    filterTabActive: {
-        borderBottomWidth: 2,
-    },
-    filterText: {
-        fontSize: 13,
-        color: '#fff',
-    },
+    filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
     alertBanner: {
         flexDirection: 'row',

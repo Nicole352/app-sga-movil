@@ -572,18 +572,21 @@ export default function AdminReportesScreen() {
                         return (
                             item.nombre?.toLowerCase().includes(busqueda) ||
                             item.apellido?.toLowerCase().includes(busqueda) ||
-                            item.identificacion?.toLowerCase().includes(busqueda) ||
+                            item.cedula?.toLowerCase().includes(busqueda) ||
                             item.email?.toLowerCase().includes(busqueda)
                         );
                     case 'cursos':
                         return (
                             item.nombre_curso?.toLowerCase().includes(busqueda) ||
-                            item.codigo_curso?.toLowerCase().includes(busqueda)
+                            item.codigo_curso?.toLowerCase().includes(busqueda) ||
+                            item.docente_nombres?.toLowerCase().includes(busqueda) ||
+                            item.docente_apellidos?.toLowerCase().includes(busqueda)
                         );
                     case 'financiero':
                         return (
                             item.nombre_estudiante?.toLowerCase().includes(busqueda) ||
                             item.apellido_estudiante?.toLowerCase().includes(busqueda) ||
+                            item.cedula_estudiante?.toLowerCase().includes(busqueda) ||
                             item.nombre_curso?.toLowerCase().includes(busqueda)
                         );
                     default:
@@ -675,7 +678,7 @@ export default function AdminReportesScreen() {
                                     onValueChange={setFiltroCursoEstudiante}
                                     items={[
                                         { label: 'Todos los cursos', value: '' },
-                                        ...cursosDisponibles.map(c => ({ label: c.nombre, value: String(c.id_curso) }))
+                                        ...cursosDisponibles.map(c => ({ label: `${c.codigo_curso} - ${c.nombre}`, value: String(c.id_curso) }))
                                     ]}
                                     theme={theme}
                                 />
@@ -708,10 +711,9 @@ export default function AdminReportesScreen() {
                                     selectedValue={filtroEstadoCurso}
                                     onValueChange={setFiltroEstadoCurso}
                                     items={[
-                                        { label: 'Todos', value: 'todos' },
-                                        { label: 'Planificado', value: 'planificado' },
-                                        { label: 'En curso', value: 'en_curso' },
-                                        { label: 'Finalizado', value: 'finalizado' }
+                                        { label: 'Todos los estados', value: 'todos' },
+                                        { label: 'Activos', value: 'activo' },
+                                        { label: 'Finalizados', value: 'finalizado' }
                                     ]}
                                     theme={theme}
                                 />
@@ -724,9 +726,10 @@ export default function AdminReportesScreen() {
                                     selectedValue={filtroOcupacionCurso}
                                     onValueChange={setFiltroOcupacionCurso}
                                     items={[
-                                        { label: 'Todos', value: 'todos' },
-                                        { label: 'Lleno', value: 'lleno' },
-                                        { label: 'Disponible', value: 'disponible' }
+                                        { label: 'Todas las ocupaciones', value: 'todos' },
+                                        { label: 'Llenos (80-100%)', value: 'lleno' },
+                                        { label: 'Media ocupación (40-79%)', value: 'medio' },
+                                        { label: 'Baja ocupación (0-39%)', value: 'bajo' }
                                     ]}
                                     theme={theme}
                                 />
@@ -739,7 +742,7 @@ export default function AdminReportesScreen() {
                                     selectedValue={filtroHorarioCurso}
                                     onValueChange={setFiltroHorarioCurso}
                                     items={[
-                                        { label: 'Todos', value: 'todos' },
+                                        { label: 'Todos los horarios', value: 'todos' },
                                         { label: 'Matutino', value: 'matutino' },
                                         { label: 'Vespertino', value: 'vespertino' }
                                     ]}
@@ -760,7 +763,7 @@ export default function AdminReportesScreen() {
                                     onValueChange={setFiltroCursoFinanciero}
                                     items={[
                                         { label: 'Todos los cursos', value: '' },
-                                        ...cursosDisponibles.map(c => ({ label: c.nombre, value: String(c.id_curso) }))
+                                        ...cursosDisponibles.map(c => ({ label: `${c.codigo_curso} - ${c.nombre}`, value: String(c.id_curso) }))
                                     ]}
                                     theme={theme}
                                 />
@@ -804,50 +807,7 @@ export default function AdminReportesScreen() {
     };
 
     // Renderizar estadísticas
-    const renderEstadisticas = () => {
-        if (!estadisticas) return null;
 
-        let metricas: any[] = [];
-
-        switch (tipoReporte) {
-            case 'estudiantes':
-                metricas = [
-                    { icon: 'people', label: 'Total', value: estadisticas.total_estudiantes || 0, color: theme.primary },
-                    { icon: 'checkmark-circle', label: 'Activos', value: estadisticas.activos || 0, color: theme.success },
-                    { icon: 'close-circle', label: 'Inactivos', value: estadisticas.retirados || 0, color: theme.textMuted },
-                ];
-                break;
-            case 'cursos':
-                metricas = [
-                    { icon: 'book', label: 'Total Cursos', value: estadisticas.total_cursos || 0, color: theme.primary },
-                    { icon: 'people', label: 'Total Estudiantes', value: estadisticas.total_estudiantes_inscritos || 0, color: theme.success },
-                    { icon: 'trending-up', label: 'Ocupación Prom.', value: `${Math.round(estadisticas.promedio_capacidad || 0)}%`, color: theme.warning },
-                ];
-                break;
-            case 'financiero':
-                metricas = [
-                    { icon: 'cash', label: 'Total Ingresos', value: formatMonto(estadisticas.ingresos_totales || 0), color: theme.success },
-                    { icon: 'time', label: 'Pendiente', value: formatMonto(estadisticas.ingresos_pendientes || 0), color: theme.warning },
-                    { icon: 'checkmark-done', label: 'Verificado', value: estadisticas.pagos_verificados || 0, color: theme.primary },
-                ];
-                break;
-        }
-
-        return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricsScroll}>
-                {metricas.map((metrica, index) => (
-                    <View
-                        key={index}
-                        style={[styles.metricCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
-                    >
-                        <Ionicons name={metrica.icon as any} size={28} color={metrica.color} />
-                        <Text style={[styles.metricValue, { color: metrica.color }]}>{metrica.value}</Text>
-                        <Text style={[styles.metricLabel, { color: theme.textMuted }]}>{metrica.label}</Text>
-                    </View>
-                ))}
-            </ScrollView>
-        );
-    };
 
     // Renderizar item de datos
     const renderDatoItem = ({ item }: { item: any }) => {
@@ -883,7 +843,7 @@ export default function AdminReportesScreen() {
                                     <View key={idx} style={[styles.dataRow, { marginBottom: 4 }]}>
                                         <Ionicons name="book" size={12} color={theme.primary} />
                                         <Text style={[styles.dataText, { color: theme.text, fontSize: 12 }]}>
-                                            {curso.nombre_curso} ({curso.horario_curso})
+                                            {curso.nombre_curso} ({curso.horario_curso?.toUpperCase()})
                                         </Text>
                                     </View>
                                 ))}
@@ -897,8 +857,14 @@ export default function AdminReportesScreen() {
                         <View style={styles.dataHeader}>
                             <Text style={[styles.dataName, { color: theme.text }]}>{item.nombre_curso}</Text>
                             <View style={[styles.statusBadge, { backgroundColor: theme.primary + '20' }]}>
-                                <Text style={[styles.statusText, { color: theme.primary }]}>{item.horario}</Text>
+                                <Text style={[styles.statusText, { color: theme.primary }]}>{item.horario?.toUpperCase()}</Text>
                             </View>
+                        </View>
+                        <View style={styles.dataRow}>
+                            <Ionicons name="person" size={14} color={theme.textMuted} />
+                            <Text style={[styles.dataText, { color: theme.textSecondary, fontSize: 13 }]}>
+                                Docente: {item.docente_apellidos} {item.docente_nombres}
+                            </Text>
                         </View>
                         <View style={styles.dataRow}>
                             <Ionicons name="barcode" size={14} color={theme.textMuted} />
@@ -922,9 +888,15 @@ export default function AdminReportesScreen() {
                 return (
                     <View style={[styles.dataCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                         <View style={styles.dataHeader}>
-                            <Text style={[styles.dataName, { color: theme.text }]}>
-                                {item.apellido_estudiante}, {item.nombre_estudiante}
-                            </Text>
+                            <View>
+                                <Text style={[styles.dataName, { color: theme.text }]}>
+                                    {item.apellido_estudiante}, {item.nombre_estudiante}
+                                </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                    <Ionicons name="card-outline" size={12} color={theme.textMuted} />
+                                    <Text style={{ fontSize: 11, color: theme.textMuted }}>ID: {item.cedula_estudiante || item.cedula || item.identificacion}</Text>
+                                </View>
+                            </View>
                         </View>
 
                         {/* Totales generales del estudiante */}
@@ -947,8 +919,8 @@ export default function AdminReportesScreen() {
                             </Text>
                         </View>
 
-                        {/* Desglose por curso si tiene múltiples cursos */}
-                        {item.cursos && item.cursos.length > 1 && (
+                        {/* Desglose por curso */}
+                        {item.cursos && item.cursos.length > 0 && (
                             <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.border }}>
                                 <Text style={[styles.dataText, { color: theme.textMuted, fontSize: 10, marginBottom: 4 }]}>
                                     Desglose por curso:
@@ -958,7 +930,7 @@ export default function AdminReportesScreen() {
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                                             <Ionicons name="book" size={11} color={theme.primary} />
                                             <Text style={[styles.dataText, { color: theme.primary, fontWeight: '600', fontSize: 11 }]}>
-                                                {curso.nombre_curso}
+                                                {curso.codigo_curso ? `[${curso.codigo_curso}] ` : ''}{curso.nombre_curso}
                                             </Text>
                                         </View>
                                         <Text style={[styles.dataText, { color: theme.textSecondary, fontSize: 10, marginLeft: 15 }]}>
@@ -1138,13 +1110,7 @@ export default function AdminReportesScreen() {
                             )}
                         </TouchableOpacity>
 
-                        {/* Estadísticas */}
-                        {estadisticas && (
-                            <View style={styles.section}>
-                                <Text style={[styles.sectionTitle, { color: theme.text }]}>Estadísticas</Text>
-                                {renderEstadisticas()}
-                            </View>
-                        )}
+
 
                         {/* Lista de Datos */}
                         {datosReporte.length > 0 && (
@@ -1158,7 +1124,11 @@ export default function AdminReportesScreen() {
                                     <Ionicons name="search" size={20} color={theme.textMuted} />
                                     <TextInput
                                         style={[styles.searchInput, { color: theme.text }]}
-                                        placeholder="Buscar..."
+                                        placeholder={
+                                            tipoReporte === 'estudiantes' ? "Buscar por nombre, identificación o email..." :
+                                                tipoReporte === 'cursos' ? "Buscar por nombre, código o docente..." :
+                                                    "Buscar por nombre, identificación o curso..."
+                                        }
                                         placeholderTextColor={theme.textMuted}
                                         value={busquedaRapida}
                                         onChangeText={setBusquedaRapida}
@@ -1188,35 +1158,35 @@ export default function AdminReportesScreen() {
                                                 }
                                             }}
                                         >
-                                            <Ionicons name="person" size={16} color={ordenamiento === 'nombre' ? theme.primary : theme.textMuted} />
-                                            <Text style={[styles.sortBtnText, { color: ordenamiento === 'nombre' ? theme.primary : theme.text }]}>Nombre</Text>
+                                            <Ionicons name={tipoReporte === 'cursos' ? 'book' : 'person'} size={16} color={ordenamiento === 'nombre' ? theme.primary : theme.textMuted} />
+                                            <Text style={[styles.sortBtnText, { color: ordenamiento === 'nombre' ? theme.primary : theme.text }]}>
+                                                {tipoReporte === 'cursos' ? 'Nombre del curso' : 'Apellidos'}
+                                            </Text>
                                             {ordenamiento === 'nombre' && (
                                                 <Ionicons name={ordenAscendente ? 'arrow-up' : 'arrow-down'} size={14} color={theme.primary} />
                                             )}
                                         </TouchableOpacity>
 
-                                        {tipoReporte !== 'estudiantes' && (
-                                            <TouchableOpacity
-                                                style={[
-                                                    styles.sortBtn,
-                                                    { backgroundColor: ordenamiento === 'fecha' ? theme.primary + '20' : theme.cardBg, borderColor: ordenamiento === 'fecha' ? theme.primary : theme.border }
-                                                ]}
-                                                onPress={() => {
-                                                    if (ordenamiento === 'fecha') {
-                                                        setOrdenAscendente(!ordenAscendente);
-                                                    } else {
-                                                        setOrdenamiento('fecha');
-                                                        setOrdenAscendente(false);
-                                                    }
-                                                }}
-                                            >
-                                                <Ionicons name="calendar" size={16} color={ordenamiento === 'fecha' ? theme.primary : theme.textMuted} />
-                                                <Text style={[styles.sortBtnText, { color: ordenamiento === 'fecha' ? theme.primary : theme.text }]}>Fecha</Text>
-                                                {ordenamiento === 'fecha' && (
-                                                    <Ionicons name={ordenAscendente ? 'arrow-up' : 'arrow-down'} size={14} color={theme.primary} />
-                                                )}
-                                            </TouchableOpacity>
-                                        )}
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.sortBtn,
+                                                { backgroundColor: ordenamiento === 'fecha' ? theme.primary + '20' : theme.cardBg, borderColor: ordenamiento === 'fecha' ? theme.primary : theme.border }
+                                            ]}
+                                            onPress={() => {
+                                                if (ordenamiento === 'fecha') {
+                                                    setOrdenAscendente(!ordenAscendente);
+                                                } else {
+                                                    setOrdenamiento('fecha');
+                                                    setOrdenAscendente(false);
+                                                }
+                                            }}
+                                        >
+                                            <Ionicons name="calendar" size={16} color={ordenamiento === 'fecha' ? theme.primary : theme.textMuted} />
+                                            <Text style={[styles.sortBtnText, { color: ordenamiento === 'fecha' ? theme.primary : theme.text }]}>Fecha</Text>
+                                            {ordenamiento === 'fecha' && (
+                                                <Ionicons name={ordenAscendente ? 'arrow-up' : 'arrow-down'} size={14} color={theme.primary} />
+                                            )}
+                                        </TouchableOpacity>
 
                                         {tipoReporte === 'financiero' && (
                                             <TouchableOpacity
@@ -1350,9 +1320,9 @@ export default function AdminReportesScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
-        marginBottom: 8,
-        paddingTop: 25,
-        paddingBottom: 25,
+        marginBottom: 4,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,

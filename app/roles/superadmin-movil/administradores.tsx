@@ -482,13 +482,19 @@ export default function AdministradoresScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <LinearGradient
-        colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-        style={styles.header}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.cardBg,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+          }
+        ]}
       >
-        <Text style={styles.headerTitle}>Gestión de Administradores</Text>
-        <Text style={styles.headerSubtitle}>Administra los usuarios con permisos administrativos</Text>
-      </LinearGradient>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Administradores</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Administra los usuarios con permisos administrativos</Text>
+      </View>
 
       <View style={styles.filtersSection}>
         <View style={[styles.searchContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>

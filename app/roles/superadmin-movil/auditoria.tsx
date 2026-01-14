@@ -197,6 +197,26 @@ export default function AuditoriaScreen() {
     });
   };
 
+  const getTablaIcon = (tabla: string) => {
+    switch (tabla) {
+      case 'usuarios': return 'people';
+      case 'docentes': return 'school';
+      case 'estudiantes': return 'happy';
+      case 'cursos': return 'book';
+      case 'matriculas': return 'card';
+      case 'pagos': return 'cash';
+      case 'asistencia': return 'calendar';
+      case 'notas': return 'document-text';
+      case 'configuracion': return 'settings';
+      default: return 'cube';
+    }
+  };
+
+  const cleanDescription = (text: string) => {
+    if (!text) return '';
+    return text.replace(' - Resultado: N/A', '').replace('Resultado: N/A', '');
+  };
+
   const getOperacionBadge = (operacion: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
       INSERT: {
@@ -271,6 +291,26 @@ export default function AuditoriaScreen() {
     </View>
   );
 
+  const getLogColor = (level: string) => {
+    switch (level) {
+      case 'error': return '#ef4444';
+      case 'warn': return '#f59e0b';
+      default: return '#22c55e';
+    }
+  };
+
+  const getRoleLabel = (rol: string) => {
+    if (!rol) return '';
+    const roles: Record<string, string> = {
+      admin: 'Administrativo',
+      administrativo: 'Administrativo',
+      superadmin: 'Super Admin',
+      docente: 'Docente',
+      estudiante: 'Estudiante',
+    };
+    return roles[rol.toLowerCase()] || rol.charAt(0).toUpperCase() + rol.slice(1).toLowerCase();
+  };
+
   const renderAuditoriaCard = ({ item }: { item: Auditoria }) => {
     const badge = getOperacionBadge(item.operacion);
 
@@ -281,32 +321,41 @@ export default function AuditoriaScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <View style={[styles.statIconContainer, { backgroundColor: `${theme.primary}15`, width: 36, height: 36, borderRadius: 10, marginBottom: 0 }]}>
+              <Ionicons name={getTablaIcon(item.tabla_afectada) as any} size={18} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.tablaText, { color: theme.text, marginBottom: 2 }]}>{item.tabla_afectada}</Text>
+              <Text style={[styles.fechaText, { color: theme.textMuted }]}>
+                {formatearFecha(item.fecha_operacion)}
+              </Text>
+            </View>
+          </View>
           <View style={[styles.operacionBadge, { backgroundColor: badge.bg }]}>
             <Text style={[styles.operacionText, { color: badge.text }]}>{badge.label}</Text>
           </View>
-          <Text style={[styles.fechaText, { color: theme.textMuted }]}>
-            {formatearFecha(item.fecha_operacion)}
-          </Text>
         </View>
 
-        <Text style={[styles.tablaText, { color: theme.text }]}>{item.tabla_afectada}</Text>
         <Text style={[styles.descripcionText, { color: theme.textSecondary }]} numberOfLines={2}>
-          {item.descripcion}
+          {cleanDescription(item.descripcion)}
         </Text>
 
-        <View style={styles.userRow}>
-          <Ionicons name="person-circle-outline" size={16} color={theme.textMuted} />
-          <Text style={[styles.userName, { color: theme.text }]}>
-            {item.usuario.nombre} {item.usuario.apellido}
-          </Text>
-          <Text style={[styles.userRol, { color: theme.textMuted }]}>
-            ({item.usuario.rol})
-          </Text>
-        </View>
+        <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
+          <View style={styles.userRow}>
+            <Ionicons name="person-circle-outline" size={16} color={theme.textMuted} />
+            <Text style={[styles.userName, { color: theme.textMuted }]}>
+              {item.usuario.nombre.split(' ')[0]} {item.usuario.apellido.split(' ')[0]}
+            </Text>
+            <Text style={[styles.userRol, { color: theme.textMuted }]}>
+              • {getRoleLabel(item.usuario.rol)}
+            </Text>
+          </View>
 
-        <View style={styles.verMasRow}>
-          <Text style={[styles.verMasText, { color: theme.primary }]}>Ver detalles</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Text style={[styles.verMasText, { color: theme.primary, fontSize: 12 }]}>Detalles</Text>
+            <Ionicons name="chevron-forward" size={12} color={theme.primary} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -365,9 +414,15 @@ export default function AuditoriaScreen() {
     return (
       <Modal visible={true} animationType="slide" onRequestClose={() => setModalDetalle(null)}>
         <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.bg }]}>
-          <LinearGradient
-            colors={darkMode ? ['#1e293b', '#0f172a'] : ['#f8fafc', '#ffffff']}
-            style={styles.modalHeader}
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: theme.cardBg,
+                borderBottomColor: theme.border,
+                borderBottomWidth: 1,
+              }
+            ]}
           >
             <View style={styles.modalHeaderContent}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Detalle de Auditoría</Text>
@@ -375,7 +430,7 @@ export default function AuditoriaScreen() {
                 <Ionicons name="close-circle" size={32} color={theme.text} />
               </TouchableOpacity>
             </View>
-          </LinearGradient>
+          </View>
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -399,7 +454,7 @@ export default function AuditoriaScreen() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Descripción:</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.descripcion}</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{cleanDescription(modalDetalle.descripcion)}</Text>
                 </View>
               </View>
 
@@ -414,11 +469,11 @@ export default function AuditoriaScreen() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Email:</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.email}</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.email.toLowerCase()}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Rol:</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{modalDetalle.usuario.rol}</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{getRoleLabel(modalDetalle.usuario.rol)}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Cédula:</Text>
@@ -431,7 +486,7 @@ export default function AuditoriaScreen() {
                 <>
                   <Text style={[styles.sectionTitle, { color: theme.text }]}>Información Detallada</Text>
                   <View style={[styles.infoSection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                    {detallesFiltrados.map(([key, value], index) => (
+                    {detallesFiltrados.filter(([_, value]) => value !== null && value !== 'NULL' && value !== 'null').map(([key, value], index) => (
                       <View
                         key={key}
                         style={[
@@ -440,7 +495,11 @@ export default function AuditoriaScreen() {
                         ]}
                       >
                         <Text style={[styles.infoLabel, { color: theme.textMuted }]}>{formatearNombreCampo(key)}:</Text>
-                        <Text style={[styles.infoValue, { color: theme.text }]}>{formatearValor(value)}</Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                          {key.toLowerCase().includes('email') && typeof value === 'string'
+                            ? value.toLowerCase()
+                            : formatearValor(value)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -458,13 +517,19 @@ export default function AuditoriaScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {/* Standardized Header */}
-      <LinearGradient
-        colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-        style={styles.header}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.cardBg,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+          }
+        ]}
       >
-        <Text style={styles.headerTitle}>Historial de Auditoría</Text>
-        <Text style={styles.headerSubtitle}>Seguimiento completo de operaciones del sistema</Text>
-      </LinearGradient>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Historial de Auditoría</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Seguimiento completo de operaciones del sistema</Text>
+      </View>
 
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
@@ -514,7 +579,7 @@ export default function AuditoriaScreen() {
               items={[
                 { label: 'Todos', value: '' },
                 { label: 'Superadmin', value: 'superadmin' },
-                { label: 'Admin', value: 'administrador' },
+                { label: 'Administrativo', value: 'administrativo' },
                 { label: 'Docente', value: 'docente' },
                 { label: 'Estudiante', value: 'estudiante' },
               ]}
@@ -587,7 +652,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: -25,
+    marginTop: 20,
     gap: 10,
     zIndex: 10,
   },
@@ -634,20 +699,20 @@ const styles = StyleSheet.create({
 
   // Auditoria Card
   auditoriaCard: {
-    borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 12,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
+    borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  operacionBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  operacionText: { fontSize: 10, fontWeight: '700' },
-  fechaText: { fontSize: 10 },
-  tablaText: { fontSize: 15, fontWeight: '700', marginBottom: 6 },
-  descripcionText: { fontSize: 13, marginBottom: 10, lineHeight: 18 },
-  userRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  userName: { fontSize: 13, fontWeight: '600' },
-  userRol: { fontSize: 11 },
-  verMasRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  verMasText: { fontSize: 13, fontWeight: '600' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  operacionBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  operacionText: { fontSize: 9, fontWeight: '700' },
+  fechaText: { fontSize: 11 },
+  tablaText: { fontSize: 14, fontWeight: '700' },
+  descripcionText: { fontSize: 13, marginBottom: 16, lineHeight: 18 },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1 },
+  userRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  userName: { fontSize: 12, fontWeight: '500' },
+  userRol: { fontSize: 12 },
+  verMasText: { fontSize: 12, fontWeight: '600' },
 
   // Modal
   modalContainer: { flex: 1 },

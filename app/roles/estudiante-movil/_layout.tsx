@@ -695,7 +695,7 @@ export default function EstudianteLayout() {
 
               {/* Formulario */}
               <View style={styles.passwordForm}>
-                {!isFirstLogin && (
+                {!isRequiredPasswordChange && (
                   <View style={styles.passwordField}>
                     <Text style={[styles.passwordLabel, { color: theme.text }]}>Contraseña Actual</Text>
                     <View style={[styles.passwordInputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>

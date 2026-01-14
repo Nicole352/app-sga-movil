@@ -213,13 +213,19 @@ export default function ConfiguracionScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {/* Standardized Header */}
-      <LinearGradient
-        colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-        style={styles.header}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.cardBg,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+          }
+        ]}
       >
-        <Text style={styles.headerTitle}>Mi Perfil</Text>
-        <Text style={styles.headerSubtitle}>Información personal del Super Administrador</Text>
-      </LinearGradient>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Información personal del Super Administrador</Text>
+      </View>
 
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
@@ -407,7 +413,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: -25,
+    marginTop: 20,
     gap: 10,
     zIndex: 10,
   },

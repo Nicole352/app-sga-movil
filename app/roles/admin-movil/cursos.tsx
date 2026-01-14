@@ -73,7 +73,7 @@ export default function AdminCursosScreen() {
     const [descripcion, setDescripcion] = useState('');
     const [capacidad, setCapacidad] = useState('');
     const [horario, setHorario] = useState('matutino');
-    const [estado, setEstado] = useState('planificado');
+    const [estado, setEstado] = useState('activo');
 
     // Fechas
     const [fechaInicio, setFechaInicio] = useState(new Date());
@@ -146,7 +146,7 @@ export default function AdminCursosScreen() {
                 setDescripcion('');
                 setCapacidad('');
                 setHorario('matutino');
-                setEstado('planificado');
+                setEstado('activo');
                 setFechaInicio(new Date());
                 setFechaFin(new Date());
             }
@@ -415,7 +415,7 @@ export default function AdminCursosScreen() {
                             </View>
                         </View>
                         <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>{item.nombre}</Text>
-                        <Text style={[styles.horarioText, { color: theme.textSecondary }]}>{item.horario || 'Horario no definido'}</Text>
+                        <Text style={[styles.horarioText, { color: theme.textSecondary }]}>{(item.horario || 'Horario no definido').toUpperCase()}</Text>
                     </View>
                 </View>
 
@@ -479,29 +479,35 @@ export default function AdminCursosScreen() {
                     )}
                 </View>
 
-                <View style={styles.filterRow}>
-                    {['todos', 'activo', 'planificado', 'finalizado'].map((f) => (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterRow}
+                >
+                    {['todos', 'activo', 'finalizado', 'cancelado'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
-                                styles.filterTab,
-                                filterEstado === f && styles.filterTabActive,
-                                { borderColor: filterEstado === f ? theme.primary : 'transparent' }
+                                styles.filterButton,
+                                {
+                                    backgroundColor: filterEstado === f ? theme.primary : theme.inputBg,
+                                    borderColor: filterEstado === f ? theme.primary : theme.border,
+                                }
                             ]}
                             onPress={() => setFilterEstado(f)}
                         >
                             <Text style={[
-                                styles.filterText,
+                                styles.filterButtonText,
                                 {
-                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
-                                    fontWeight: filterEstado === f ? '700' : '500'
+                                    color: filterEstado === f ? '#fff' : theme.text,
+                                    fontWeight: filterEstado === f ? '700' : '600'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </ScrollView>
             </View>
 
             {/* --- LISTA --- */}
@@ -573,17 +579,6 @@ export default function AdminCursosScreen() {
                                 showsVerticalScrollIndicator={false}
                             >
                                 <View style={styles.inputGroup}>
-                                    <Text style={[styles.label, { color: theme.textSecondary }]}>Código (Automático)</Text>
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.textMuted, borderColor: theme.border }]}
-                                        value={codigo || 'Se genera automáticamente'}
-                                        editable={false}
-                                        placeholder="Generado autom."
-                                        placeholderTextColor={theme.textMuted}
-                                    />
-                                </View>
-
-                                <View style={styles.inputGroup}>
                                     <Text style={[styles.label, { color: theme.textSecondary }]}>Tipo de Curso *</Text>
                                     <CompactPicker
                                         items={[
@@ -594,20 +589,16 @@ export default function AdminCursosScreen() {
                                         onValueChange={handleTipoChange}
                                         theme={theme}
                                     />
-                                </View>
-
-                                <View style={styles.inputGroup}>
-                                    <Text style={[styles.label, { color: theme.textSecondary }]}>Nombre del Curso</Text>
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.textMuted, borderColor: theme.border }]}
-                                        value={nombre}
-                                        editable={false}
-                                        placeholder="Selecciona un tipo de curso primero"
-                                        placeholderTextColor={theme.textMuted}
-                                    />
-                                    <Text style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
-                                        Se completa automáticamente con el nombre del tipo.
-                                    </Text>
+                                    {(codigo || nombre) ? (
+                                        <View style={{ marginTop: 8, padding: 8, backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderRadius: 8, borderWidth: 1, borderColor: theme.border }}>
+                                            <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                                                <Text style={{ fontWeight: 'bold' }}>Código:</Text> {codigo}
+                                            </Text>
+                                            <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                                                <Text style={{ fontWeight: 'bold' }}>Nombre:</Text> {nombre}
+                                            </Text>
+                                        </View>
+                                    ) : null}
                                 </View>
 
                                 <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -640,7 +631,6 @@ export default function AdminCursosScreen() {
                                     <Text style={[styles.label, { color: theme.textSecondary }]}>Estado</Text>
                                     <CompactPicker
                                         items={[
-                                            { label: "Planificado", value: "planificado" },
                                             { label: "Activo", value: "activo" },
                                             { label: "Finalizado", value: "finalizado" },
                                             { label: "Cancelado", value: "cancelado" }
@@ -742,9 +732,9 @@ export default function AdminCursosScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        marginBottom: 16,
-        paddingTop: 25,
-        paddingBottom: 25,
+        marginBottom: 4,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
@@ -775,10 +765,16 @@ const styles = StyleSheet.create({
 
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 20 },
     searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
-    filterRow: { flexDirection: 'row', gap: 15, overflow: 'hidden' }, // fixed width layout
-    filterTab: { paddingBottom: 4, borderBottomWidth: 2 },
-    filterTabActive: { borderBottomWidth: 2 },
-    filterText: { fontSize: 14 },
+    filterRow: { flexDirection: 'row', gap: 6, justifyContent: 'space-between' },
+    filterButton: {
+        paddingHorizontal: 13,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        minWidth: 90,
+        alignItems: 'center'
+    },
+    filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
     listContent: { padding: 20, paddingBottom: 100 },
     card: {

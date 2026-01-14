@@ -14,7 +14,8 @@ import {
     Image,
     Dimensions,
     Linking,
-    Platform
+    Platform,
+    KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -55,6 +56,7 @@ interface Solicitud {
     estado: 'pendiente' | 'aprobado' | 'rechazado' | 'observaciones';
     fecha_solicitud: string;
     observaciones_admin?: string;
+    id_estudiante_existente?: number;
     // Auxiliares para mapeo defensivo
     curso?: { nombre: string };
 }
@@ -161,13 +163,20 @@ export default function AdminMatriculasScreen() {
             result = result.filter(s => s.estado === filterEstado);
         }
         if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            result = result.filter(s =>
-                (s.nombre_solicitante || '').toLowerCase().includes(term) ||
-                (s.apellido_solicitante || '').toLowerCase().includes(term) ||
-                (s.identificacion_solicitante || '').includes(term) ||
-                (s.email_solicitante || '').toLowerCase().includes(term)
-            );
+            const term = searchTerm.toLowerCase().trim();
+            result = result.filter(s => {
+                const nombreCompleto = `${s.nombre_solicitante || ''} ${s.apellido_solicitante || ''}`.toLowerCase();
+                const identificacion = (s.identificacion_solicitante || '').toLowerCase();
+                const email = (s.email_solicitante || '').toLowerCase();
+
+                // Buscar por palabras que empiecen con el término o coincidencia exacta en identificación
+                const palabras = nombreCompleto.split(' ');
+                const nombreMatch = palabras.some(palabra => palabra.startsWith(term));
+                const identificacionMatch = identificacion.includes(term);
+                const emailMatch = email.includes(term);
+
+                return nombreMatch || identificacionMatch || emailMatch;
+            });
         }
         setFilteredSolicitudes(result);
         setCurrentPage(1); // Reset to page 1
@@ -198,6 +207,27 @@ export default function AdminMatriculasScreen() {
             });
             if (res.ok) {
                 const fullData = await res.json();
+
+                // Si es estudiante existente, cargar sus datos básicos del perfil
+                if (fullData.id_estudiante_existente) {
+                    try {
+                        const studentRes = await fetch(`${API_URL}/estudiantes/${fullData.id_estudiante_existente}`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (studentRes.ok) {
+                            const studentData = await studentRes.json();
+                            // Fusionar datos del estudiante si faltan en la solicitud
+                            fullData.fecha_nacimiento_solicitante = fullData.fecha_nacimiento_solicitante || studentData.fecha_nacimiento;
+                            fullData.contacto_emergencia = fullData.contacto_emergencia || studentData.contacto_emergencia;
+                            fullData.genero_solicitante = fullData.genero_solicitante || studentData.genero;
+                            fullData.direccion_solicitante = fullData.direccion_solicitante || studentData.direccion;
+                            fullData.telefono_solicitante = fullData.telefono_solicitante || studentData.telefono;
+                        }
+                    } catch (err) {
+                        console.error('Error loading existing student data', err);
+                    }
+                }
+
                 setSelectedSolicitud(prev => ({ ...prev, ...fullData }));
             }
         } catch (e) {
@@ -209,7 +239,12 @@ export default function AdminMatriculasScreen() {
 
     const handleAction = (type: 'aprobado' | 'rechazado') => {
         setActionType(type);
-        setInputObservacion('');
+        if (type === 'rechazado' && selectedSolicitud) {
+            const template = `Estimado ${selectedSolicitud.nombre_solicitante} ${selectedSolicitud.apellido_solicitante}, con identificación ${selectedSolicitud.identificacion_solicitante || ''}, se rechazó su solicitud de matrícula por inconsistencias de información o pago. Si cree que es un error, por favor acérquese a la escuela Jessica Vélez.`;
+            setInputObservacion(template);
+        } else {
+            setInputObservacion('');
+        }
         // Cerrar el modal de detalle primero para evitar problemas de modales apilados
         setShowDetailModal(false);
         // Delay para que el modal de detalle se cierre completamente
@@ -304,8 +339,13 @@ export default function AdminMatriculasScreen() {
 
     const formatDate = (d?: string) => {
         if (!d) return 'No especificado';
+        // Manejo manual para evitar problemas de zona horaria con fechas YYYY-MM-DD
+        if (typeof d === 'string' && d.includes('-') && d.length === 10) {
+            const [year, month, day] = d.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
         return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-
     };
 
     // Paginación
@@ -403,15 +443,17 @@ export default function AdminMatriculasScreen() {
                     )}
                 </View>
 
-                {/* Filtros Tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ paddingRight: 20 }}>
+                {/* Filtros Botones */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ gap: 6 }}>
                     {['todos', 'pendiente', 'aprobado', 'rechazado'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
-                                styles.filterTab,
-                                filterEstado === f && styles.filterTabActive,
-                                { borderBottomColor: filterEstado === f ? theme.primary : 'transparent' }
+                                styles.filterButton,
+                                {
+                                    backgroundColor: filterEstado === f ? theme.primary : theme.inputBg,
+                                    borderColor: filterEstado === f ? theme.primary : theme.border,
+                                }
                             ]}
                             onPress={() => {
                                 if (filterEstado !== f) {
@@ -422,10 +464,10 @@ export default function AdminMatriculasScreen() {
                             activeOpacity={0.7}
                         >
                             <Text style={[
-                                styles.filterText,
+                                styles.filterButtonText,
                                 {
-                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
-                                    fontWeight: filterEstado === f ? '700' : '500'
+                                    color: filterEstado === f ? '#fff' : theme.text,
+                                    fontWeight: filterEstado === f ? '700' : '600'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -733,40 +775,130 @@ export default function AdminMatriculasScreen() {
 
             {/* MODAL ACTION CONFIRMATION */}
             <Modal visible={showActionModal} transparent animationType="fade" onRequestClose={() => setShowActionModal(false)}>
-                <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 99999, elevation: 99999 }]}>
-                    <View style={[styles.modalCard, { backgroundColor: theme.cardBg, height: 'auto', padding: 30, borderRadius: 20, zIndex: 100000, elevation: 100000, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text, textAlign: 'center', marginBottom: 15 }]}>
-                            {actionType === 'aprobado' ? '¿Aprobar Matrícula?' : 'Rechazar Matrícula'}
-                        </Text>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 99999, elevation: 99999 }]}
+                        onPress={() => setShowActionModal(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={[
+                                styles.modalCard,
+                                {
+                                    backgroundColor: darkMode ? '#121212' : '#ffffff',
+                                    height: 'auto',
+                                    padding: 24,
+                                    borderRadius: 24,
+                                    zIndex: 100000,
+                                    elevation: 100000,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 10 },
+                                    shadowOpacity: 0.5,
+                                    shadowRadius: 20,
+                                    borderWidth: 1,
+                                    borderColor: darkMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)'
+                                }
+                            ]}
+                        >
+                            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: actionType === 'aprobado' ? theme.success + '20' : theme.danger + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+                                    <Ionicons
+                                        name={actionType === 'aprobado' ? "checkmark-circle" : "close-circle"}
+                                        size={32}
+                                        color={actionType === 'aprobado' ? theme.success : theme.danger}
+                                    />
+                                </View>
+                                <Text style={[styles.modalTitle, { color: theme.text, textAlign: 'center', marginBottom: 8 }]}>
+                                    {actionType === 'aprobado' ? '¿Aprobar Matrícula?' : 'Rechazar Matrícula'}
+                                </Text>
+                                <Text style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 13, paddingHorizontal: 10 }}>
+                                    {actionType === 'aprobado'
+                                        ? 'Esta acción registrará al estudiante y le notificará por correo electrónico.'
+                                        : 'Se enviará un correo electrónico al estudiante notificando el rechazo con el siguiente mensaje:'}
+                                </Text>
+                            </View>
 
-                        {actionType !== 'aprobado' && (
-                            <TextInput
-                                style={[styles.textArea, { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border }]}
-                                placeholder="Escribe el motivo..."
-                                placeholderTextColor={theme.textMuted}
-                                multiline
-                                numberOfLines={4}
-                                value={inputObservacion}
-                                onChangeText={setInputObservacion}
-                            />
-                        )}
+                            {actionType === 'rechazado' && (
+                                <View style={{ marginBottom: 20 }}>
+                                    <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>Motivo de rechazo:</Text>
+                                    <TextInput
+                                        style={[
+                                            styles.textArea,
+                                            {
+                                                backgroundColor: darkMode ? '#1a1a1a' : '#f8fafc',
+                                                color: theme.text,
+                                                borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                                                borderRadius: 12,
+                                                padding: 16,
+                                                fontSize: 14,
+                                                lineHeight: 20,
+                                                minHeight: 120,
+                                                textAlignVertical: 'top'
+                                            }
+                                        ]}
+                                        placeholder="Escribe el motivo..."
+                                        placeholderTextColor={theme.textMuted}
+                                        multiline
+                                        numberOfLines={6}
+                                        value={inputObservacion}
+                                        onChangeText={setInputObservacion}
+                                    />
+                                </View>
+                            )}
 
-                        <View style={{ flexDirection: 'row', gap: 15, marginTop: 10 }}>
-                            <TouchableOpacity style={{ flex: 1, padding: 12, borderWidth: 1, borderColor: theme.border, borderRadius: 10, alignItems: 'center' }} onPress={() => setShowActionModal(false)}>
-                                <Text style={{ color: theme.text }}>Cancelar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={{ flex: 1, padding: 12, backgroundColor: actionType === 'rechazado' ? theme.danger : actionType === 'aprobado' ? theme.success : theme.warning, borderRadius: 10, alignItems: 'center' }}
-                                onPress={submitDecision}
-                                disabled={processing}
-                            >
-                                {processing ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirmar</Text>}
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <TouchableOpacity
+                                    style={{
+                                        flex: 1,
+                                        padding: 14,
+                                        borderRadius: 12,
+                                        backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                                        alignItems: 'center',
+                                        borderWidth: 1,
+                                        borderColor: theme.border
+                                    }}
+                                    onPress={() => setShowActionModal(false)}
+                                >
+                                    <Text style={{ color: theme.text, fontWeight: '600' }}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={{
+                                        flex: 1.5,
+                                        padding: 14,
+                                        backgroundColor: actionType === 'rechazado' ? theme.danger : theme.success,
+                                        borderRadius: 12,
+                                        alignItems: 'center',
+                                        flexDirection: 'row',
+                                        justifyContent: 'center',
+                                        gap: 8,
+                                        shadowColor: actionType === 'rechazado' ? theme.danger : theme.success,
+                                        shadowOffset: { width: 0, height: 4 },
+                                        shadowOpacity: 0.3,
+                                        shadowRadius: 8,
+                                        elevation: 4
+                                    }}
+                                    onPress={submitDecision}
+                                    disabled={processing || (actionType === 'rechazado' && !inputObservacion.trim())}
+                                >
+                                    {processing ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>
+                                                {actionType === 'aprobado' ? 'Confirmar Aprobación' : 'Confirmar Rechazo'}
+                                            </Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </KeyboardAvoidingView>
             </Modal>
-
         </View>
     );
 }
@@ -774,9 +906,9 @@ export default function AdminMatriculasScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        marginBottom: 16,
-        paddingTop: 25,
-        paddingBottom: 25,
+        marginBottom: 4,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
@@ -791,17 +923,15 @@ const styles = StyleSheet.create({
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
     searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
 
-    filterTab: {
-        paddingBottom: 4,
-        borderBottomWidth: 2,
-        marginRight: 15,
+    filterButton: {
+        paddingHorizontal: 13,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        minWidth: 90,
+        alignItems: 'center'
     },
-    filterTabActive: {
-        borderBottomWidth: 2,
-    },
-    filterText: {
-        fontSize: 14,
-    },
+    filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
     listContent: { padding: 20, paddingBottom: 100 },
     card: {

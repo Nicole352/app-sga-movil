@@ -321,7 +321,7 @@ export default function AdminEstudiantesScreen() {
                             {item.apellido} {item.nombre}
                         </Text>
                         <Text style={[styles.idText, { color: theme.textSecondary }]}>
-                            CI: {item.identificacion}
+                            ID: {item.identificacion}
                         </Text>
                         <Text style={{ fontSize: 12, color: theme.textMuted }}>{item.email}</Text>
 
@@ -388,23 +388,25 @@ export default function AdminEstudiantesScreen() {
                     )}
                 </View>
 
-                {/* Filtros Tabs */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }}>
+                {/* Filtros Botones */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ gap: 6 }}>
                     {['todos', 'activo', 'inactivo', 'pendiente'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
-                                styles.filterTab,
-                                filterEstado === f && styles.filterTabActive,
-                                { borderColor: filterEstado === f ? theme.primary : 'transparent' }
+                                styles.filterButton,
+                                {
+                                    backgroundColor: filterEstado === f ? theme.primary : theme.inputBg,
+                                    borderColor: filterEstado === f ? theme.primary : theme.border,
+                                }
                             ]}
                             onPress={() => setFilterEstado(f)}
                         >
                             <Text style={[
-                                styles.filterText,
+                                styles.filterButtonText,
                                 {
-                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
-                                    fontWeight: filterEstado === f ? '700' : '500'
+                                    color: filterEstado === f ? '#fff' : theme.text,
+                                    fontWeight: filterEstado === f ? '700' : '600'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -412,25 +414,6 @@ export default function AdminEstudiantesScreen() {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </View>
-
-            {/* Stats Cards - Outside header */}
-            <View style={styles.statsCardsContainer}>
-                <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                    <Ionicons name="people" size={18} color={theme.primary} />
-                    <Text style={[styles.statCardValue, { color: theme.text }]}>{stats.total}</Text>
-                    <Text style={[styles.statCardLabel, { color: theme.textSecondary }]}>Total</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                    <Ionicons name="checkmark-circle" size={18} color={theme.success} />
-                    <Text style={[styles.statCardValue, { color: theme.text }]}>{stats.activos}</Text>
-                    <Text style={[styles.statCardLabel, { color: theme.textSecondary }]}>Activos</Text>
-                </View>
-                <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                    <Ionicons name="close-circle" size={18} color={theme.textMuted} />
-                    <Text style={[styles.statCardValue, { color: theme.text }]}>{stats.inactivos}</Text>
-                    <Text style={[styles.statCardLabel, { color: theme.textSecondary }]}>Inactivos</Text>
-                </View>
             </View>
 
             {/* List */}
@@ -694,9 +677,9 @@ export default function AdminEstudiantesScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        marginBottom: 8,
-        paddingTop: 25,
-        paddingBottom: 25,
+        marginBottom: 4,
+        paddingTop: 16,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
@@ -709,34 +692,18 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
     headerSubtitle: { fontSize: 13, marginBottom: 12 },
 
-    statsCardsContainer: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        marginTop: 10,
-        marginBottom: 16,
-        gap: 8
-    },
-    statCard: {
-        flex: 1,
-        alignItems: 'center',
-        padding: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3
-    },
-    statCardValue: { fontSize: 14, fontWeight: '700', marginTop: 4 },
-    statCardLabel: { fontSize: 9, marginTop: 2 },
-
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
     searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
 
-    filterTab: { paddingBottom: 4, borderBottomWidth: 2, marginRight: 15 },
-    filterTabActive: { borderBottomWidth: 2 },
-    filterText: { fontSize: 14 },
+    filterButton: {
+        paddingHorizontal: 13,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        minWidth: 90,
+        alignItems: 'center'
+    },
+    filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
     listContent: { padding: 20, paddingBottom: 100 },
     card: {

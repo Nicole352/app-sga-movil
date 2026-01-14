@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../../constants/config';
 import { getDarkMode, getToken } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import { useSocket } from '../../../hooks/useSocket';
 
 interface LogEntry {
   level: 'error' | 'warn' | 'info';
@@ -60,6 +61,15 @@ export default function DashboardSuperAdmin() {
     primary: '#ef4444',
     inputBg: '#ffffff',
   };
+
+  useSocket({
+    activeConnectionsUpdate: (data) => {
+      setSystemMetrics(prev => ({
+        ...prev,
+        activeConnections: data.activeConnections
+      }));
+    }
+  }, userData?.id_usuario);
 
   const loadSystemMetrics = async () => {
     try {
@@ -212,24 +222,31 @@ export default function DashboardSuperAdmin() {
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {/* Standardized Header */}
-      <LinearGradient
-        colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-        style={styles.header}
+      {/* Standardized Header - Clean Nike Effect */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.cardBg,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 1,
+          }
+        ]}
       >
         <View>
-          <Text style={styles.welcomeLabel}>Bienvenido,</Text>
-          <Text style={styles.userName}>
+          <Text style={[styles.welcomeLabel, { color: theme.textSecondary }]}>Bienvenido,</Text>
+          <Text style={[styles.userName, { color: theme.text }]}>
             {userData?.nombre} {userData?.apellido}
           </Text>
-          <Text style={styles.userRole}>Super Administrador</Text>
+          <Text style={[styles.userRole, { color: theme.textMuted }]}>Super Administrador</Text>
         </View>
         <View style={styles.dateRow}>
-          <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.9)" />
-          <Text style={styles.dateText}>
+          <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
+          <Text style={[styles.dateText, { color: theme.textSecondary }]}>
             {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Stats Cards - Overlapping Header */}
       <View style={styles.statsGrid}>
@@ -375,7 +392,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: -25,
+    marginTop: 20,
     gap: 10,
     zIndex: 10,
   },
