@@ -368,23 +368,16 @@ export default function DetalleCursoEstudiante() {
 
       {/* Premium Header */}
       <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
-              <Text style={styles.backButtonText}>Volver a Mis Cursos</Text>
-            </TouchableOpacity>
-            <View>
-              <Text style={styles.headerTitle} numberOfLines={1}>{curso?.nombre}</Text>
-              <Text style={styles.headerSubtitle}>{curso?.codigo_curso}</Text>
-            </View>
+        <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: theme.accent + '10' }]}>
+            <Ionicons name="arrow-back" size={20} color={theme.accent} />
+            <Text style={[styles.backButtonText, { color: theme.accent }]}>Volver a Mis Cursos</Text>
+          </TouchableOpacity>
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{curso?.nombre}</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>{curso?.codigo_curso}</Text>
           </View>
-        </LinearGradient>
+        </View>
       </View>
 
       <ScrollView
@@ -548,16 +541,10 @@ export default function DetalleCursoEstudiante() {
                                       <TouchableOpacity
                                         activeOpacity={0.8}
                                         onPress={() => handleSelectFile(tarea, modulo.id_modulo, 'upload')}
+                                        style={[styles.uploadBtn, { backgroundColor: theme.accent }]}
                                       >
-                                        <LinearGradient
-                                          colors={['#fbbf24', '#f59e0b']}
-                                          style={styles.uploadBtnGradient}
-                                          start={{ x: 0, y: 0 }}
-                                          end={{ x: 1, y: 0 }}
-                                        >
-                                          <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
-                                          <Text style={styles.uploadBtnText}>Subir Tarea</Text>
-                                        </LinearGradient>
+                                        <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
+                                        <Text style={styles.uploadBtnText}>Subir Tarea</Text>
                                       </TouchableOpacity>
                                     ) : (
                                       <Text style={{ color: theme.textMuted, fontSize: 12 }}>Módulo cerrado</Text>
@@ -662,21 +649,19 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     marginBottom: -20,
-    zIndex: 10
+    zIndex: 10,
+    backgroundColor: '#fff' // Default bg for shadow
   },
-  headerGradient: {
+  header: {
     paddingTop: Platform.OS === 'ios' ? 50 : 40,
-    paddingBottom: 30,
+    paddingBottom: 20,
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
+    borderBottomWidth: 1,
   },
   backButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -685,12 +670,11 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   backButtonText: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 14
   },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', flexShrink: 1 },
-  headerSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', flexShrink: 1 },
+  headerSubtitle: { fontSize: 12 },
   scrollContent: { padding: 16, paddingTop: 30, paddingBottom: 50 },
   emptyState: { padding: 40, alignItems: 'center', borderRadius: 16 },
 
@@ -748,9 +732,10 @@ const styles = StyleSheet.create({
   warningText: { fontSize: 11, fontWeight: '600', flex: 1 },
 
   actionFooter: { paddingTop: 10, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
-  uploadBtnGradient: {
+  uploadBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2
   },
   uploadBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 

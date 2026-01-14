@@ -324,48 +324,60 @@ export default function MisEstudiantesScreen() {
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
-      {/* PREMIUM BLUE GRADIENT HEADER */}
+      {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
       <Animated.View entering={FadeInDown.duration(400)}>
-        <LinearGradient
-          colors={theme.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Mis Estudiantes</Text>
-              <Text style={styles.headerSubtitle}>Gestiona y monitorea el progreso</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Estudiantes</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y monitorea el progreso</Text>
             </View>
-            <Ionicons name="people" size={28} color="#fff" />
+            <Ionicons name="people" size={28} color={theme.accent} />
           </View>
-        </LinearGradient>
+        </View>
       </Animated.View>
 
       {/* Estadísticas */}
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: theme.accent }]}>
-          <Ionicons name="people" size={14} color="#fff" />
-          <Text style={styles.statLabel}>Total</Text>
-          <Text style={styles.statValue}>{estudiantesFiltrados.length}</Text>
+        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+          <View style={{ padding: 6, borderRadius: 20, backgroundColor: theme.accent + '15', marginBottom: 4 }}>
+            <Ionicons name="people" size={14} color={theme.accent} />
+          </View>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Total</Text>
+          <Text style={[styles.statValue, { color: theme.text }]}>{estudiantesFiltrados.length}</Text>
         </View>
 
-        <View style={[styles.statCard, { backgroundColor: theme.green }]}>
-          <Ionicons name="trophy" size={14} color="#fff" />
-          <Text style={styles.statLabel}>Destacados</Text>
-          <Text style={styles.statValue}>{destacados}</Text>
+        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+          <View style={{ padding: 6, borderRadius: 20, backgroundColor: theme.green + '15', marginBottom: 4 }}>
+            <Ionicons name="trophy" size={14} color={theme.green} />
+          </View>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Destacados</Text>
+          <Text style={[styles.statValue, { color: theme.text }]}>{destacados}</Text>
         </View>
 
-        <View style={[styles.statCard, { backgroundColor: theme.orange }]}>
-          <Ionicons name="star" size={14} color="#fff" />
-          <Text style={styles.statLabel}>Promedio</Text>
-          <Text style={styles.statValue}>{promedioGeneral}</Text>
+        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+          <View style={{ padding: 6, borderRadius: 20, backgroundColor: theme.orange + '15', marginBottom: 4 }}>
+            <Ionicons name="star" size={14} color={theme.orange} />
+          </View>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Promedio</Text>
+          <Text style={[styles.statValue, { color: theme.text }]}>{promedioGeneral}</Text>
         </View>
 
-        <View style={[styles.statCard, { backgroundColor: theme.purple }]}>
-          <Ionicons name="book" size={14} color="#fff" />
-          <Text style={styles.statLabel}>Cursos</Text>
-          <Text style={styles.statValue}>{cursosUnicos.length}</Text>
+        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
+          <View style={{ padding: 6, borderRadius: 20, backgroundColor: theme.purple + '15', marginBottom: 4 }}>
+            <Ionicons name="book" size={14} color={theme.purple} />
+          </View>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Cursos</Text>
+          <Text style={[styles.statValue, { color: theme.text }]}>{cursosUnicos.length}</Text>
         </View>
       </View>
 
@@ -506,11 +518,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 24,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 15,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerContent: {
     flexDirection: 'row',

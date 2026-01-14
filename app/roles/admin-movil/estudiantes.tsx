@@ -210,7 +210,12 @@ export default function AdminEstudiantesScreen() {
 
     const handleActionRequest = (type: 'activar' | 'desactivar') => {
         setActionType(type);
-        setShowActionModal(true);
+        // Cerrar el modal de detalle primero para evitar problemas de modales apilados
+        setShowModal(false);
+        // Delay para que el modal de detalle se cierre completamente
+        setTimeout(() => {
+            setShowActionModal(true);
+        }, 300);
     };
 
     const executeAction = async () => {
@@ -352,27 +357,33 @@ export default function AdminEstudiantesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
-            {/* Header / Summary Card */}
-            <LinearGradient
-                colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-                style={styles.summaryCard}
+            {/* Header / Summary Card (Clean Nike Effect) */}
+            <View
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.cardBg,
+                        borderBottomColor: theme.border,
+                        borderBottomWidth: 1,
+                    }
+                ]}
             >
-                <Text style={styles.headerTitle}>Estudiantes</Text>
-                <Text style={styles.headerSubtitle}>Gestiona y administra los estudiantes</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Estudiantes</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y administra los estudiantes</Text>
 
                 {/* Search */}
-                <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }]}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginLeft: 10, opacity: 0.8 }} />
+                <View style={[styles.searchContainer, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: 1 }]}>
+                    <Ionicons name="search" size={20} color={theme.textMuted} style={{ marginLeft: 10 }} />
                     <TextInput
                         placeholder="Buscar por nombre, CI, email..."
-                        placeholderTextColor="rgba(255,255,255,0.7)"
-                        style={styles.searchInput}
+                        placeholderTextColor={theme.textMuted}
+                        style={[styles.searchInput, { color: theme.text }]}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
                     {searchTerm.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 8 }}>
-                            <Ionicons name="close-circle" size={18} color="#fff" />
+                            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -385,17 +396,23 @@ export default function AdminEstudiantesScreen() {
                             style={[
                                 styles.filterTab,
                                 filterEstado === f && styles.filterTabActive,
-                                { borderColor: filterEstado === f ? '#fff' : 'transparent' }
+                                { borderColor: filterEstado === f ? theme.primary : 'transparent' }
                             ]}
                             onPress={() => setFilterEstado(f)}
                         >
-                            <Text style={[styles.filterText, { fontWeight: filterEstado === f ? '700' : '400', opacity: filterEstado === f ? 1 : 0.7 }]}>
+                            <Text style={[
+                                styles.filterText,
+                                {
+                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
+                                    fontWeight: filterEstado === f ? '700' : '500'
+                                }
+                            ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </LinearGradient>
+            </View>
 
             {/* Stats Cards - Outside header */}
             <View style={styles.statsCardsContainer}>
@@ -677,21 +694,25 @@ export default function AdminEstudiantesScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        marginBottom: 16,
+        marginBottom: 8,
         paddingTop: 25,
         paddingBottom: 25,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 12 },
+    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerSubtitle: { fontSize: 13, marginBottom: 12 },
 
     statsCardsContainer: {
         flexDirection: 'row',
         paddingHorizontal: 20,
-        marginTop: -30,
+        marginTop: 10,
         marginBottom: 16,
         gap: 8
     },
@@ -711,11 +732,11 @@ const styles = StyleSheet.create({
     statCardLabel: { fontSize: 9, marginTop: 2 },
 
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
-    searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },
+    searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
 
     filterTab: { paddingBottom: 4, borderBottomWidth: 2, marginRight: 15 },
     filterTabActive: { borderBottomWidth: 2 },
-    filterText: { color: '#fff', fontSize: 13 },
+    filterText: { fontSize: 14 },
 
     listContent: { padding: 20, paddingBottom: 100 },
     card: {

@@ -144,23 +144,28 @@ export default function HorarioEstudiante() {
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* Premium Header with Gradient */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+      {/* Premium Header - Clean Nike */}
+      <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Mi Horario</Text>
-              <Text style={styles.headerSubtitle}>Calendario Semanal</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Horario</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Calendario Semanal</Text>
             </View>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="calendar" size={24} color="#fff" />
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
+              <Ionicons name="calendar" size={24} color={theme.accent} />
             </View>
           </View>
-        </LinearGradient>
+        </View>
       </View>
 
       {/* Day Selector Tabs */}
@@ -304,12 +309,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     zIndex: 10
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 25,
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -317,25 +322,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
     marginTop: 2,
   },
   headerIconContainer: {
     width: 45,
     height: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    backdropFilter: 'blur(10px)',
   },
 
   tabsContainer: {

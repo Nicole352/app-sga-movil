@@ -108,7 +108,7 @@ export default function AdminDashboard() {
         warning: '#d97706',
         info: '#2563eb',
         purple: '#7c3aed',
-        cardBorder: 'rgba(239, 68, 68, 0.1)'
+        cardBorder: '#e2e8f0'
     };
 
     useFocusEffect(
@@ -122,6 +122,12 @@ export default function AdminDashboard() {
         eventEmitter.on('themeChanged', themeHandler);
         return () => { eventEmitter.off('themeChanged', themeHandler); };
     }, []);
+
+    // Debug effect para próximos vencimientos
+    useEffect(() => {
+        console.log('🔍 [State Update] Próximos Vencimientos:', proximosVencimientos);
+    }, [proximosVencimientos]);
+
 
     const loadData = async () => {
         try {
@@ -228,29 +234,37 @@ export default function AdminDashboard() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             >
-                {/* WELCOME CARD (Red Gradient) */}
+                {/* WELCOME CARD (Clean Nike Effect) */}
                 <View style={styles.welcomeCardContainer}>
-                    <LinearGradient
-                        colors={theme.primaryGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.welcomeCardGradient}
+                    {/* Fondo blanco/card con borde inferior estilizado */}
+                    <View
+                        style={[
+                            styles.welcomeCardContent,
+                            {
+                                backgroundColor: theme.cardBg,
+                                borderBottomColor: theme.border,
+                            }
+                        ]}
                     >
                         <View>
-                            <Text style={styles.welcomeLabel}>Bienvenido,</Text>
-                            <Text style={styles.userName}>
+                            <Text style={[styles.welcomeLabel, { color: theme.textSecondary }]}>Bienvenido,</Text>
+                            <Text style={[styles.userName, { color: theme.text }]}>
                                 {userData?.nombre} {userData?.apellido}
                             </Text>
-                            <Text style={styles.userRole}>Administrador</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                    <Text style={[styles.userRole, { color: theme.primary, fontWeight: '700' }]}>Administrador</Text>
+                                </View>
+                            </View>
                         </View>
 
                         <View style={styles.dateRow}>
-                            <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.9)" />
-                            <Text style={styles.dateText}>
+                            <Ionicons name="calendar-outline" size={14} color={theme.textMuted} />
+                            <Text style={[styles.dateText, { color: theme.textMuted }]}>
                                 {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </Text>
                         </View>
-                    </LinearGradient>
+                    </View>
                 </View>
 
                 {/* --- STATS PRINCIPALES --- */}
@@ -297,7 +311,48 @@ export default function AdminDashboard() {
                     </ScrollView>
                 </View>
 
-                {/* --- PRÓXIMOS VENCIMIENTOS (Faltante) --- */}
+                {/* --- PAGOS PENDIENTES VERIFICACIÓN --- */}
+                <View style={styles.sectionContainer}>
+                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Pagos Pendientes Verificación</Text>
+                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20, alignItems: 'center', borderColor: theme.border, borderWidth: 1 }]}>
+                        {/* Gráfico Circular */}
+                        <View style={{ width: 120, height: 120, marginBottom: 16, position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                            {/* Círculo de fondo */}
+                            <View style={{
+                                position: 'absolute',
+                                width: 120,
+                                height: 120,
+                                borderRadius: 60,
+                                borderWidth: 14,
+                                borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                            }} />
+                            {/* Círculo de progreso (naranja) */}
+                            <View style={{
+                                position: 'absolute',
+                                width: 120,
+                                height: 120,
+                                borderRadius: 60,
+                                borderWidth: 14,
+                                borderColor: theme.warning,
+                                borderTopColor: 'transparent',
+                                borderRightColor: 'transparent',
+                                transform: [{ rotate: '-90deg' }]
+                            }} />
+                            {/* Número central */}
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={{ color: theme.warning, fontSize: 32, fontWeight: '700' }}>
+                                    {loading ? '...' : pagosPendientes.total_pendientes}
+                                </Text>
+                                <Text style={{ color: theme.textMuted, fontSize: 11 }}>pagos</Text>
+                            </View>
+                        </View>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12, textAlign: 'center' }}>
+                            Esperando aprobación del admin
+                        </Text>
+                    </View>
+                </View>
+
+                {/* --- PRÓXIMOS VENCIMIENTOS --- */}
                 <View style={styles.sectionContainer}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, alignItems: 'center', marginBottom: 12 }}>
                         <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>Próximos Vencimientos</Text>
@@ -406,30 +461,38 @@ const styles = StyleSheet.create({
     // WELCOME CARD REFACTOR
     welcomeCardContainer: {
         marginBottom: 20,
+        // Eliminamos shadow del contenedor para que el "recorte" sea limpio, o lo aplicamos suave
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 4,
+        zIndex: 10,
     },
-    welcomeCardGradient: {
-        paddingTop: 25,
-        paddingBottom: 25,
+    welcomeCardContent: {
+        paddingTop: 16,
+        paddingBottom: 24,
         paddingHorizontal: 24,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 32, // Efecto curvado "Nike" más pronunciado
+        borderBottomRightRadius: 32,
         justifyContent: 'space-between',
-        height: 180, // Allow space for info
+        height: 160,
+        borderBottomWidth: 1, // Sutil borde inferior para definición
     },
-    welcomeLabel: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '500', marginBottom: 4 },
-    userName: { color: '#ffffff', fontSize: 22, fontWeight: '700', marginBottom: 4 },
-    userRole: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '500' },
+    welcomeLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
+    userName: { fontSize: 24, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
+    userRole: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-    dateRow: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', gap: 6 },
-    dateText: { color: 'rgba(255,255,255,0.95)', fontSize: 12, textTransform: 'capitalize' },
+    dateRow: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', gap: 6, opacity: 0.8 },
+    dateText: { fontSize: 12, textTransform: 'capitalize', fontWeight: '500' },
 
-    gridContainer: { paddingHorizontal: 20, marginTop: -30 }, // Overlap card
-    row: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-    statCard: { flex: 1, padding: 14, borderRadius: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-    statHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-    iconContainer: { padding: 6, borderRadius: 8 },
-    statValue: { fontSize: 18, fontWeight: '800', marginBottom: 2 },
-    statLabel: { fontSize: 11, fontWeight: '500' },
+    gridContainer: { paddingHorizontal: 20, marginTop: -40, zIndex: 20 }, // Higher zIndex to overlap header
+    row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    statCard: { flex: 1, padding: 10, borderRadius: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+    statHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+    iconContainer: { padding: 5, borderRadius: 8 },
+    statValue: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
+    statLabel: { fontSize: 10, fontWeight: '500' },
 
     sectionContainer: { marginBottom: 16 },
     sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },

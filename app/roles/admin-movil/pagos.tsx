@@ -92,7 +92,7 @@ export default function AdminPagosScreen() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showComprobanteModal, setShowComprobanteModal] = useState(false);
     const [comprobanteUrl, setComprobanteUrl] = useState('');
-    const [showRechazoModal, setShowRechazoModal] = useState(false);
+    // const [showRechazoModal, setShowRechazoModal] = useState(false); // Removed
     const [motivoRechazo, setMotivoRechazo] = useState('');
     const [procesando, setProcesando] = useState(false);
     const [selectedCursoTab, setSelectedCursoTab] = useState<'todos' | number>('todos');
@@ -133,6 +133,8 @@ export default function AdminPagosScreen() {
         warning: '#d97706',
         danger: '#ef4444',
     };
+
+    const [viewMode, setViewMode] = useState<'detail' | 'reject'>('detail');
 
     useFocusEffect(
         useCallback(() => {
@@ -332,6 +334,7 @@ export default function AdminPagosScreen() {
                             if (response.ok) {
                                 Alert.alert('Éxito', 'Pago verificado correctamente');
                                 setShowDetailModal(false);
+                                setArchivoPreview(null);
                                 await loadData();
                             } else {
                                 Alert.alert('Error', 'No se pudo verificar el pago');
@@ -348,9 +351,9 @@ export default function AdminPagosScreen() {
     };
 
     const handleRechazarPago = (pago: Pago) => {
-        setSelectedPago(pago);
+        // Cambiar al modo rechazo dentro del mismo modal
         setMotivoRechazo('');
-        setShowRechazoModal(true);
+        setViewMode('reject');
     };
 
     const confirmarRechazo = async () => {
@@ -384,7 +387,6 @@ export default function AdminPagosScreen() {
 
             if (response.ok) {
                 Alert.alert('Éxito', 'Pago rechazado correctamente');
-                setShowRechazoModal(false);
                 setShowDetailModal(false);
                 await loadData();
             } else {
@@ -482,6 +484,7 @@ export default function AdminPagosScreen() {
                 style={[styles.cardCompact, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                 onPress={() => {
                     setSelectedPago(pago);
+                    setViewMode('detail');
                     setShowDetailModal(true);
                 }}
                 activeOpacity={0.8}
@@ -566,6 +569,7 @@ export default function AdminPagosScreen() {
                             style={[styles.btnCircle, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                             onPress={() => {
                                 setSelectedPago(pago);
+                                setViewMode('detail');
                                 setShowDetailModal(true);
                             }}
                         >
@@ -579,27 +583,33 @@ export default function AdminPagosScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
-            {/* Header Gradiente */}
-            <LinearGradient
-                colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-                style={styles.summaryCard}
+            {/* Header Clean Nike Effect */}
+            <View
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.cardBg,
+                        borderBottomColor: theme.border,
+                        borderBottomWidth: 1,
+                    }
+                ]}
             >
-                <Text style={styles.headerTitle}>Gestión de Pagos</Text>
-                <Text style={styles.headerSubtitle}>Verifica y administra los pagos mensuales</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Pagos</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Verifica y administra los pagos mensuales</Text>
 
                 {/* Search */}
-                <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', marginTop: 10 }]}>
-                    <Ionicons name="search" size={18} color="#fff" style={{ marginLeft: 10, opacity: 0.8 }} />
+                <View style={[styles.searchContainer, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: 1, marginTop: 10 }]}>
+                    <Ionicons name="search" size={18} color={theme.textMuted} style={{ marginLeft: 10 }} />
                     <TextInput
                         placeholder="Buscar estudiante..."
-                        placeholderTextColor="rgba(255,255,255,0.6)"
-                        style={styles.searchInput}
+                        placeholderTextColor={theme.textMuted}
+                        style={[styles.searchInput, { color: theme.text }]}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
                     {searchTerm.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 8 }}>
-                            <Ionicons name="close-circle" size={16} color="#fff" />
+                            <Ionicons name="close-circle" size={16} color={theme.textMuted} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -612,7 +622,7 @@ export default function AdminPagosScreen() {
                             style={[
                                 styles.filterTab,
                                 filterEstado === f && styles.filterTabActive,
-                                { borderBottomColor: filterEstado === f ? '#fff' : 'transparent' }
+                                { borderBottomColor: filterEstado === f ? theme.primary : 'transparent' }
                             ]}
                             onPress={() => {
                                 if (filterEstado !== f) {
@@ -625,8 +635,8 @@ export default function AdminPagosScreen() {
                             <Text style={[
                                 styles.filterText,
                                 {
-                                    fontWeight: filterEstado === f ? '700' : '400',
-                                    opacity: filterEstado === f ? 1 : 0.7
+                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
+                                    fontWeight: filterEstado === f ? '700' : '500'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -637,8 +647,8 @@ export default function AdminPagosScreen() {
 
                 {/* Pestañas de Cursos (Estilo Web) */}
                 {cursosDisponibles.length > 0 && (
-                    <View style={{ marginTop: 10 }}>
-                        <Text style={{ fontSize: 10, color: '#fff', opacity: 0.7, marginBottom: 6, fontWeight: '700' }}>CURSOS ACTIVOS:</Text>
+                    <View style={{ marginTop: 15 }}>
+                        <Text style={{ fontSize: 10, color: theme.textMuted, marginBottom: 6, fontWeight: '700' }}>CURSOS ACTIVOS:</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
                             {['todos', ...cursosDisponibles.map(c => c.id)].map((cursoId) => {
                                 const isAll = cursoId === 'todos';
@@ -652,19 +662,20 @@ export default function AdminPagosScreen() {
                                         style={[
                                             styles.courseTab,
                                             {
-                                                backgroundColor: isActive ? '#fff' : 'rgba(255,255,255,0.1)',
-                                                borderColor: isActive ? '#fff' : 'rgba(255,255,255,0.2)',
+                                                backgroundColor: isActive ? theme.primary : theme.bg,
+                                                borderColor: isActive ? theme.primary : theme.border,
+                                                borderWidth: 1
                                             }
                                         ]}
                                     >
                                         <Ionicons
                                             name={isAll ? "apps-outline" : "book-outline"}
                                             size={14}
-                                            color={isActive ? theme.primary : '#fff'}
+                                            color={isActive ? '#fff' : theme.textSecondary}
                                         />
                                         <Text style={[
                                             styles.courseTabText,
-                                            { color: isActive ? theme.primary : '#fff' }
+                                            { color: isActive ? '#fff' : theme.textSecondary }
                                         ]}>
                                             {cursoInfo?.nombre}
                                         </Text>
@@ -674,7 +685,7 @@ export default function AdminPagosScreen() {
                         </ScrollView>
                     </View>
                 )}
-            </LinearGradient>
+            </View>
 
             {/* Banner Informativo Compacto */}
             {pagosPorVerificar > 0 ? (
@@ -736,18 +747,35 @@ export default function AdminPagosScreen() {
                 </View>
             )}
 
-            {/* MODAL DETALLE */}
-            <Modal visible={showDetailModal} animationType="slide" transparent onRequestClose={() => setShowDetailModal(false)}>
+            {/* MODAL DETALLE / RECHAZO */}
+            <Modal visible={showDetailModal} animationType="slide" transparent onRequestClose={() => {
+                if (viewMode === 'reject') {
+                    setViewMode('detail');
+                } else {
+                    setShowDetailModal(false);
+                }
+            }}>
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalCard, { backgroundColor: theme.cardBg }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: theme.text }]}>Detalle de Pago</Text>
+                            <TouchableOpacity onPress={() => {
+                                if (viewMode === 'reject') {
+                                    setViewMode('detail');
+                                } else {
+                                    setShowDetailModal(false);
+                                }
+                            }}>
+                                <Ionicons name="arrow-back" size={24} color={theme.textMuted} style={{ marginRight: 10, display: viewMode === 'reject' ? 'flex' : 'none' }} />
+                            </TouchableOpacity>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>
+                                {viewMode === 'reject' ? 'Rechazar Pago' : 'Detalle de Pago'}
+                            </Text>
                             <TouchableOpacity onPress={() => setShowDetailModal(false)}>
                                 <Ionicons name="close" size={24} color={theme.textMuted} />
                             </TouchableOpacity>
                         </View>
 
-                        {selectedPago && (
+                        {selectedPago && viewMode === 'detail' && (
                             <ScrollView style={{ marginTop: 10 }} showsVerticalScrollIndicator={false}>
                                 {/* Estado Badge Grande */}
                                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -877,44 +905,45 @@ export default function AdminPagosScreen() {
                             </ScrollView>
                         )}
 
-                    </View>
-                </View>
-            </Modal>
+                        {selectedPago && viewMode === 'reject' && (
+                            <View style={{ marginTop: 20 }}>
+                                <Text style={{ color: theme.textSecondary, marginBottom: 15, textAlign: 'center' }}>
+                                    Ingrese el motivo del rechazo para:
+                                    {'\n'}
+                                    <Text style={{ fontWeight: 'bold', color: theme.text }}>
+                                        {selectedPago.estudiante_nombre} {selectedPago.estudiante_apellido}
+                                    </Text>
+                                </Text>
 
-            {/* MODAL RECHAZO */}
-            <Modal visible={showRechazoModal} transparent animationType="fade" onRequestClose={() => setShowRechazoModal(false)}>
-                <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }]}>
-                    <View style={[styles.modalCard, { backgroundColor: theme.cardBg, height: 'auto', padding: 30, borderRadius: 20 }]}>
-                        <Text style={[styles.modalTitle, { color: theme.text, textAlign: 'center', marginBottom: 15 }]}>
-                            Rechazar Pago
-                        </Text>
-                        <Text style={{ color: theme.textSecondary, marginBottom: 15, textAlign: 'center' }}>
-                            Ingrese el motivo del rechazo
-                        </Text>
-                        <TextInput
-                            style={[styles.textArea, { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border }]}
-                            placeholder="Motivo del rechazo..."
-                            placeholderTextColor={theme.textMuted}
-                            multiline
-                            numberOfLines={4}
-                            value={motivoRechazo}
-                            onChangeText={setMotivoRechazo}
-                        />
-                        <View style={{ flexDirection: 'row', gap: 15, marginTop: 10 }}>
-                            <TouchableOpacity
-                                style={{ flex: 1, padding: 12, borderWidth: 1, borderColor: theme.border, borderRadius: 10, alignItems: 'center' }}
-                                onPress={() => setShowRechazoModal(false)}
-                            >
-                                <Text style={{ color: theme.text }}>Cancelar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={{ flex: 1, padding: 12, backgroundColor: theme.danger, borderRadius: 10, alignItems: 'center' }}
-                                onPress={confirmarRechazo}
-                                disabled={procesando}
-                            >
-                                {procesando ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: 'bold' }}>Rechazar</Text>}
-                            </TouchableOpacity>
-                        </View>
+                                <TextInput
+                                    style={[styles.textArea, { backgroundColor: theme.bg, color: theme.text, borderColor: theme.border, height: 120 }]}
+                                    placeholder="Motivo del rechazo..."
+                                    placeholderTextColor={theme.textMuted}
+                                    multiline
+                                    numberOfLines={4}
+                                    value={motivoRechazo}
+                                    onChangeText={setMotivoRechazo}
+                                    autoFocus // Workaround for better UX
+                                />
+
+                                <View style={{ flexDirection: 'row', gap: 15, marginTop: 20 }}>
+                                    <TouchableOpacity
+                                        style={{ flex: 1, padding: 12, borderWidth: 1, borderColor: theme.border, borderRadius: 10, alignItems: 'center' }}
+                                        onPress={() => setViewMode('detail')}
+                                    >
+                                        <Text style={{ color: theme.text }}>Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={{ flex: 1, padding: 12, backgroundColor: theme.danger, borderRadius: 10, alignItems: 'center' }}
+                                        onPress={confirmarRechazo}
+                                        disabled={procesando}
+                                    >
+                                        {procesando ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: 'bold' }}>Confirmar Rechazo</Text>}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+
                     </View>
                 </View>
             </Modal>
@@ -995,7 +1024,11 @@ export default function AdminPagosScreen() {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.visorActionBtnLarge, { backgroundColor: '#ef4444' }]}
-                                onPress={() => handleRechazarPago(selectedPago)}
+                                onPress={() => {
+                                    setArchivoPreview(null); // Cerrar visor 
+                                    handleRechazarPago(selectedPago); // Configura modo rechazo
+                                    setShowDetailModal(true); // Reabrir modal detalle
+                                }}
                                 disabled={procesando}
                             >
                                 <Ionicons name="close-circle" size={22} color="#fff" />

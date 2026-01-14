@@ -333,7 +333,7 @@ export default function DocenteLayout() {
     text: darkMode ? '#ffffff' : '#1e293b',
     textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.7)',
     textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
-    border: darkMode ? '#27272a' : 'rgba(59, 130, 246, 0.3)',
+    border: darkMode ? '#27272a' : '#e2e8f0', // Neutral gray
     accent: '#3b82f6',
     tabActive: '#3b82f6',
     tabInactive: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',

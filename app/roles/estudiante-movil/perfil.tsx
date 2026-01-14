@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -271,380 +271,614 @@ export default function PerfilEstudiante() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      {/* Premium Header Gradient */}
-      <LinearGradient
-        colors={theme.primaryGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
+        }
       >
-        <TouchableOpacity
-          style={styles.headerAvatarContainer}
-          onPress={() => setShowPhotoPreview(true)}
-          activeOpacity={0.9}
-        >
-          {fotoUrl ? (
-            <Image source={{ uri: fotoUrl }} style={styles.headerAvatar} />
-          ) : (
-            <View style={styles.headerAvatarPlaceholder}>
-              <Text style={styles.headerInitials}>{getInitials()}</Text>
+        {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
+        <Animated.View entering={FadeInDown.duration(400)}>
+          <View
+            style={[
+              styles.header,
+              {
+                backgroundColor: theme.cardBg,
+                borderBottomColor: theme.border,
+                borderBottomWidth: 1,
+              }
+            ]}
+          >
+            <View style={styles.headerContent}>
+              <View>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tu información</Text>
+              </View>
+              <Ionicons name="person-circle" size={32} color={theme.accent} />
             </View>
-          )}
-          <View style={styles.headerChangeIcon}>
-            <Ionicons name="camera" size={12} color="#fff" />
+
+            {/* AVATAR */}
+            <TouchableOpacity
+              style={styles.avatarContainer}
+              onPress={() => setShowPhotoPreview(true)}
+            >
+              {fotoUrl ? (
+                <Image source={{ uri: fotoUrl }} style={[styles.avatar, { borderColor: theme.cardBg }]} />
+              ) : (
+                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent, borderColor: theme.cardBg }]}>
+                  <Text style={styles.avatarText}>{getInitials()}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <Text style={[styles.userName, { color: theme.text }]}>
+              {estudiante?.nombres || estudiante?.nombre} {estudiante?.apellidos || estudiante?.apellido}
+            </Text>
+            <Text style={[styles.userRole, { color: theme.textMuted }]}>Estudiante</Text>
           </View>
-        </TouchableOpacity>
+        </Animated.View>
 
-        <Text style={styles.headerName}>
-          {(estudiante?.nombres || estudiante?.nombre || 'Estudiante')}
-        </Text>
-        <Text style={styles.headerUsername}>
-          {estudiante?.username ? `@${estudiante.username}` : ''}
-        </Text>
-
-        <View style={styles.headerBadge}>
-          <Ionicons name="school" size={12} color="#fff" />
-          <Text style={styles.headerBadgeText}>Estudiante</Text>
-        </View>
-      </LinearGradient>
-
-      <View style={[styles.contentContainer, { backgroundColor: theme.bg }]}>
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
+        {/* ANIMATED TABS */}
+        <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'info' && styles.activeTab]}
+            style={[
+              styles.tab,
+              {
+                backgroundColor: activeTab === 'info' ? theme.accent : theme.inputBg,
+                borderColor: activeTab === 'info' ? theme.accent : theme.border,
+              }
+            ]}
             onPress={() => setActiveTab('info')}
           >
-            <Ionicons name="person" size={16} color={activeTab === 'info' ? theme.accent : theme.textMuted} />
-            <Text style={[styles.tabText, { color: activeTab === 'info' ? theme.text : theme.textMuted, fontWeight: activeTab === 'info' ? '700' : '500' }]}>
+            <Ionicons
+              name="person"
+              size={18}
+              color={activeTab === 'info' ? '#fff' : theme.textMuted}
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'info' ? '#fff' : theme.textMuted }
+            ]}>
               Información
             </Text>
-            {activeTab === 'info' && <View style={[styles.activeIndicator, { backgroundColor: theme.accent }]} />}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'password' && styles.activeTab]}
+            style={[
+              styles.tab,
+              {
+                backgroundColor: activeTab === 'password' ? theme.accent : theme.inputBg,
+                borderColor: activeTab === 'password' ? theme.accent : theme.border,
+              }
+            ]}
             onPress={() => setActiveTab('password')}
           >
-            <Ionicons name="lock-closed" size={16} color={activeTab === 'password' ? theme.accent : theme.textMuted} />
-            <Text style={[styles.tabText, { color: activeTab === 'password' ? theme.text : theme.textMuted, fontWeight: activeTab === 'password' ? '700' : '500' }]}>
+            <Ionicons
+              name="lock-closed"
+              size={18}
+              color={activeTab === 'password' ? '#fff' : theme.textMuted}
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'password' ? '#fff' : theme.textMuted }
+            ]}>
               Seguridad
             </Text>
-            {activeTab === 'password' && <View style={[styles.activeIndicator, { backgroundColor: theme.accent }]} />}
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
-        >
+        {/* TAB CONTENT */}
+        <View style={styles.content}>
           {activeTab === 'info' ? (
-            <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+            <Animated.View entering={FadeInUp.duration(300)}>
+              {/* Read-Only Info Card */}
               <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                {/* Header Row */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <Text style={[styles.sectionTitle, { color: theme.accent }]}>DATOS PERSONALES</Text>
-                  {!isEditing ? (
-                    <TouchableOpacity onPress={() => setIsEditing(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Ionicons name="create-outline" size={18} color={theme.accent} />
-                      <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '600' }}>Editar</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity onPress={() => setIsEditing(false)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Ionicons name="close-circle-outline" size={18} color={theme.textMuted} />
-                      <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: '600' }}>Cancelar</Text>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información del Sistema</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Identificación</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {estudiante?.identificacion || estudiante?.cedula || 'No especificado'}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Estado</Text>
+                  <Text style={[styles.infoValue, { color: theme.success }]}>
+                    {estudiante?.estado || 'Activo'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Editable Info Card */}
+              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="person-outline" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información Personal</Text>
+                  {!isEditing && (
+                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
+                      <Ionicons name="create-outline" size={20} color={theme.accent} />
                     </TouchableOpacity>
                   )}
                 </View>
 
-                {/* Fields Grid */}
-                <View style={{ gap: 15 }}>
+                <View style={styles.formGrid}>
                   <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Nombres</Text>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nombres</Text>
                     <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.nombres || ''}
+                      onChangeText={(text) => setFormData({ ...formData, nombres: text })}
                       editable={isEditing}
-                      value={formData.nombres}
-                      onChangeText={(t) => setFormData({ ...formData, nombres: t })}
-                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                      placeholder="Nombres"
+                      placeholderTextColor={theme.textMuted}
                     />
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Apellidos</Text>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Apellidos</Text>
                     <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.apellidos || ''}
+                      onChangeText={(text) => setFormData({ ...formData, apellidos: text })}
                       editable={isEditing}
-                      value={formData.apellidos}
-                      onChangeText={(t) => setFormData({ ...formData, apellidos: t })}
-                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                      placeholder="Apellidos"
+                      placeholderTextColor={theme.textMuted}
                     />
-                  </View>
-
-                  <View style={styles.inputRow}>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
-                      <TextInput
-                        editable={isEditing}
-                        value={formData.email}
-                        onChangeText={(t) => setFormData({ ...formData, email: t })}
-                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
-                        keyboardType="email-address"
-                      />
-                    </View>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={[styles.label, { color: theme.textSecondary }]}>Teléfono</Text>
-                      <TextInput
-                        editable={isEditing}
-                        value={formData.telefono}
-                        onChangeText={(t) => setFormData({ ...formData, telefono: t })}
-                        style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
-                        keyboardType="phone-pad"
-                      />
-                    </View>
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Dirección</Text>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Email</Text>
                     <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.email || ''}
+                      onChangeText={(text) => setFormData({ ...formData, email: text })}
                       editable={isEditing}
-                      value={formData.direccion}
-                      onChangeText={(t) => setFormData({ ...formData, direccion: t })}
-                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                      placeholder="Email"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="email-address"
                     />
                   </View>
 
-                  {/* Read Only Fields */}
-                  <View style={styles.inputRow}>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={[styles.label, { color: theme.textSecondary }]}>Identificación</Text>
-                      <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                        <Ionicons name="card-outline" size={14} color={theme.textMuted} style={{ marginRight: 8 }} />
-                        <Text style={{ color: theme.textMuted, fontSize: 13 }}>{estudiante?.identificacion || estudiante?.cedula}</Text>
-                      </View>
-                    </View>
-                    <View style={[styles.inputGroup, { flex: 1 }]}>
-                      <Text style={[styles.label, { color: theme.textSecondary }]}>Estado</Text>
-                      <View style={[styles.readOnlyBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                        <Ionicons name="checkmark-circle-outline" size={14} color={theme.success} style={{ marginRight: 8 }} />
-                        <Text style={{ color: theme.success, fontSize: 13, textTransform: 'capitalize' }}>{estudiante?.estado || 'Activo'}</Text>
-                      </View>
-                    </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Teléfono</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.telefono || ''}
+                      onChangeText={(text) => setFormData({ ...formData, telefono: text })}
+                      editable={isEditing}
+                      placeholder="Teléfono"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Dirección</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.direccion || ''}
+                      onChangeText={(text) => setFormData({ ...formData, direccion: text })}
+                      editable={isEditing}
+                      placeholder="Dirección"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contacto de Emergencia</Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                          borderColor: theme.border,
+                          color: theme.text
+                        }
+                      ]}
+                      value={formData.contacto_emergencia || ''}
+                      onChangeText={(text) => setFormData({ ...formData, contacto_emergencia: text })}
+                      editable={isEditing}
+                      placeholder="Nombre y Teléfono"
+                      placeholderTextColor={theme.textMuted}
+                    />
                   </View>
                 </View>
 
                 {isEditing && (
-                  <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: theme.accent }]}
-                    onPress={handleSave}
-                  >
-                    <Text style={styles.saveButtonText}>Guardar Cambios</Text>
-                  </TouchableOpacity>
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.cancelButton, { borderColor: theme.border }]}
+                      onPress={() => {
+                        setIsEditing(false);
+                        fetchPerfil();
+                      }}
+                    >
+                      <Text style={[styles.buttonText, { color: theme.textSecondary }]}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.saveButton, { backgroundColor: theme.accent }]}
+                      onPress={handleSave}
+                    >
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                      <Text style={[styles.buttonText, { color: '#fff' }]}>Guardar</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             </Animated.View>
           ) : (
-            <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+            <Animated.View entering={FadeInUp.duration(300)}>
               <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                <Text style={[styles.sectionTitle, { color: theme.accent, marginBottom: 20 }]}>CAMBIAR CONTRASEÑA</Text>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="lock-closed-outline" size={20} color={theme.accent} />
+                  <Text style={[styles.cardTitle, { color: theme.text }]}>Cambiar Contraseña</Text>
+                </View>
 
-                <View style={{ gap: 15 }}>
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Contraseña Actual</Text>
-                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                      <TextInput
-                        style={[styles.passwordInput, { color: theme.text }]}
-                        value={passwordData.password_actual}
-                        onChangeText={(t) => setPasswordData({ ...passwordData, password_actual: t })}
-                        secureTextEntry={!showCurrentPassword}
-                        placeholderTextColor={theme.textMuted}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contraseña Actual</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.password_actual}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
+                      secureTextEntry={!showCurrentPassword}
+                      placeholder="••••••••"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                    >
+                      <Ionicons
+                        name={showCurrentPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
                       />
-                      <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)} style={{ padding: 10 }}>
-                        <Ionicons name={showCurrentPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
-                      </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nueva Contraseña</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.password_nueva}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
+                      secureTextEntry={!showNewPassword}
+                      placeholder="Mínimo 8 caracteres"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <Ionicons
+                        name={showNewPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
+                    </TouchableOpacity>
                   </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Nueva Contraseña</Text>
-                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                      <TextInput
-                        style={[styles.passwordInput, { color: theme.text }]}
-                        value={passwordData.password_nueva}
-                        onChangeText={(t) => setPasswordData({ ...passwordData, password_nueva: t })}
-                        secureTextEntry={!showNewPassword}
-                        placeholderTextColor={theme.textMuted}
-                      />
-                      <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={{ padding: 10 }}>
-                        <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Password Strength Checklist */}
-                    {passwordData.password_nueva.length > 0 && (
-                      <View style={{ marginTop: 10, gap: 4 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name={passwordData.password_nueva.length >= 8 ? "checkmark-circle" : "ellipse-outline"} size={14} color={passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted} />
-                          <Text style={{ fontSize: 12, color: passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted }}>Mínimo 8 caracteres</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name={/[A-Z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                          <Text style={{ fontSize: 12, color: /[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una mayúscula</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name={/[a-z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                          <Text style={{ fontSize: 12, color: /[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una minúscula</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name={/[0-9]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                          <Text style={{ fontSize: 12, color: /[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Un número</Text>
-                        </View>
+                  {/* Password Strength Checklist */}
+                  {passwordData.password_nueva.length > 0 && (
+                    <View style={{ marginTop: 10, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={passwordData.password_nueva.length >= 8 ? "checkmark-circle" : "ellipse-outline"} size={14} color={passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted }}>Mínimo 8 caracteres</Text>
                       </View>
-                    )}
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.label, { color: theme.textSecondary }]}>Confirmar Contraseña</Text>
-                    <View style={[styles.passwordInputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                      <TextInput
-                        style={[styles.passwordInput, { color: theme.text }]}
-                        value={passwordData.confirmar_password}
-                        onChangeText={(t) => setPasswordData({ ...passwordData, confirmar_password: t })}
-                        secureTextEntry={!showConfirmPassword}
-                        placeholderTextColor={theme.textMuted}
-                      />
-                      <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 10 }}>
-                        <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color={theme.textMuted} />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[A-Z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una mayúscula</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[a-z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una minúscula</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name={/[0-9]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                        <Text style={{ fontSize: 12, color: /[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Un número</Text>
+                      </View>
                     </View>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Confirmar Nueva Contraseña</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                      value={passwordData.confirmar_password}
+                      onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
+                      secureTextEntry={!showConfirmPassword}
+                      placeholder="Repite la contraseña"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? 'eye-off' : 'eye'}
+                        size={20}
+                        color={theme.textMuted}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.saveButton, { backgroundColor: theme.accent, marginTop: 25 }]}
+                  style={[styles.button, styles.saveButton, { backgroundColor: theme.accent, marginTop: 8 }]}
                   onPress={handleChangePassword}
-                  disabled={loading}
                 >
-                  <Text style={styles.saveButtonText}>{loading ? 'Actualizando...' : 'Actualizar Contraseña'}</Text>
+                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                  <Text style={[styles.buttonText, { color: '#fff' }]}>Cambiar Contraseña</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
           )}
-        </ScrollView>
-      </View>
+        </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
 
       {/* Photo Preview Modal */}
-      <Modal visible={showPhotoPreview} transparent animationType="fade" onRequestClose={() => setShowPhotoPreview(false)}>
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowPhotoPreview(false)}>
-            <Ionicons name="close" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={[styles.previewContainer, { borderColor: theme.accent }]}>
+      <Modal visible={showPhotoPreview} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowPhotoPreview(false)}
+        >
+          <View style={styles.modalContent}>
             {fotoUrl ? (
-              <Image source={{ uri: fotoUrl }} style={styles.previewImage} />
+              <Image source={{ uri: fotoUrl }} style={styles.modalImage} />
             ) : (
-              <View style={[styles.previewPlaceholder, { backgroundColor: theme.accent }]}>
-                <Text style={styles.previewInitials}>{getInitials()}</Text>
+              <View style={[styles.modalImagePlaceholder, { backgroundColor: theme.accent }]}>
+                <Text style={styles.modalImageText}>{getInitials()}</Text>
               </View>
             )}
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    alignItems: 'center',
-    borderBottomLeftRadius: 30,
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 45, // Reduced
+    paddingBottom: 80, // Reduced bottom padding significantly for overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30, // Keep slightly larger for profile aesthetic
     borderBottomRightRadius: 30,
+    alignItems: 'center',
   },
-  headerAvatarContainer: {
-    position: 'relative',
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 24,
   },
-  headerAvatar: {
-    width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff'
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
   },
-  headerAvatarPlaceholder: {
-    width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff',
-    backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center'
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
   },
-  headerInitials: {
-    fontSize: 32, fontWeight: '800', color: '#fff'
+  avatarContainer: {
+    marginBottom: 16,
   },
-  headerChangeIcon: {
-    position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)',
-    width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff'
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#fff',
   },
-  headerName: {
-    fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerUsername: {
-    fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 10
+  avatarText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#fff',
   },
-  headerBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
   },
-  headerBadgeText: {
-    fontSize: 12, fontWeight: '600', color: '#fff'
-  },
-  contentContainer: {
-    flex: 1, marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingVertical: 10
+  userRole: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
   },
   tabsContainer: {
-    flexDirection: 'row', paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)'
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginTop: -40,
+    zIndex: 10,
   },
   tab: {
-    marginRight: 20, paddingVertical: 15, position: 'relative', flexDirection: 'row', alignItems: 'center', gap: 6
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  activeTab: {},
-  tabText: { fontSize: 14 },
-  activeIndicator: {
-    position: 'absolute', bottom: -1, left: 0, right: 0, height: 3, borderRadius: 3
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  content: {
+    padding: 16,
   },
   card: {
-    borderRadius: 20, padding: 20, borderWidth: 1,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
   },
-  sectionTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  inputGroup: { gap: 5 },
-  inputRow: { flexDirection: 'row', gap: 10 },
-  label: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  editButton: {
+    padding: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  infoLabel: {
+    fontSize: 13,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  formGrid: {
+    gap: 12,
+  },
+  inputGroup: {
+    marginBottom: 4,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
   input: {
-    padding: 12, borderRadius: 12, borderWidth: 1, fontSize: 14
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    fontSize: 14,
   },
-  readOnlyBox: {
-    padding: 12, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center'
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    padding: 4,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  cancelButton: {
+    borderWidth: 1,
   },
   saveButton: {
-    padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 15,
-    shadowColor: "#fbbf24", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4
+    // backgroundColor set dynamically
   },
-  saveButtonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  passwordInputContainer: {
-    flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
-  passwordInput: { flex: 1, padding: 12 },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center'
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalCloseBtn: {
-    position: 'absolute', top: 50, right: 30, padding: 10
+  modalContent: {
+    width: width * 0.9,
+    aspectRatio: 1,
   },
-  previewContainer: {
-    width: width * 0.8, height: width * 0.8, borderRadius: width * 0.4, borderWidth: 4, overflow: 'hidden'
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
   },
-  previewImage: { width: '100%', height: '100%' },
-  previewPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  previewInitials: { fontSize: 80, fontWeight: 'bold', color: '#fff' }
+  modalImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImageText: {
+    fontSize: 80,
+    fontWeight: '700',
+    color: '#fff',
+  },
 });

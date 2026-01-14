@@ -31,6 +31,7 @@ const getTheme = (isDark: boolean) => ({
     background: isDark ? '#0a0a0a' : '#f8fafc',
     cardBg: isDark ? '#141414' : '#ffffff',
     text: isDark ? '#ffffff' : '#1e293b',
+    textSecondary: isDark ? '#a1a1aa' : '#475569', // Added this line
     textMuted: isDark ? '#71717a' : '#64748b',
     border: isDark ? '#27272a' : '#e2e8f0',
     success: '#10b981',
@@ -503,20 +504,27 @@ export default function TomarAsistenciaScreen() {
 
             {/* Header Premium */}
             <Animated.View entering={FadeInDown.duration(400)}>
-                <LinearGradient
-                    colors={theme.primaryGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.header}
-                >
-                    <View style={styles.headerContent}>
-                        <View style={{ flexDirection: 'column', gap: 4 }}>
-                            <Text style={styles.headerTitle}>Tomar Asistencia</Text>
-                            <Text style={styles.headerSubtitle}>Registra la asistencia diaria</Text>
+                {/* Header Premium - Clean Nike */}
+                <Animated.View entering={FadeInDown.duration(400)}>
+                    <View
+                        style={[
+                            styles.header,
+                            {
+                                backgroundColor: theme.cardBg,
+                                borderBottomColor: theme.border,
+                                borderBottomWidth: 1,
+                            }
+                        ]}
+                    >
+                        <View style={styles.headerContent}>
+                            <View style={{ flexDirection: 'column', gap: 4 }}>
+                                <Text style={[styles.headerTitle, { color: theme.text }]}>Tomar Asistencia</Text>
+                                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Registra la asistencia diaria</Text>
+                            </View>
+                            <Ionicons name="calendar" size={28} color={theme.primary} />
                         </View>
-                        <Ionicons name="calendar" size={28} color="#fff" />
                     </View>
-                </LinearGradient>
+                </Animated.View>
 
             </Animated.View>
 
@@ -658,11 +666,11 @@ const styles = StyleSheet.create({
         backgroundColor: theme.background,
     },
     header: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 50,
-        paddingBottom: 20,
+        paddingTop: Platform.OS === 'ios' ? 40 : 20,
+        paddingBottom: 15,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
     },
     headerContent: {
         flexDirection: 'row',

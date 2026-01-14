@@ -31,6 +31,7 @@ export default function ServiciosEstudiante() {
   const theme = darkMode
     ? {
       bg: '#0a0a0a',
+      cardBg: '#141414',
       text: '#ffffff',
       textSecondary: '#a1a1aa',
       textMuted: '#71717a',
@@ -42,6 +43,7 @@ export default function ServiciosEstudiante() {
     }
     : {
       bg: '#f8fafc',
+      cardBg: '#ffffff',
       text: '#0f172a',
       textSecondary: '#475569',
       textMuted: '#64748b',
@@ -74,23 +76,28 @@ export default function ServiciosEstudiante() {
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* Premium Header Container */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+      {/* Premium Header Container */}
+      <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Pagos</Text>
-              <Text style={styles.headerSubtitle}>Estudiantiles</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Pagos</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Estudiantiles</Text>
             </View>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="apps" size={24} color="#fff" />
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
+              <Ionicons name="apps" size={24} color={theme.accent} />
             </View>
           </View>
-        </LinearGradient>
+        </View>
       </View>
 
       <ScrollView
@@ -107,68 +114,70 @@ export default function ServiciosEstudiante() {
             entering={FadeInDown.delay(index * 200).springify()}
             style={styles.cardContainer}
           >
-            <LinearGradient
-              colors={theme.cardGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.serviceCard}
+            <View
+              style={[
+                styles.serviceCard,
+                {
+                  backgroundColor: theme.cardBg,
+                  borderColor: theme.border,
+                  borderWidth: 1,
+                  shadowColor: theme.text
+                }
+              ]}
             >
-              {/* Decorative Circle Background */}
-              <View style={styles.decorativeCircle} />
-
               {/* Header */}
               <View style={styles.cardHeader}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: theme.accent + '15' }]}>
                   <Ionicons name={service.icon as any} size={28} color={theme.accent} />
                 </View>
                 <View style={styles.headerTextContainer}>
-                  <Text style={styles.serviceTitle}>{service.title}</Text>
-                  <View style={styles.statusBadge}>
-                    <View style={styles.statusDot} />
-                    <Text style={styles.statusText}>Disponible</Text>
+                  <Text style={[styles.serviceTitle, { color: theme.text }]}>{service.title}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: theme.success + '15' }]}>
+                    <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
+                    <Text style={[styles.statusText, { color: theme.success }]}>Disponible</Text>
                   </View>
                 </View>
               </View>
 
-              <Text style={styles.descriptionText}>
+              <Text style={[styles.descriptionText, { color: theme.textSecondary }]}>
                 {service.description}
               </Text>
 
               {/* Features */}
               <View style={styles.featuresContainer}>
                 {service.features.map((feature, idx) => (
-                  <View key={idx} style={styles.featureItem}>
-                    <Ionicons name={feature.icon as any} size={14} color="#fff" />
-                    <Text style={styles.featureText}>{feature.text}</Text>
+                  <View key={idx} style={[styles.featureItem, { backgroundColor: theme.bg, borderColor: theme.border }]}>
+                    <Ionicons name={feature.icon as any} size={14} color={theme.textMuted} />
+                    <Text style={[styles.featureText, { color: theme.textMuted }]}>{feature.text}</Text>
                   </View>
                 ))}
               </View>
 
-              {/* Contact Info (Glass effect) */}
-              <View style={styles.contactContainer}>
+              {/* Contact Info */}
+              <View style={[styles.contactContainer, { backgroundColor: theme.bg }]}>
                 <View style={styles.contactRow}>
-                  <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.9)" />
-                  <Text style={styles.contactText}>{service.schedule}</Text>
+                  <Ionicons name="time-outline" size={14} color={theme.textMuted} />
+                  <Text style={[styles.contactText, { color: theme.textMuted }]}>{service.schedule}</Text>
                 </View>
                 <View style={styles.contactRow}>
-                  <Ionicons name="mail-outline" size={14} color="rgba(255,255,255,0.9)" />
-                  <Text style={styles.contactText}>{service.contact}</Text>
+                  <Ionicons name="mail-outline" size={14} color={theme.textMuted} />
+                  <Text style={[styles.contactText, { color: theme.textMuted }]}>{service.contact}</Text>
                 </View>
               </View>
 
               {/* Action Button */}
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[styles.actionButton, { backgroundColor: theme.accent }]}
                 onPress={() => router.push(`/roles/estudiante-movil/${service.route}` as any)}
                 activeOpacity={0.9}
               >
-                <Text style={[styles.actionButtonText, { color: theme.accent }]}>
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>
                   {service.action}
                 </Text>
-                <Ionicons name="arrow-forward" size={18} color={theme.accent} />
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
               </TouchableOpacity>
 
-            </LinearGradient>
+            </View>
           </Animated.View>
         ))}
       </ScrollView>
@@ -187,12 +196,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     zIndex: 10
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 25,
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -200,25 +209,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
     marginTop: -4,
   },
   headerIconContainer: {
     width: 45,
     height: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    backdropFilter: 'blur(10px)',
   },
 
   scrollContent: {
@@ -237,11 +242,10 @@ const styles = StyleSheet.create({
   cardContainer: {
     marginBottom: 20,
     borderRadius: 24,
-    shadowColor: "#f59e0b",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   serviceCard: {
     borderRadius: 24,
@@ -269,15 +273,10 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 50,
     height: 50,
-    backgroundColor: '#fff',
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   headerTextContainer: {
     flex: 1,
@@ -285,13 +284,11 @@ const styles = StyleSheet.create({
   serviceTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#fff',
     marginBottom: 4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -301,11 +298,9 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10b981', // Green dot always visible on white/gold
     marginRight: 6,
   },
   statusText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -329,16 +324,13 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   featureText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -357,7 +349,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   contactText: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 12,
     fontWeight: '500',
   },

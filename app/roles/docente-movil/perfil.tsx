@@ -290,39 +290,46 @@ export default function PerfilDocente() {
       >
         {/* PREMIUM BLUE GRADIENT HEADER */}
         <Animated.View entering={FadeInDown.duration(400)}>
-          <LinearGradient
-            colors={theme.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
-            <View style={styles.headerContent}>
-              <View>
-                <Text style={styles.headerTitle}>Mi Perfil</Text>
-                <Text style={styles.headerSubtitle}>Gestiona tu información</Text>
-              </View>
-              <Ionicons name="person-circle" size={32} color="#fff" />
-            </View>
-
-            {/* AVATAR */}
-            <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={() => setShowPhotoPreview(true)}
+          {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
+          <Animated.View entering={FadeInDown.duration(400)}>
+            <View
+              style={[
+                styles.header,
+                {
+                  backgroundColor: theme.cardBg,
+                  borderBottomColor: theme.border,
+                  borderBottomWidth: 1,
+                }
+              ]}
             >
-              {fotoUrl ? (
-                <Image source={{ uri: fotoUrl }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Text style={styles.avatarText}>{getInitials()}</Text>
+              <View style={styles.headerContent}>
+                <View>
+                  <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
+                  <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tu información</Text>
                 </View>
-              )}
-            </TouchableOpacity>
+                <Ionicons name="person-circle" size={32} color={theme.accent} />
+              </View>
 
-            <Text style={styles.userName}>
-              {docente.nombre || docente.nombres} {docente.apellido || docente.apellidos}
-            </Text>
-            <Text style={styles.userRole}>{docente.titulo_profesional || 'Docente'}</Text>
-          </LinearGradient>
+              {/* AVATAR */}
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() => setShowPhotoPreview(true)}
+              >
+                {fotoUrl ? (
+                  <Image source={{ uri: fotoUrl }} style={[styles.avatar, { borderColor: theme.cardBg }]} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent, borderColor: theme.cardBg }]}>
+                    <Text style={styles.avatarText}>{getInitials()}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <Text style={[styles.userName, { color: theme.text }]}>
+                {docente.nombre || docente.nombres} {docente.apellido || docente.apellidos}
+              </Text>
+              <Text style={[styles.userRole, { color: theme.textMuted }]}>{docente.titulo_profesional || 'Docente'}</Text>
+            </View>
+          </Animated.View>
         </Animated.View>
 
         {/* ANIMATED TABS */}
@@ -714,10 +721,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 100,
+    paddingTop: 45, // Reduced
+    paddingBottom: 80, // Reduced bottom padding significantly for overlap
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
+    borderBottomLeftRadius: 30, // Keep slightly larger for profile aesthetic
     borderBottomRightRadius: 30,
     alignItems: 'center',
   },

@@ -508,14 +508,20 @@ export default function ControlUsuariosScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
-            {/* HEADER */}
-            <LinearGradient
-                colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-                style={styles.header}
+            {/* HEADER CLEAN NIKE EFFECT */}
+            <View
+                style={[
+                    styles.header,
+                    {
+                        backgroundColor: theme.cardBg,
+                        borderBottomColor: theme.border,
+                        borderBottomWidth: 1,
+                    }
+                ]}
             >
-                <Text style={styles.headerTitle}>Control de Usuarios</Text>
-                <Text style={styles.headerSubtitle}>Gestiona todos los usuarios del sistema</Text>
-            </LinearGradient>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Control de Usuarios</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona todos los usuarios del sistema</Text>
+            </View>
 
             {/* FILTROS */}
             <View style={styles.filters}>
@@ -862,27 +868,20 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
+        marginBottom: 8,
         paddingTop: 25,
         paddingBottom: 25,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.05,
         shadowRadius: 8,
-        elevation: 5,
+        elevation: 3
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#fff',
-        marginBottom: 4,
-    },
-    headerSubtitle: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.8)',
-    },
+    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerSubtitle: { fontSize: 13, marginBottom: 16 },
     filters: {
         padding: 20,
         gap: 12,
@@ -909,32 +908,33 @@ const styles = StyleSheet.create({
         paddingTop: 0,
     },
     userCard: {
-        borderRadius: 16,
+        borderRadius: 12,
         borderWidth: 1,
-        padding: 16,
-        marginBottom: 16,
+        padding: 10,
+        marginBottom: 8,
     },
     userHeader: {
         flexDirection: 'row',
-        marginBottom: 12,
+        marginBottom: 4,
+        alignItems: 'center',
     },
     userAvatar: {
-        marginRight: 12,
+        marginRight: 8,
     },
     avatarImage: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
     },
     avatarPlaceholder: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        fontSize: 20,
+        fontSize: 14,
         fontWeight: '700',
     },
     userInfo: {
@@ -942,47 +942,48 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     userName: {
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: '700',
-        marginBottom: 2,
+        marginBottom: 0,
     },
     userCedula: {
-        fontSize: 12,
-        marginBottom: 2,
+        fontSize: 11,
+        marginBottom: 0,
     },
     userEmail: {
-        fontSize: 12,
+        fontSize: 10,
+        opacity: 0.8,
     },
     userBadges: {
         flexDirection: 'row',
-        gap: 8,
-        marginBottom: 12,
+        gap: 4,
+        marginBottom: 6,
     },
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
         borderWidth: 1,
     },
     badgeText: {
-        fontSize: 11,
+        fontSize: 9,
         fontWeight: '600',
     },
     userLastConnection: {
-        fontSize: 12,
-        marginBottom: 12,
+        fontSize: 10,
+        marginBottom: 6,
     },
     userActions: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
         flexWrap: 'wrap',
     },
     actionButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',

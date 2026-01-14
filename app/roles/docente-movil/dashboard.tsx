@@ -185,37 +185,40 @@ export default function DocenteDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
         }
       >
-        {/* PREMIUM HEADER - BLUE GRADIENT (Teacher Identity) */}
+        {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
         <View style={styles.headerContainer}>
-          <LinearGradient
-            colors={theme.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
+          <View
+            style={[
+              styles.headerGradient,
+              {
+                backgroundColor: theme.cardBg,
+                borderBottomColor: theme.border,
+                borderBottomWidth: 1,
+              }
+            ]}
           >
             <View style={styles.headerContent}>
               <View style={styles.headerTop}>
                 <View>
-                  <Text style={styles.welcomeText}>Bienvenido,</Text>
-                  <Text style={styles.userName}>
+                  <Text style={[styles.welcomeText, { color: theme.textSecondary }]}>Bienvenido,</Text>
+                  <Text style={[styles.userName, { color: theme.text }]}>
                     {userData?.nombre} {userData?.apellido}
                   </Text>
-                  <Text style={styles.userRole}>
+                  <Text style={[styles.userRole, { color: theme.textMuted }]}>
                     {userData?.titulo_profesional || 'Docente'}
                   </Text>
                 </View>
-                {/* Profile Icon REMOVED as requested */}
               </View>
 
               {/* Date Badge */}
               <View style={styles.dateBadge}>
-                <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.9)" />
-                <Text style={styles.dateText}>
+                <Ionicons name="calendar-outline" size={12} color={theme.textMuted} />
+                <Text style={[styles.dateText, { color: theme.textMuted }]}>
                   {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </Text>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </View>
 
         {/* STATS ROW - 4 CARDS (Envolviendo en un solo Animated.View para evitar bugs en iOS) */}
@@ -309,13 +312,6 @@ export default function DocenteDashboard() {
                   onPress={() => router.push(`/roles/docente-movil/detallecursodocente?id=${curso.id_curso}` as any)}
                   activeOpacity={0.9}
                 >
-                  <LinearGradient
-                    colors={theme.primaryGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.cardStripe}
-                  />
-
                   <View style={styles.cardContent}>
                     <View style={styles.cardHeader}>
                       <View style={[styles.codeBadge, { backgroundColor: `${theme.accent}15` }]}>
@@ -388,11 +384,11 @@ const styles = StyleSheet.create({
     marginBottom: 20, // Keep this as container margin
   },
   headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 25,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20, // Aggressive reduction
+    paddingBottom: 15, // Aggressive reduction
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerContent: {}, // Removed gap: 16 to match structure better or keep if content needs it. 
   // keeping structure similar but styles exact

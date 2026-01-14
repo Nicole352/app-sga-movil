@@ -30,6 +30,7 @@ const getTheme = (isDark: boolean) => ({
   background: isDark ? '#0a0a0a' : '#f8fafc',
   cardBg: isDark ? '#141414' : '#ffffff',
   text: isDark ? '#ffffff' : '#1e293b',
+  textSecondary: isDark ? '#a1a1aa' : '#475569',
   textMuted: isDark ? '#71717a' : '#64748b',
   border: isDark ? '#27272a' : '#e2e8f0',
   success: '#10b981',
@@ -348,11 +349,9 @@ export default function CalificacionesCursoScreen() {
     if (moduloActivo === 'todos' || moduloActivo === 'resumen_global') return [];
 
     // Ordenar tareas
+    // Ordenar tareas por ID (orden de creación) para coincidir con la web
     const sorted = [...tareasVisibles].sort((a, b) => {
-      const catA = a.categoria_nombre || 'Sin Categoría';
-      const catB = b.categoria_nombre || 'Sin Categoría';
-      if (catA === catB) return a.id_tarea - b.id_tarea;
-      return catA.localeCompare(catB);
+      return a.id_tarea - b.id_tarea;
     });
 
     const groups: { category: string, weight: number, tasks: Tarea[] }[] = [];
@@ -393,18 +392,20 @@ export default function CalificacionesCursoScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Animated.View entering={FadeInDown.duration(400)}>
-        <LinearGradient colors={theme.primaryGradient} style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.cardBg, borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
           <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
+            </TouchableOpacity>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.headerTitle} numberOfLines={1}>Calificaciones</Text>
-              <Text style={styles.headerSubtitle} numberOfLines={1}>{cursoNombre}</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>Calificaciones</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]} numberOfLines={1}>{cursoNombre}</Text>
             </View>
-            <View style={styles.headerIcon}>
-              <Ionicons name="school-outline" size={22} color="#fff" />
+            <View style={[styles.headerIcon, { backgroundColor: theme.primary + '15' }]}>
+              <Ionicons name="school-outline" size={20} color={theme.primary} />
             </View>
           </View>
-        </LinearGradient>
+        </View>
       </Animated.View>
 
       {loading && !refreshing ? <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} /> : (
@@ -471,7 +472,7 @@ export default function CalificacionesCursoScreen() {
                   width: moduloActivo === 'resumen_global' ? studentColWidthGlobal : 140
                 }]}>
                   <View style={[styles.colNameContainer, { backgroundColor: theme.tableHeaderBg }]}>
-                    <Text style={[styles.headText, { color: theme.primary, textAlign: 'left', paddingLeft: 12 }]}>Estudiante</Text>
+                    <Text style={[styles.headText, { color: theme.primary, textAlign: 'left', paddingLeft: 12 }]}>ESTUDIANTE</Text>
                   </View>
                   <LinearGradient
                     colors={darkMode ? ['rgba(0,0,0,0.5)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent']}
@@ -484,16 +485,16 @@ export default function CalificacionesCursoScreen() {
                   <>
                     {modulosList.map((m, i) => (
                       <View key={i} style={[styles.colModule, { borderColor: theme.border }]}>
-                        <Text style={[styles.headText, { color: theme.text }]} numberOfLines={2}>{m}</Text>
+                        <Text style={[styles.headText, { color: theme.text }]} numberOfLines={2}>{m.toUpperCase()}</Text>
                       </View>
                     ))}
                     <View style={[styles.colGrade, { borderColor: theme.border }]}>
-                      <Text style={[styles.headText, { color: theme.primary, fontWeight: '800' }]}>Global</Text>
+                      <Text style={[styles.headText, { color: theme.primary, fontWeight: '800' }]}>GLOBAL</Text>
                     </View>
                   </>
                 ) : moduloActivo === 'resumen_global' ? (
                   <View style={[styles.colGrade, { borderColor: theme.border, width: 110 }]}>
-                    <Text style={[styles.headText, { color: theme.primary, fontWeight: '800', fontSize: 11 }]}>Global</Text>
+                    <Text style={[styles.headText, { color: theme.primary, fontWeight: '800', fontSize: 11 }]}>GLOBAL</Text>
                   </View>
                 ) : (
                   <>
@@ -510,7 +511,7 @@ export default function CalificacionesCursoScreen() {
                           borderTopRightRadius: 8,
                         }}>
                           <Text style={{ fontSize: 10, fontWeight: '700', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
-                            {group.category} <Text style={{ fontWeight: '400', fontSize: 9 }}>({group.weight}%)</Text>
+                            {group.category.toUpperCase()} <Text style={{ fontWeight: '400', fontSize: 9 }}>({group.weight}%)</Text>
                           </Text>
                         </View>
                         <View style={{ flexDirection: 'row' }}>
@@ -524,7 +525,7 @@ export default function CalificacionesCursoScreen() {
                       </View>
                     ))}
                     <View style={[styles.colGrade, { borderColor: theme.border, backgroundColor: theme.warning + '08' }]}>
-                      <Text style={[styles.headText, { color: theme.warning, fontWeight: '800' }]}>Promedio {moduloActivo}</Text>
+                      <Text style={[styles.headText, { color: theme.warning, fontWeight: '800' }]}>PROMEDIO {moduloActivo.toUpperCase()}</Text>
                     </View>
                   </>
                 )}
@@ -551,7 +552,7 @@ export default function CalificacionesCursoScreen() {
                           contentContainerStyle={{ alignItems: 'center', paddingLeft: 12, paddingRight: 12 }}
                         >
                           <Text style={{ fontSize: 10, fontWeight: '700', color: theme.text }}>
-                            {est.apellido}, {est.nombre}
+                            {est.apellido.toUpperCase()}, {est.nombre.toUpperCase()}
                           </Text>
                         </ScrollView>
                       </View>
@@ -619,11 +620,17 @@ export default function CalificacionesCursoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingTop: Platform.OS === 'ios' ? 60 : 50, paddingBottom: 20, paddingHorizontal: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20
+  },
   headerContent: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  headerIcon: { backgroundColor: 'rgba(255,255,255,0.2)', padding: 8, borderRadius: 12 },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerSubtitle: { fontSize: 12 },
+  headerIcon: { padding: 6, borderRadius: 10 },
   backButton: { padding: 4 },
 
   content: { flex: 1, padding: 16 },

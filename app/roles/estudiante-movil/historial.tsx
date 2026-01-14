@@ -297,23 +297,28 @@ export default function HistorialAcademico() {
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       {/* Premium Header with Gradient */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+      {/* Premium Header - Clean Nike */}
+      <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Historial Académico</Text>
-              <Text style={styles.headerSubtitle}>Trayectoria y Cursos</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Historial Académico</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Trayectoria y Cursos</Text>
             </View>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="school" size={24} color="#fff" />
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
+              <Ionicons name="school" size={24} color={theme.accent} />
             </View>
           </View>
-        </LinearGradient>
+        </View>
       </View>
 
       {/* Header Tabs */}
@@ -397,12 +402,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     zIndex: 10
   },
-  headerGradient: {
-    paddingTop: 60,
-    paddingBottom: 25,
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -410,21 +415,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
     marginTop: 2,
   },
   headerIconContainer: {
     width: 45,
     height: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',

@@ -548,8 +548,11 @@ export default function AdminReportesScreen() {
     // Formatear fecha
     const formatDate = (dateString: string) => {
         if (!dateString) return 'N/D';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+        // Usar split para evitar problemas de zona horaria, igual que en la web
+        const justDate = dateString.split('T')[0];
+        const [year, month, day] = justDate.split('-');
+        const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        return `${day} ${months[parseInt(month) - 1]} ${year}`;
     };
 
     const formatMonto = (monto: number) => {
@@ -1005,38 +1008,50 @@ export default function AdminReportesScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
-            {/* Header Gradiente */}
-            <LinearGradient
-                colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-                style={styles.header}
+            {/* Header Clean Nike Effect */}
+            <View
+                style={[
+                    styles.header,
+                    {
+                        backgroundColor: theme.cardBg,
+                        borderBottomColor: theme.border,
+                        borderBottomWidth: 1,
+                    }
+                ]}
             >
-                <Text style={styles.headerTitle}>Reportes</Text>
-                <Text style={styles.headerSubtitle}>Genera y descarga reportes del sistema</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Reportes</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Genera y descarga reportes del sistema</Text>
 
                 {/* Tabs */}
-                <View style={styles.tabsContainer}>
+                <View style={[styles.tabsContainer, { backgroundColor: theme.bg, padding: 4, borderRadius: 12 }]}>
                     <TouchableOpacity
-                        style={[styles.tab, vistaActual === 'generar' && styles.tabActive]}
+                        style={[
+                            styles.tab,
+                            vistaActual === 'generar' && { backgroundColor: theme.cardBg, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }
+                        ]}
                         onPress={() => {
                             setVistaActual('generar');
                             setCurrentPage(1);
                         }}
                     >
-                        <Ionicons name="document-text" size={18} color="#fff" />
-                        <Text style={styles.tabText}>Generar</Text>
+                        <Ionicons name="document-text" size={18} color={vistaActual === 'generar' ? theme.primary : theme.textMuted} />
+                        <Text style={[styles.tabText, { color: vistaActual === 'generar' ? theme.primary : theme.textMuted }]}>Generar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.tab, vistaActual === 'historial' && styles.tabActive]}
+                        style={[
+                            styles.tab,
+                            vistaActual === 'historial' && { backgroundColor: theme.cardBg, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }
+                        ]}
                         onPress={() => {
                             setVistaActual('historial');
                             setCurrentPage(1);
                         }}
                     >
-                        <Ionicons name="time" size={18} color="#fff" />
-                        <Text style={styles.tabText}>Historial</Text>
+                        <Ionicons name="time" size={18} color={vistaActual === 'historial' ? theme.primary : theme.textMuted} />
+                        <Text style={[styles.tabText, { color: vistaActual === 'historial' ? theme.primary : theme.textMuted }]}>Historial</Text>
                     </TouchableOpacity>
                 </View>
-            </LinearGradient>
+            </View>
 
             <ScrollView
                 style={{ flex: 1 }}
@@ -1335,32 +1350,32 @@ export default function AdminReportesScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
+        marginBottom: 8,
         paddingTop: 25,
         paddingBottom: 25,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.05,
         shadowRadius: 8,
-        elevation: 5
+        elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 16 },
-    tabsContainer: { flexDirection: 'row', gap: 12 },
+    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerSubtitle: { fontSize: 13, marginBottom: 16 },
+    tabsContainer: { flexDirection: 'row', gap: 0 },
     tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
-        paddingVertical: 10,
+        paddingVertical: 8,
         borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.15)',
     },
-    tabActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-    tabText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    tabActive: {}, // Handled inline now
+    tabText: { fontWeight: '600', fontSize: 13 },
     content: { padding: 20 },
     section: { marginBottom: 20 },
     sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },

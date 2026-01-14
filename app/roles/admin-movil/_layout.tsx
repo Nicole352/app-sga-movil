@@ -306,8 +306,8 @@ export default function AdminLayout() {
         text: darkMode ? '#ffffff' : '#1e293b',
         textSecondary: darkMode ? '#a1a1aa' : 'rgba(30,41,59,0.7)',
         textMuted: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
-        border: darkMode ? '#27272a' : 'rgba(239, 68, 68, 0.2)', // Rojo Border
-        accent: '#ef4444', // Rojo Admin
+        border: darkMode ? '#27272a' : '#e2e8f0', // Neutral Border
+        accent: '#ef4444', // Rojo Admin (Mantener solo para acciones puntuales)
         tabActive: '#ef4444',
         tabInactive: darkMode ? '#71717a' : 'rgba(30,41,59,0.5)',
         tabBg: darkMode ? '#141414' : '#ffffff',

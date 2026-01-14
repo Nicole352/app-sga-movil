@@ -103,22 +103,26 @@ export default function CalificacionesScreen() {
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" />
 
-      {/* Premium Header */}
+      {/* Premium Header - Clean Nike */}
       <Animated.View entering={FadeInDown.duration(400)}>
-        <LinearGradient
-          colors={theme.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
-            <View style={{ flexDirection: 'column', gap: 4 }}>
-              <Text style={styles.headerTitle}>Calificaciones</Text>
-              <Text style={styles.headerSubtitle}>Gestión Académica</Text>
+            <View style={{ flexDirection: 'column', gap: 2 }}>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Calificaciones</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestión Académica</Text>
             </View>
-            <Ionicons name="ribbon" size={28} color="#fff" />
+            <Ionicons name="ribbon" size={24} color={theme.accent} />
           </View>
-        </LinearGradient>
+        </View>
       </Animated.View>
 
       {/* Tabs */}
@@ -255,11 +259,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 10,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerContent: {
     flexDirection: 'row',
@@ -267,14 +271,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
   },
   tabsContainer: {
     flexDirection: 'row',

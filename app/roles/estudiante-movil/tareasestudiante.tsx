@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal, TextInput, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal, TextInput, Linking, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useGlobalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -813,8 +813,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 10 : 0,
+    paddingBottom: 20,
     borderBottomWidth: 1,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   backButton: {
     marginRight: 12,

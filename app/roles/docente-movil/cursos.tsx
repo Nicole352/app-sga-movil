@@ -149,22 +149,26 @@ export default function MisCursosScreen() {
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
-      {/* PREMIUM BLUE GRADIENT HEADER */}
+      {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
       <Animated.View entering={FadeInDown.duration(400)}>
-        <LinearGradient
-          colors={theme.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Mis Cursos</Text>
-              <Text style={styles.headerSubtitle}>Gestiona tus cursos y estudiantes</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Cursos</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tus cursos y estudiantes</Text>
             </View>
-            <Ionicons name="book" size={28} color="#fff" />
+            <Ionicons name="book" size={28} color={theme.accent} />
           </View>
-        </LinearGradient>
+        </View>
       </Animated.View>
 
       {/* Tabs */}
@@ -242,35 +246,41 @@ export default function MisCursosScreen() {
 
               return (
                 <View key={curso.id_curso} style={[styles.cursoCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                  {/* Header con gradiente */}
-                  <View style={[styles.cursoHeader, { backgroundColor: color1 }]}>
+                  {/* Header SIN gradiente masivo, solo acento sutil */}
+                  <View style={styles.cursoHeader}>
+                    <View style={[styles.accentStrip, { backgroundColor: color1 }]} />
+
                     <View style={styles.cursoHeaderTop}>
-                      <View style={styles.cursoBadge}>
-                        <Text style={styles.cursoBadgeText}>{curso.codigo_curso}</Text>
+                      <View style={[styles.cursoBadge, { backgroundColor: color1 + '15' }]}>
+                        <Text style={[styles.cursoBadgeText, { color: color1 }]}>{curso.codigo_curso}</Text>
                       </View>
                       <View style={[
                         styles.cursoEstadoBadge,
-                        { backgroundColor: curso.estado === 'activo' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)' }
+                        { backgroundColor: curso.estado === 'activo' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)' }
                       ]}>
-                        <Text style={styles.cursoEstadoText}>{curso.estado.toUpperCase()}</Text>
+                        <Text style={[
+                          styles.cursoEstadoText,
+                          { color: curso.estado === 'activo' ? theme.accent : '#f59e0b' }
+                        ]}>{curso.estado.toUpperCase()}</Text>
                       </View>
                     </View>
 
-                    <Text style={styles.cursoNombre}>{curso.nombre}</Text>
+                    <Text style={[styles.cursoNombre, { color: theme.text }]}>{curso.nombre}</Text>
 
                     {/* Estadística */}
                     <View style={styles.cursoStats}>
-                      <View style={styles.cursoStatsBox}>
+                      <View style={[styles.cursoStatsBox, { backgroundColor: theme.bg }]}>
                         <View style={styles.cursoStatsHeader}>
-                          <Ionicons name="people" size={14} color="#fff" />
-                          <Text style={styles.cursoStatsLabel}>Estudiantes</Text>
+                          <Ionicons name="people" size={14} color={color1} />
+                          <Text style={[styles.cursoStatsLabel, { color: theme.textMuted }]}>Estudiantes</Text>
                         </View>
-                        <Text style={styles.cursoStatsValue}>{curso.total_estudiantes}</Text>
-                        <Text style={styles.cursoStatsSubtext}>de {curso.capacidad_maxima}</Text>
+                        <Text style={[styles.cursoStatsValue, { color: theme.text }]}>{curso.total_estudiantes}</Text>
+                        <Text style={[styles.cursoStatsSubtext, { color: theme.textSecondary }]}>de {curso.capacidad_maxima}</Text>
                       </View>
 
-                      <View style={styles.cursoProgress}>
-                        <Text style={styles.cursoProgressText}>
+                      <View style={[styles.cursoProgress, { backgroundColor: theme.bg }]}>
+                        <View style={[styles.progressCircle, { borderColor: color1, borderTopColor: 'transparent' }]} />
+                        <Text style={[styles.cursoProgressText, { color: theme.text }]}>
                           {Math.round((curso.total_estudiantes / curso.capacidad_maxima) * 100)}%
                         </Text>
                       </View>
@@ -369,11 +379,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 24,
+    paddingTop: Platform.OS === 'ios' ? 40 : 20, // Aggressive reduction
+    paddingBottom: 10, // Aggressive reduction
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 20, // Slightly smaller radius for tighter look
+    borderBottomRightRadius: 20,
   },
   headerContent: {
     flexDirection: 'row',
@@ -454,23 +464,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cursoHeader: {
-    padding: 12,
+    padding: 8, // Ultra compact
+    paddingLeft: 12,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  accentStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
   },
   cursoHeaderTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4, // Ultra compact
   },
   cursoBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   cursoBadgeText: {
-    color: '#fff',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -480,74 +497,79 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   cursoEstadoText: {
-    color: '#fff',
     fontSize: 9,
     fontWeight: '700',
   },
   cursoNombre: {
-    color: '#fff',
-    fontSize: 13,
+    fontSize: 13, // Ultra compact font
     fontWeight: '700',
-    marginBottom: 10,
-    lineHeight: 18,
+    marginBottom: 6,
+    lineHeight: 16,
   },
   cursoStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
   },
   cursoStatsBox: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 8,
-    borderRadius: 8,
+    padding: 6, // Ultra compact
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   cursoStatsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 3,
+    gap: 3,
+    marginBottom: 1,
   },
   cursoStatsLabel: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 9,
     fontWeight: '600',
   },
   cursoStatsValue: {
-    color: '#fff',
-    fontSize: 14,
+    fontSize: 13, // Ultra compact
     fontWeight: '800',
-    lineHeight: 16,
+    lineHeight: 15,
+    marginTop: 1,
   },
   cursoStatsSubtext: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 9,
+    fontSize: 10,
     marginTop: 1,
   },
   cursoProgress: {
     width: 45,
     height: 45,
     borderRadius: 23,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  progressCircle: {
+    position: 'absolute',
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    borderWidth: 3,
+    opacity: 0.3
   },
   cursoProgressText: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '800',
   },
   cursoContent: {
-    padding: 12,
+    padding: 8, // Ultra compact
   },
   cursoInfoGrid: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 6,
   },
   cursoInfoBox: {
     flex: 1,
-    padding: 8,
+    padding: 6, // Reduced padding
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -585,16 +607,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cursoPeriodo: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 5,
+    borderRadius: 6,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   cursoPeriodoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    gap: 3,
+    marginBottom: 2,
   },
   cursoPeriodoContent: {
     flexDirection: 'row',

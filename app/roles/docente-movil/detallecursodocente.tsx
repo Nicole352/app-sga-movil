@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getToken, getDarkMode, getUserData } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { useSocket } from '../../../hooks/useSocket';
@@ -418,35 +419,39 @@ export default function DetalleCursoDocenteScreen() {
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header Azul con Gradiente */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={theme.primaryGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+      {/*HEADER */}
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-            <Text style={styles.backButtonText}>Volver</Text>
-          </TouchableOpacity>
-
           <View style={styles.headerContent}>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="book" size={28} color={theme.blue} />
-            </View>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color={theme.text} />
+            </TouchableOpacity>
+
             <View style={styles.headerInfo}>
-              <Text style={styles.headerTitle}>{curso?.nombre || 'Detalle del Curso'}</Text>
-              <Text style={styles.headerSubtitle}>
-                Código: {curso?.codigo_curso} • {curso?.total_estudiantes || 0} estudiantes
+              <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{curso?.nombre || 'Detalle del Curso'}</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+                {curso?.codigo_curso} • {curso?.total_estudiantes || 0} estudiantes
               </Text>
             </View>
+
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.blue + '15' }]}>
+              <Ionicons name="book" size={24} color={theme.blue} />
+            </View>
           </View>
-        </LinearGradient>
-      </View>
+        </View>
+      </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
@@ -822,6 +827,13 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginBottom: -20,
     zIndex: 10
+  },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
   headerGradient: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,

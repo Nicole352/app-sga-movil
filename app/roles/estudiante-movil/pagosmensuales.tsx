@@ -345,23 +345,27 @@ export default function PagosMensuales() {
       <StatusBar barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* Premium Header */}
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
+      <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.cardBg,
+              borderBottomColor: theme.border,
+              borderBottomWidth: 1,
+            }
+          ]}
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.headerTitle}>Gestión de Pagos</Text>
-              <Text style={styles.headerSubtitle}>Tus finanzas al día</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Pagos</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Tus finanzas al día</Text>
             </View>
-            <View style={styles.headerIconContainer}>
-              <Ionicons name="card" size={24} color="#fff" />
+            <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
+              <Ionicons name="card" size={24} color={theme.accent} />
             </View>
           </View>
-        </LinearGradient>
+        </View>
       </View>
 
       <ScrollView
@@ -371,7 +375,7 @@ export default function PagosMensuales() {
       >
         {/* Horizontal Dashboard (Fintech Style) */}
         {resumenPagos && (
-          <View style={{ flexDirection: 'row', paddingHorizontal: 10, gap: 6, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', paddingHorizontal: 10, gap: 6, marginBottom: 20, marginTop: 20 }}>
             <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
               <View style={[styles.statIconBadge, { backgroundColor: '#3b82f620' }]}>
                 <Ionicons name="list" size={16} color="#3b82f6" />
@@ -428,36 +432,31 @@ export default function PagosMensuales() {
                   entering={FadeInDown.delay(index * 100).springify()}
                   style={[styles.courseCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}
                 >
-                  {/* Course Header with Gradient */}
-                  <LinearGradient
-                    colors={theme.accentGradient}
-                    style={styles.courseHeaderGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
+                  {/* Course Header - Clean Nike */}
+                  <View style={styles.courseHeaderGradient}>
                     <View style={styles.courseHeaderContent}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.courseTitle}>{curso.curso_nombre}</Text>
+                        <Text style={[styles.courseTitle, { color: theme.text }]}>{curso.curso_nombre}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                          <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <Text style={styles.courseCode}>{curso.codigo_curso}</Text>
+                          <View style={{ backgroundColor: theme.accent + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={[styles.courseCode, { color: theme.accent }]}>{curso.codigo_curso}</Text>
                           </View>
                           {!!curso.es_curso_promocional && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                              <Ionicons name="gift" size={10} color="#fff" />
-                              <Text style={styles.courseCode}>PROMOCIONAL</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.success + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Ionicons name="gift" size={10} color={theme.success} />
+                              <Text style={[styles.courseCode, { color: theme.success }]}>PROMOCIONAL</Text>
                             </View>
                           )}
                         </View>
                       </View>
                       <TouchableOpacity
                         onPress={() => handleToggleCuotas(curso)}
-                        style={styles.expandButton}
+                        style={[styles.expandButton, { backgroundColor: theme.accent + '15' }]}
                       >
                         <Ionicons name={cursoExpandido === curso.id_matricula ? 'chevron-up' : 'chevron-down'} size={20} color={theme.accent} />
                       </TouchableOpacity>
                     </View>
-                  </LinearGradient>
+                  </View>
 
                   {/* Course Body */}
                   <View style={styles.courseBody}>
@@ -956,12 +955,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     zIndex: 10
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingBottom: 25,
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -971,17 +970,16 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
+    marginTop: 2,
   },
   headerIconContainer: {
     width: 45,
     height: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1091,14 +1089,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   courseCode: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
   expandButton: {
     width: 32,
     height: 32,
-    backgroundColor: '#fff',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1206,6 +1202,12 @@ const styles = StyleSheet.create({
   },
   methodText: { fontWeight: '700', fontSize: 12 },
   bankChip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 8
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });

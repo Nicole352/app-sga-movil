@@ -245,20 +245,24 @@ export default function PerfilAdmin() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
                 }
             >
-                {/* RED GRADIENT HEADER */}
+                {/* CLEAN NIKE HEADER */}
                 <Animated.View entering={FadeInDown.duration(400)}>
-                    <LinearGradient
-                        colors={theme.primaryGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.header}
+                    <View
+                        style={[
+                            styles.header,
+                            {
+                                backgroundColor: theme.cardBg,
+                                borderBottomColor: theme.border,
+                                borderBottomWidth: 1,
+                            }
+                        ]}
                     >
                         <View style={styles.headerContent}>
                             <View>
-                                <Text style={styles.headerTitle}>Mi Perfil</Text>
-                                <Text style={styles.headerSubtitle}>Gestiona tu información</Text>
+                                <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
+                                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tu información</Text>
                             </View>
-                            <Ionicons name="shield-checkmark" size={32} color="#fff" />
+                            <Ionicons name="shield-checkmark" size={32} color={theme.accent} />
                         </View>
 
                         {/* AVATAR */}
@@ -269,17 +273,17 @@ export default function PerfilAdmin() {
                             {fotoUrl ? (
                                 <Image source={{ uri: fotoUrl }} style={styles.avatar} />
                             ) : (
-                                <View style={[styles.avatarPlaceholder, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                                    <Text style={styles.avatarText}>{getInitials()}</Text>
+                                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                                    <Text style={[styles.avatarText, { color: theme.text }]}>{getInitials()}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
 
-                        <Text style={styles.userName}>
+                        <Text style={[styles.userName, { color: theme.text }]}>
                             {admin.nombre} {admin.apellido}
                         </Text>
-                        <Text style={styles.userRole}>Administrativo</Text>
-                    </LinearGradient>
+                        <Text style={[styles.userRole, { color: theme.accent }]}>Administrativo</Text>
+                    </View>
                 </Animated.View>
 
                 {/* ANIMATED TABS */}
@@ -653,17 +657,29 @@ export default function PerfilAdmin() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { paddingTop: 60, paddingBottom: 100, paddingHorizontal: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, alignItems: 'center' },
-    headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 24 },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff' },
-    headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 4 },
+    header: {
+        paddingTop: 40,
+        paddingBottom: 30,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3
+    },
+    headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 },
+    headerTitle: { fontSize: 24, fontWeight: '700' },
+    headerSubtitle: { fontSize: 13, marginTop: 4 },
     avatarContainer: { marginBottom: 16 },
-    avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff' },
-    avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { fontSize: 36, fontWeight: '700', color: '#fff' },
-    userName: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 4 },
-    userRole: { fontSize: 14, color: 'rgba(255,255,255,0.9)' },
-    tabsContainer: { flexDirection: 'row', paddingHorizontal: 16, gap: 12, marginTop: -40, zIndex: 10 },
+    avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: 'transparent' },
+    avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+    avatarText: { fontSize: 36, fontWeight: '700' },
+    userName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
+    userRole: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+    tabsContainer: { flexDirection: 'row', paddingHorizontal: 16, gap: 12, marginTop: 16, zIndex: 10 },
     tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
     tabText: { fontSize: 14, fontWeight: '600' },
     content: { padding: 16 },

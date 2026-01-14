@@ -61,12 +61,7 @@ export default function NotificationBell({
     return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
   };
 
-  const handleNotificationPress = (notif: Notificacion) => {
-    setShowModal(false);
-    if (notif.link) {
-      router.push(notif.link as any);
-    }
-  };
+
 
   const theme = darkMode ? {
     bg: '#1a1a1a',
@@ -169,19 +164,18 @@ export default function NotificationBell({
                 </View>
               ) : (
                 notificacionesVisibles.map((notif) => (
-                  <TouchableOpacity
+                  <View
                     key={notif.id}
                     style={[
                       styles.notificationItem,
                       {
-                        backgroundColor: notif.leida ? 'transparent' : (darkMode ? 'rgba(251, 191, 36, 0.1)' : 'rgba(251, 191, 36, 0.05)'),
+                        backgroundColor: 'transparent',
                         borderBottomColor: theme.border
                       }
                     ]}
-                    onPress={() => handleNotificationPress(notif)}
                   >
-                    <View style={[styles.notificationIcon, { backgroundColor: getColorTipo(notif.tipo) + '20' }]}>
-                      <Ionicons name={getIconoTipo(notif.tipo) as any} size={20} color={getColorTipo(notif.tipo)} />
+                    <View style={[styles.notificationIcon, { backgroundColor: theme.text }]}>
+                      <Ionicons name={getIconoTipo(notif.tipo) as any} size={20} color="#fff" />
                     </View>
                     <View style={styles.notificationContent}>
                       <Text style={[styles.notificationTitle, { color: theme.text }]} numberOfLines={1}>
@@ -197,7 +191,7 @@ export default function NotificationBell({
                     {!notif.leida && (
                       <View style={[styles.unreadDot, { backgroundColor: theme.accent }]} />
                     )}
-                  </TouchableOpacity>
+                  </View>
                 ))
               )}
             </ScrollView>

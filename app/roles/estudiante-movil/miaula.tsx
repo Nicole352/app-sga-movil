@@ -213,30 +213,36 @@ export default function MiAulaEstudiante() {
       >
         {/* Header Gradient */}
         <Animated.View entering={FadeInDown.delay(100).duration(600)}>
-          <LinearGradient
-            colors={darkMode ? ['#b45309', '#78350f'] : ['#fbbf24', '#d97706']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
-          >
-            <View style={styles.headerContent}>
-              <View style={styles.headerTop}>
-                <View>
-                  <Text style={styles.greetingText}>Hola,</Text>
-                  <Text style={styles.nameText}>
-                    {userData?.nombres || userData?.nombre || 'Estudiante'} {userData?.apellido || ''}
+          {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
+          <Animated.View entering={FadeInDown.delay(100).duration(600)}>
+            <View
+              style={[
+                styles.header,
+                {
+                  backgroundColor: theme.cardBg,
+                  borderBottomColor: theme.border,
+                  borderBottomWidth: 1,
+                }
+              ]}
+            >
+              <View style={styles.headerContent}>
+                <View style={styles.headerTop}>
+                  <View>
+                    <Text style={[styles.greetingText, { color: theme.textSecondary }]}>Hola,</Text>
+                    <Text style={[styles.nameText, { color: theme.text }]}>
+                      {userData?.nombres || userData?.nombre || 'Estudiante'} {userData?.apellido || ''}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.dateContainer}>
+                  <Ionicons name="calendar-outline" size={14} color={theme.textMuted} />
+                  <Text style={[styles.dateText, { color: theme.textMuted }]}>
+                    {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>
                 </View>
-                {/* Profile button removed as it exists in the main header */}
-              </View>
-              <View style={styles.dateContainer}>
-                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.dateText}>
-                  {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </Text>
               </View>
             </View>
-          </LinearGradient>
+          </Animated.View>
         </Animated.View>
 
         {/* Stats Grid */}
@@ -419,12 +425,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    marginBottom: 10,
   },
   headerContent: {},
   headerTop: {
@@ -434,12 +441,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   greetingText: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
     fontWeight: '500',
   },
   nameText: {
-    color: '#fff',
     fontSize: 22,
     fontWeight: '700',
   },
@@ -459,7 +464,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateText: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 12,
     textTransform: 'capitalize',
   },
@@ -467,7 +471,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: -25, // Overlap header
     gap: 10,
   },
   statCard: {

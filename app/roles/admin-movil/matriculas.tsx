@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import Pagination from './components/Pagination';
 import { API_URL } from '../../../constants/config';
-import { getToken, getDarkMode } from '../../../services/storage';
+import { getToken, getDarkMode, getUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
 
 const { width } = Dimensions.get('window');
@@ -198,7 +198,6 @@ export default function AdminMatriculasScreen() {
             });
             if (res.ok) {
                 const fullData = await res.json();
-                console.log('Full Detail Data:', fullData);
                 setSelectedSolicitud(prev => ({ ...prev, ...fullData }));
             }
         } catch (e) {
@@ -211,7 +210,12 @@ export default function AdminMatriculasScreen() {
     const handleAction = (type: 'aprobado' | 'rechazado') => {
         setActionType(type);
         setInputObservacion('');
-        setShowActionModal(true);
+        // Cerrar el modal de detalle primero para evitar problemas de modales apilados
+        setShowDetailModal(false);
+        // Delay para que el modal de detalle se cierre completamente
+        setTimeout(() => {
+            setShowActionModal(true);
+        }, 300);
     };
 
     const submitDecision = async () => {
@@ -219,18 +223,33 @@ export default function AdminMatriculasScreen() {
         try {
             setProcessing(true);
             const token = await getToken();
+
             let url = '';
             let method = '';
             let body = {};
 
             if (actionType === 'aprobado') {
+                // Obtener el ID del usuario logueado para aprobado_por
+                let aprobadoPor = 1; // Fallback
+                try {
+                    const userData = await getUserData();
+                    if (userData?.id_usuario) {
+                        aprobadoPor = userData.id_usuario;
+                    }
+                } catch (e) {
+                    console.error('Error obteniendo usuario:', e);
+                }
+
                 url = `${API_URL}/estudiantes/crear-desde-solicitud`;
                 method = 'POST';
-                body = { id_solicitud: selectedSolicitud.id_solicitud };
-            } else {
+                body = {
+                    id_solicitud: selectedSolicitud.id_solicitud,
+                    aprobado_por: aprobadoPor
+                };
+            } else if (actionType === 'rechazado') {
                 url = `${API_URL}/solicitudes/${selectedSolicitud.id_solicitud}/decision`;
                 method = 'PATCH';
-                body = { estado: actionType, observaciones: inputObservacion };
+                body = { estado: 'rechazado', observaciones: inputObservacion || null };
             }
 
             const response = await fetch(url, {
@@ -240,16 +259,16 @@ export default function AdminMatriculasScreen() {
             });
 
             if (response.ok) {
-                Alert.alert('Éxito', `Solicitud ${actionType} correctamente.`);
+                await response.json();
+                Alert.alert('Éxito', `Solicitud ${actionType === 'aprobado' ? 'aprobada' : 'rechazada'} correctamente.`);
                 setShowActionModal(false);
-                setShowDetailModal(false);
-                fetchSolicitudes();
+                await fetchSolicitudes();
             } else {
-                const err = await response.text();
-                Alert.alert('Error', 'No se pudo procesar la solicitud');
+                const errorText = await response.text();
+                Alert.alert('Error', `No se pudo procesar la solicitud: ${errorText}`);
             }
-        } catch (e) {
-            Alert.alert('Error', 'Error de red');
+        } catch (e: any) {
+            Alert.alert('Error', `Error de red: ${e.message || 'Desconocido'}`);
         } finally {
             setProcessing(false);
         }
@@ -284,7 +303,7 @@ export default function AdminMatriculasScreen() {
     };
 
     const formatDate = (d?: string) => {
-        if (!d) return 'N/DP';
+        if (!d) return 'No especificado';
         return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 
     };
@@ -353,27 +372,33 @@ export default function AdminMatriculasScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
-            {/* --- HEADER ROJO GRADIENTE ESTILO COKET --- */}
-            <LinearGradient
-                colors={darkMode ? ['#b91c1c', '#991b1b'] : ['#ef4444', '#dc2626']}
-                style={styles.summaryCard}
+            {/* --- HEADER CLEAN NIKE EFFECT --- */}
+            <View
+                style={[
+                    styles.summaryCard,
+                    {
+                        backgroundColor: theme.cardBg,
+                        borderBottomColor: theme.border,
+                        borderBottomWidth: 1,
+                    }
+                ]}
             >
-                <Text style={styles.headerTitle}>Matrículas</Text>
-                <Text style={styles.headerSubtitle}>Gestiona y administra las solicitudes</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Matrículas</Text>
+                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y administra las solicitudes</Text>
 
                 {/* Search */}
-                <View style={[styles.searchContainer, { backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', marginTop: 10 }]}>
-                    <Ionicons name="search" size={20} color="#fff" style={{ marginLeft: 10, opacity: 0.8 }} />
+                <View style={[styles.searchContainer, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: 1, marginTop: 10 }]}>
+                    <Ionicons name="search" size={20} color={theme.textMuted} style={{ marginLeft: 10 }} />
                     <TextInput
                         placeholder="Buscar solicitud..."
-                        placeholderTextColor="rgba(255,255,255,0.7)"
-                        style={styles.searchInput}
+                        placeholderTextColor={theme.textMuted}
+                        style={[styles.searchInput, { color: theme.text }]}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
                     {searchTerm.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 8 }}>
-                            <Ionicons name="close-circle" size={18} color="#fff" />
+                            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -386,7 +411,7 @@ export default function AdminMatriculasScreen() {
                             style={[
                                 styles.filterTab,
                                 filterEstado === f && styles.filterTabActive,
-                                { borderBottomColor: filterEstado === f ? '#fff' : 'transparent' }
+                                { borderBottomColor: filterEstado === f ? theme.primary : 'transparent' }
                             ]}
                             onPress={() => {
                                 if (filterEstado !== f) {
@@ -399,8 +424,8 @@ export default function AdminMatriculasScreen() {
                             <Text style={[
                                 styles.filterText,
                                 {
-                                    fontWeight: filterEstado === f ? '700' : '400',
-                                    opacity: filterEstado === f ? 1 : 0.7
+                                    color: filterEstado === f ? theme.primary : theme.textSecondary,
+                                    fontWeight: filterEstado === f ? '700' : '500'
                                 }
                             ]}>
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -408,7 +433,7 @@ export default function AdminMatriculasScreen() {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </LinearGradient>
+            </View>
 
             <FlatList
                 data={paginatedSolicitudes}
@@ -524,10 +549,10 @@ export default function AdminMatriculasScreen() {
                                     <Text style={[styles.sectionTitle, { color: theme.text }]}>Información Personal</Text>
                                     <View style={styles.row}>
                                         <DetailItem label="Identificación" value={selectedSolicitud.identificacion_solicitante} theme={theme} />
-                                        <DetailItem label="Teléfono" value={selectedSolicitud.telefono_solicitante || 'N/A'} theme={theme} />
+                                        <DetailItem label="Teléfono" value={selectedSolicitud.telefono_solicitante || 'No especificado'} theme={theme} />
                                     </View>
                                     <View style={styles.row}>
-                                        <DetailItem label="Dirección" value={selectedSolicitud.direccion_solicitante || 'SD'} theme={theme} />
+                                        <DetailItem label="Dirección" value={selectedSolicitud.direccion_solicitante || 'No especificado'} theme={theme} />
                                         <DetailItem label="Contacto Emergencia" value={selectedSolicitud.contacto_emergencia || selectedSolicitud.telefono_solicitante} theme={theme} highlight />
                                     </View>
                                     <View style={styles.row}>
@@ -539,7 +564,7 @@ export default function AdminMatriculasScreen() {
                                     <Text style={[styles.sectionTitle, { color: theme.text }]}>Curso y Pago</Text>
                                     <View style={styles.row}>
                                         <DetailItem label="Curso Interés" value={selectedSolicitud.curso_nombre || selectedSolicitud.tipo_curso_nombre} theme={theme} highlight />
-                                        <DetailItem label="Horario" value={selectedSolicitud.horario_preferido || 'No difinido'} theme={theme} />
+                                        <DetailItem label="Horario" value={selectedSolicitud.horario_preferido || 'No definido'} theme={theme} />
                                     </View>
                                     <View style={styles.row}>
                                         <DetailItem label="Monto" value={`$${Number(selectedSolicitud.monto_matricula || (selectedSolicitud as any).monto || 0).toFixed(2)}`} theme={theme} isCurrency />
@@ -708,8 +733,8 @@ export default function AdminMatriculasScreen() {
 
             {/* MODAL ACTION CONFIRMATION */}
             <Modal visible={showActionModal} transparent animationType="fade" onRequestClose={() => setShowActionModal(false)}>
-                <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.8)' }]}>
-                    <View style={[styles.modalCard, { backgroundColor: theme.cardBg, height: 'auto', padding: 30, borderRadius: 20 }]}>
+                <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 99999, elevation: 99999 }]}>
+                    <View style={[styles.modalCard, { backgroundColor: theme.cardBg, height: 'auto', padding: 30, borderRadius: 20, zIndex: 100000, elevation: 100000, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 }]}>
                         <Text style={[styles.modalTitle, { color: theme.text, textAlign: 'center', marginBottom: 15 }]}>
                             {actionType === 'aprobado' ? '¿Aprobar Matrícula?' : 'Rechazar Matrícula'}
                         </Text>
@@ -753,14 +778,18 @@ const styles = StyleSheet.create({
         paddingTop: 25,
         paddingBottom: 25,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
-    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 12 },
+    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerSubtitle: { fontSize: 13, marginBottom: 12 },
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
-    searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },
+    searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
 
     filterTab: {
         paddingBottom: 4,
@@ -771,8 +800,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
     },
     filterText: {
-        fontSize: 13,
-        color: '#fff',
+        fontSize: 14,
     },
 
     listContent: { padding: 20, paddingBottom: 100 },
