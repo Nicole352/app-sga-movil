@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14
   },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', flexShrink: 1 },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', flexShrink: 1 },
   headerSubtitle: { fontSize: 12 },
   scrollContent: { padding: 16, paddingTop: 30, paddingBottom: 50 },
   emptyState: { padding: 40, alignItems: 'center', borderRadius: 16 },

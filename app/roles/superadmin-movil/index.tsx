@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   welcomeLabel: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginBottom: 4 },
-  userName: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 2 },
+  userName: { fontSize: 19, fontWeight: '700', color: '#fff', marginBottom: 2 },
   userRole: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 12 },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dateText: { fontSize: 12, color: 'rgba(255,255,255,0.9)', textTransform: 'capitalize' },

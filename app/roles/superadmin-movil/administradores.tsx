@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 4 },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
   filtersSection: { padding: 20 },
   searchContainer: {

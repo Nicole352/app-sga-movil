@@ -1200,7 +1200,7 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 24,
         shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
     },
-    headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+    headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
     headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: -2 },
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44 },
     searchInput: { flex: 1, color: '#fff', paddingHorizontal: 10, fontSize: 15 },

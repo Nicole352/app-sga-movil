@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   userName: { // nameText in miaula
     color: '#fff',
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '700',
   },
   userRole: { // Extra in teacher

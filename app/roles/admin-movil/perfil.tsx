@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
         elevation: 3
     },
     headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 },
-    headerTitle: { fontSize: 24, fontWeight: '700' },
+    headerTitle: { fontSize: 22, fontWeight: '700' },
     headerSubtitle: { fontSize: 13, marginTop: 4 },
     avatarContainer: { marginBottom: 16 },
     avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 4, borderColor: 'transparent' },

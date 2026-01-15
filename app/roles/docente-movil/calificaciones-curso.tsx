@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ interface Tarea {
   modulo_nombre?: string;
   categoria_nombre?: string;
   ponderacion?: number; // Peso de la categoría
+  categoria_ponderacion?: number; // Ponderación específica de la categoría
 }
 
 interface ModuloDetalle {
@@ -213,6 +214,204 @@ const CompactPicker = ({
   );
 };
 
+// --- TEMA ---
+// (Moved Theme usage inside component or passed as prop)
+
+// --- TARJETA ESTUDIANTE (Refactored) ---
+const StudentCard = React.memo(({
+  est,
+  expanded,
+  onPress,
+  theme,
+  moduloActivo,
+  modulosList,
+  tareas
+}: {
+  est: Estudiante,
+  expanded: boolean,
+  onPress: () => void,
+  theme: any,
+  moduloActivo: string,
+  modulosList: string[],
+  tareas: Tarea[]
+}) => {
+  // Determinar estado global
+  const promedio = est.promedio_global || 0;
+  const isAprobado = promedio >= 7;
+  const statusColor = isAprobado ? theme.success : theme.error;
+  const statusBg = isAprobado ? theme.success + '15' : theme.error + '15';
+
+  // Datos para vista detallada (agrupación de tareas)
+  const groupedTasks = useMemo(() => {
+    if (moduloActivo === 'todos' || moduloActivo === 'resumen_global') return [];
+
+    // Filtrar tareas del módulo
+    const tareasModulo = tareas.filter(t => t.modulo_nombre === moduloActivo);
+
+    // Agrupar por categoría
+    const grupos: { [key: string]: { category: string, weight: number, tasks: Tarea[] } } = {};
+
+    tareasModulo.forEach(t => {
+      const cat = t.categoria_nombre || 'General';
+      if (!grupos[cat]) {
+        grupos[cat] = { category: cat, weight: 0, tasks: [] };
+      }
+
+      // PRIORIDAD: Usar categoria_ponderacion que viene del JOIN con categorias_evaluacion
+      if (t.categoria_ponderacion && t.categoria_ponderacion > 0) {
+        grupos[cat].weight = Number(t.categoria_ponderacion);
+      }
+      // FALLBACK: Si no hay categoria_ponderacion, intentar usar ponderacion de la tarea (si es que se usó esa columna)
+      else if (t.ponderacion && t.ponderacion > grupos[cat].weight) {
+        grupos[cat].weight = Number(t.ponderacion);
+      }
+
+      grupos[cat].tasks.push(t);
+    });
+
+    return Object.values(grupos);
+  }, [moduloActivo, tareas]);
+
+  return (
+    <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardInfo}>
+            <Text style={[styles.studentName, { color: theme.text }]}>
+              {est.apellido} {est.nombre}
+            </Text>
+            <Text style={[styles.studentId, { color: theme.textSecondary }]}>
+              ID: {est.identificacion}
+            </Text>
+          </View>
+          <View style={[styles.gradeBadge, { backgroundColor: statusBg, borderColor: statusColor + '30' }]}>
+            <Text style={[styles.gradeValue, { color: statusColor }]}>
+              {promedio.toFixed(2)}
+            </Text>
+            <Text style={[styles.gradeLabel, { color: statusColor }]}>
+              GLOBAL
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <Animated.View entering={FadeInDown.duration(200)} style={[styles.cardBody, { borderTopColor: theme.border }]}>
+          {moduloActivo === 'todos' || moduloActivo === 'resumen_global' ? (
+            // VISTA DE TODOS LOS MÓDULOS (RESUMEN)
+            <View style={styles.modulesGrid}>
+              {modulosList.map((mod, idx) => {
+                const det = est.modulos_detalle?.find(d => d.nombre_modulo === mod);
+                const notaMod = det ? parseFloat(String(det.promedio_modulo_sobre_10)) : 0;
+                const modColor = notaMod >= 7 ? theme.success : (notaMod > 0 ? theme.error : theme.textMuted);
+
+                return (
+                  <View key={idx} style={[styles.moduleItem, { backgroundColor: theme.background }]}>
+                    <Text style={[styles.moduleName, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {mod}
+                    </Text>
+                    <Text style={[styles.moduleGrade, { color: modColor }]}>
+                      {notaMod > 0 ? notaMod.toFixed(2) : '-'}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            // VISTA DETALLADA POR TAREAS (MÓDULO ESPECÍFICO)
+            <View>
+              {/* Promedio del Módulo Actual */}
+              <View style={[styles.moduleSummary, { backgroundColor: theme.background }]}>
+                <Text style={[styles.moduleSummaryTitle, { color: theme.text }]}>PROMEDIO {moduloActivo.toUpperCase()}</Text>
+                {(() => {
+                  const det = est.modulos_detalle?.find(d => d.nombre_modulo === moduloActivo);
+                  const nota = det ? parseFloat(String(det.promedio_modulo_sobre_10)) : 0;
+                  const color = nota >= 7 ? theme.success : theme.error;
+                  return (
+                    <Text style={[styles.moduleSummaryGrade, { color }]}>{nota.toFixed(2)}</Text>
+                  );
+                })()}
+              </View>
+
+              {/* Lista de Tareas Agrupadas */}
+              {groupedTasks.length > 0 ? groupedTasks.map((group, idx) => (
+                <View key={idx} style={styles.taskGroup}>
+                  {/* Encabezado de Categoría estilo Web (Azul + Icono) */}
+                  <View style={[
+                    styles.taskGroupHeader,
+                    {
+                      backgroundColor: theme.primary + '10', // Fondo azul muy suave
+                      paddingVertical: 8,
+                      paddingHorizontal: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6
+                    }
+                  ]}>
+                    <Ionicons name="bookmark" size={14} color={theme.primary} />
+                    <Text style={[styles.taskGroupTitle, { color: theme.primary, fontSize: 12 }]}>
+                      {group.category.toUpperCase()} ({group.weight.toFixed(2)} pts)
+                    </Text>
+                  </View>
+
+                  {group.tasks.map(task => {
+                    const notaTarea = est.calificaciones[task.id_tarea];
+                    const max = task.nota_maxima;
+
+                    // Calcular peso individual de la tarea
+                    const numTareas = group.tasks.length;
+                    const pesoIndividual = numTareas > 0 ? group.weight / numTareas : 0;
+
+                    // Calculamos porcentaje para color
+                    let tColor = theme.textMuted;
+                    if (notaTarea !== null && notaTarea !== undefined) {
+                      const pct = (Number(notaTarea) / max) * 100;
+                      tColor = pct >= 70 ? theme.success : (pct >= 50 ? theme.warning : theme.error);
+                    }
+
+                    return (
+                      <View key={task.id_tarea} style={[styles.taskRow, { borderBottomColor: theme.border }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.taskTitle, { color: theme.text }]}>{task.titulo}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                            <Ionicons name="scale-outline" size={9} color={theme.textMuted} />
+                            <Text style={[styles.taskWeight, { color: theme.textMuted }]}>
+                              {pesoIndividual.toFixed(2)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.taskGradeContainer}>
+                          <Text style={[styles.taskGrade, { color: tColor }]}>
+                            {notaTarea ?? '-'}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )) : (
+                <Text style={{ color: theme.textMuted, fontSize: 12, textAlign: 'center', padding: 10 }}>
+                  No hay tareas registradas en este módulo.
+                </Text>
+              )}
+            </View>
+          )}
+        </Animated.View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.expandButton, { borderTopColor: theme.border }]}
+        onPress={onPress}
+      >
+        <Text style={{ fontSize: 11, color: theme.primary, fontWeight: '600' }}>
+          {expanded ? 'Ocultar Detalles' : 'Ver Detalles'}
+        </Text>
+        <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={theme.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 // --- PANTALLA PRINCIPAL ---
 export default function CalificacionesCursoScreen() {
   const { id } = useLocalSearchParams();
@@ -339,55 +538,13 @@ export default function CalificacionesCursoScreen() {
     setFilteredEstudiantes(result);
   }, [filtroEstado, estudiantes]);
 
-  // --- PREPARAR DATOS PARA LA TABLA ---
-
-  // Tareas filtradas por módulo activo
-  const tareasVisibles = moduloActivo === 'todos' || moduloActivo === 'resumen_global' ? [] : tareas.filter(t => t.modulo_nombre === moduloActivo);
-
-  // Agrupar Tareas por Categoría para el Header
-  const groupedTasks = React.useMemo(() => {
-    if (moduloActivo === 'todos' || moduloActivo === 'resumen_global') return [];
-
-    // Ordenar tareas
-    // Ordenar tareas por ID (orden de creación) para coincidir con la web
-    const sorted = [...tareasVisibles].sort((a, b) => {
-      return a.id_tarea - b.id_tarea;
-    });
-
-    const groups: { category: string, weight: number, tasks: Tarea[] }[] = [];
-    let currentGroup: any = null;
-
-    sorted.forEach(t => {
-      const catName = t.categoria_nombre || 'Sin Categoría';
-      if (!currentGroup || currentGroup.category !== catName) {
-        if (currentGroup) groups.push(currentGroup);
-        currentGroup = { category: catName, weight: t.ponderacion || 0, tasks: [] };
-      }
-      currentGroup.tasks.push(t);
-    });
-    if (currentGroup) groups.push(currentGroup);
-    return groups;
-  }, [tareasVisibles, moduloActivo]);
 
 
-  const renderBadge = (val: number, isGood: boolean) => (
-    <View style={[styles.badgeContainer, { backgroundColor: isGood ? theme.success + '15' : theme.error + '15', borderColor: isGood ? theme.success + '30' : theme.error + '30' }]}>
-      <Text style={{ fontWeight: '700', fontSize: 13, color: isGood ? theme.success : theme.error }}>{val.toFixed(2)}</Text>
-    </View>
-  );
-
-  const renderGrade = (val: number | null | undefined, max: number) => {
-    if (val === null || val === undefined) return <Text style={{ color: theme.textMuted, fontSize: 13 }}>-</Text>;
-    const pct = (val / max) * 100;
-    let color = theme.error;
-    if (pct >= 70) color = theme.success;
-    else if (pct >= 50) color = theme.warning;
-    return <Text style={{ color, fontWeight: '600', fontSize: 13 }}>{val}</Text>;
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const toggleExpand = (id: number) => {
+    // Si ya está expandido, lo cerramos. Si no, abrimos este y cerramos el anterior (acordeón)
+    setExpandedId(prev => prev === id ? null : id);
   };
-
-  // CALCULO DINÁMICO DE ANCHO COLUMNA ESTUDIANTE (Solo para Resumen Global)
-  // Pantalla - Padding (16*2) - GlobalCol (110) - BorderSafety (2)
-  const studentColWidthGlobal = width - 36 - 110;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -408,9 +565,15 @@ export default function CalificacionesCursoScreen() {
         </View>
       </Animated.View>
 
-      {loading && !refreshing ? <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} /> : (
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={{ marginTop: 10, color: theme.textMuted, fontSize: 12 }}>Cargando notas...</Text>
+        </View>
+      ) : (
         <ScrollView
           style={styles.content}
+          contentContainerStyle={{ paddingBottom: 40 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -443,175 +606,47 @@ export default function CalificacionesCursoScreen() {
                 />
               </View>
             </View>
+
+            {/* Stats Compactos */}
             <View style={styles.statsSummary}>
               <View style={styles.statItem}>
-                <Ionicons name="people-outline" size={14} color={theme.textMuted} />
-                <Text style={{ color: theme.textMuted, fontSize: 12, marginLeft: 4 }}>
-                  Estudiantes: <Text style={{ color: theme.text, fontWeight: '700' }}>{filteredEstudiantes.length}</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 11 }}>PROMEDIO GRUPAL</Text>
+                <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>
+                  {(filteredEstudiantes.reduce((acc, curr) => acc + (curr.promedio_global || 0), 0) / (filteredEstudiantes.length || 1)).toFixed(2)}
                 </Text>
               </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
               <View style={styles.statItem}>
-                <Ionicons name="analytics-outline" size={14} color={theme.textMuted} />
-                <Text style={{ color: theme.textMuted, fontSize: 12, marginLeft: 4 }}>
-                  Promedio: <Text style={{ color: theme.primary, fontWeight: '700' }}>
-                    {(filteredEstudiantes.reduce((acc, curr) => acc + (curr.promedio_global || 0), 0) / (filteredEstudiantes.length || 1)).toFixed(2)}
-                  </Text>
+                <Text style={{ color: theme.textMuted, fontSize: 11 }}>ESTUDIANTE</Text>
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700' }}>
+                  {filteredEstudiantes.length}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Tabla */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableScroll}>
-            <View style={{ minWidth: '100%' }}>
-              {/* --- HEADER DE TABLA --- */}
-              <View style={[styles.tableHeader, { backgroundColor: theme.tableHeaderBg, borderColor: theme.border }]}>
-                {/* Columna Estudiante Dynamic Width */}
-                <View style={[styles.colNameWrapper, {
-                  borderRightColor: theme.border,
-                  width: moduloActivo === 'resumen_global' ? studentColWidthGlobal : 140
-                }]}>
-                  <View style={[styles.colNameContainer, { backgroundColor: theme.tableHeaderBg }]}>
-                    <Text style={[styles.headText, { color: theme.primary, textAlign: 'left', paddingLeft: 12 }]}>ESTUDIANTE</Text>
-                  </View>
-                  <LinearGradient
-                    colors={darkMode ? ['rgba(0,0,0,0.5)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.stickyShadow}
-                  />
-                </View>
-
-                {moduloActivo === 'todos' ? (
-                  <>
-                    {modulosList.map((m, i) => (
-                      <View key={i} style={[styles.colModule, { borderColor: theme.border }]}>
-                        <Text style={[styles.headText, { color: theme.text }]} numberOfLines={2}>{m.toUpperCase()}</Text>
-                      </View>
-                    ))}
-                    <View style={[styles.colGrade, { borderColor: theme.border }]}>
-                      <Text style={[styles.headText, { color: theme.primary, fontWeight: '800' }]}>GLOBAL</Text>
-                    </View>
-                  </>
-                ) : moduloActivo === 'resumen_global' ? (
-                  <View style={[styles.colGrade, { borderColor: theme.border, width: 110 }]}>
-                    <Text style={[styles.headText, { color: theme.primary, fontWeight: '800', fontSize: 11 }]}>GLOBAL</Text>
-                  </View>
-                ) : (
-                  <>
-                    {groupedTasks.map((group, i) => (
-                      <View key={i} style={{ flexDirection: 'column', width: group.tasks.length * 130 }}>
-                        <View style={{
-                          backgroundColor: theme.categoryHeaderBg,
-                          paddingVertical: 6,
-                          borderBottomWidth: 1,
-                          borderColor: theme.border,
-                          alignItems: 'center',
-                          marginHorizontal: 1,
-                          borderTopLeftRadius: 8,
-                          borderTopRightRadius: 8,
-                        }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }} numberOfLines={1}>
-                            {group.category.toUpperCase()} <Text style={{ fontWeight: '400', fontSize: 9 }}>({group.weight}%)</Text>
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: 'row' }}>
-                          {group.tasks.map(t => (
-                            <View key={t.id_tarea} style={[styles.colTask, { borderColor: theme.border }]}>
-                              <Text style={[styles.headText, { fontSize: 11, color: theme.text, marginBottom: 2 }]} numberOfLines={1}>{t.titulo}</Text>
-                              <Text style={{ fontSize: 9, color: theme.textMuted, fontWeight: '500' }}>/{t.nota_maxima}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    ))}
-                    <View style={[styles.colGrade, { borderColor: theme.border, backgroundColor: theme.warning + '08' }]}>
-                      <Text style={[styles.headText, { color: theme.warning, fontWeight: '800' }]}>PROMEDIO {moduloActivo.toUpperCase()}</Text>
-                    </View>
-                  </>
-                )}
+          {/* Lista de Estudiantes (Tarjetas) */}
+          <View style={styles.listContainer}>
+            {filteredEstudiantes.length > 0 ? (
+              filteredEstudiantes.map((est) => (
+                <StudentCard
+                  key={est.id_estudiante}
+                  est={est}
+                  expanded={expandedId === est.id_estudiante}
+                  onPress={() => toggleExpand(est.id_estudiante)}
+                  theme={theme}
+                  moduloActivo={moduloActivo}
+                  modulosList={modulosList}
+                  tareas={tareas}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="search-outline" size={40} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, marginTop: 10 }}>No se encontraron estudiantes con los filtros seleccionados.</Text>
               </View>
-
-              {/* --- BODY --- */}
-              <ScrollView bounces={false}>
-                {filteredEstudiantes.map((est, idx) => (
-                  <View key={est.id_estudiante} style={[styles.row, {
-                    backgroundColor: idx % 2 === 0 ? theme.cardBg : (darkMode ? 'rgba(255,255,255,0.02)' : '#fafafa'),
-                    borderColor: theme.border
-                  }]}>
-                    <View style={[styles.colNameWrapper, {
-                      borderRightColor: theme.border,
-                      width: moduloActivo === 'resumen_global' ? studentColWidthGlobal : 140
-                    }]}>
-                      <View style={[styles.colNameContainer, {
-                        backgroundColor: idx % 2 === 0 ? theme.cardBg : (darkMode ? '#1e1e1e' : '#fafafa')
-                      }]}>
-                        <ScrollView
-                          horizontal
-                          nestedScrollEnabled={true}
-                          showsHorizontalScrollIndicator={false}
-                          contentContainerStyle={{ alignItems: 'center', paddingLeft: 12, paddingRight: 12 }}
-                        >
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: theme.text }}>
-                            {est.apellido.toUpperCase()}, {est.nombre.toUpperCase()}
-                          </Text>
-                        </ScrollView>
-                      </View>
-                      <LinearGradient
-                        colors={darkMode ? ['rgba(0,0,0,0.5)', 'transparent'] : ['rgba(0,0,0,0.05)', 'transparent']}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={styles.stickyShadow}
-                      />
-                    </View>
-
-                    {moduloActivo === 'todos' ? (
-                      <>
-                        {modulosList.map((m, i) => {
-                          const det = est.modulos_detalle?.find(d => d.nombre_modulo === m);
-                          const nota = det ? parseFloat(String(det.promedio_modulo_sobre_10)) : 0;
-                          return (
-                            <View key={i} style={[styles.colModule, { borderColor: theme.border }]}>
-                              {renderBadge(nota, nota >= 7)}
-                            </View>
-                          );
-                        })}
-                        <View style={[styles.colGrade, { borderColor: theme.border }]}>
-                          <Text style={{ fontWeight: '800', fontSize: 14, color: (est.promedio_global || 0) >= 7 ? theme.success : theme.error }}>
-                            {(est.promedio_global || 0).toFixed(2)}
-                          </Text>
-                        </View>
-                      </>
-                    ) : moduloActivo === 'resumen_global' ? (
-                      <View style={[styles.colGrade, { borderColor: theme.border, width: 110 }]}>
-                        <Text style={{ fontWeight: '800', fontSize: 14, color: (est.promedio_global || 0) >= 7 ? theme.success : theme.error }}>
-                          {(est.promedio_global || 0).toFixed(2)}
-                        </Text>
-                      </View>
-                    ) : (
-                      <>
-                        {groupedTasks.map((group, i) => (
-                          <React.Fragment key={i}>
-                            {group.tasks.map(t => (
-                              <View key={t.id_tarea} style={[styles.colTask, { borderColor: theme.border }]}>
-                                {renderGrade(est.calificaciones[t.id_tarea], t.nota_maxima)}
-                              </View>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                        <View style={[styles.colGrade, { borderColor: theme.border, backgroundColor: theme.warning + '05' }]}>
-                          {(() => {
-                            const det = est.modulos_detalle?.find(d => d.nombre_modulo === moduloActivo);
-                            const nota = det ? parseFloat(String(det.promedio_modulo_sobre_10)) : 0;
-                            return renderBadge(nota, nota >= 7);
-                          })()}
-                        </View>
-                      </>
-                    )}
-                  </View>
-                ))}
-                <View style={{ height: 60 }} />
-              </ScrollView>
-            </View>
-          </ScrollView>
+            )}
+          </View>
         </ScrollView>
       )}
     </View>
@@ -620,6 +655,7 @@ export default function CalificacionesCursoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
     paddingBottom: 10,
@@ -628,13 +664,25 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20
   },
   headerContent: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  headerTitle: { fontSize: 22, fontWeight: '700' },
   headerSubtitle: { fontSize: 12 },
   headerIcon: { padding: 6, borderRadius: 10 },
   backButton: { padding: 4 },
 
   content: { flex: 1, padding: 16 },
-  filtersCard: { borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
+
+  // Filtros
+  filtersCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 2
+  },
   label: { fontSize: 11, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   pickerTrigger: {
     borderRadius: 12,
@@ -652,9 +700,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Stats
+  statsSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)'
+  },
+  statItem: { alignItems: 'center' },
+  statDivider: { width: 1, height: 24, backgroundColor: '#e2e8f0' },
+
+  // Lista
+  listContainer: { gap: 12 },
+  emptyState: { alignItems: 'center', marginTop: 40, padding: 20 },
+
+  // Tarjeta Estudiante
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 6,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1
+  },
+  cardHeader: { flexDirection: 'row', padding: 16, alignItems: 'center', justifyContent: 'space-between' },
+  cardInfo: { flex: 1 },
+  studentName: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  studentId: { fontSize: 11 },
+  gradeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    minWidth: 50
+  },
+  gradeValue: { fontSize: 14, fontWeight: '800' },
+  gradeLabel: { fontSize: 8, fontWeight: '700', marginTop: 2 },
+
+  // Cuerpo Tarjeta
+  cardBody: { paddingHorizontal: 16, paddingBottom: 16, borderTopWidth: 1, paddingTop: 12 },
+
+  // Grid Modulos
+  modulesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  moduleItem: {
+    width: '48%',
+    padding: 10,
+    borderRadius: 10,
+    justifyContent: 'space-between'
+  },
+  moduleName: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  moduleGrade: { fontSize: 14, fontWeight: '700' },
+
+  // Detalle Tareas
+  moduleSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12
+  },
+  moduleSummaryTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+  moduleSummaryGrade: { fontSize: 16, fontWeight: '800' },
+
+  taskGroup: { marginBottom: 12 },
+  taskGroupHeader: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 6 },
+  taskGroupTitle: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+  taskRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 0.5, alignItems: 'flex-start' },
+  taskTitle: { fontSize: 13, fontWeight: '600', marginBottom: 2 },
+  taskWeight: { fontSize: 10, fontWeight: '400' },
+  taskGradeContainer: { flexDirection: 'row', alignItems: 'baseline' },
+  taskGrade: { fontSize: 13, fontWeight: '700', marginRight: 2 },
+  taskMax: { fontSize: 10 },
+
+  // Boton Expandir
+  expandButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.01)'
+  },
+
+  // Picker Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -703,24 +845,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-
-  statsSummary: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
-  statItem: { flexDirection: 'row', alignItems: 'center' },
-
-  // TABLA
-  tableScroll: { flex: 1, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, height: 50 }, // Altura fija header
-  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, height: 50 }, // Altura fija fila
-
-  // Columnas
-  colNameWrapper: { width: 140, height: '100%', position: 'relative', borderRightWidth: 1, zIndex: 10 },
-  colNameContainer: { width: '100%', height: '100%', justifyContent: 'center' },
-  stickyShadow: { position: 'absolute', right: -6, top: 0, bottom: 0, width: 6, zIndex: 5 },
-
-  colModule: { width: 100, paddingHorizontal: 4, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, height: '100%' },
-  colGrade: { width: 90, paddingHorizontal: 4, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, height: '100%' },
-  colTask: { width: 130, paddingHorizontal: 2, justifyContent: 'center', alignItems: 'center', borderRightWidth: 0.5, paddingVertical: 8 },
-
-  headText: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
-  badgeContainer: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1 }
 });

@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   nameText: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '700',
   },
   profileButton: {

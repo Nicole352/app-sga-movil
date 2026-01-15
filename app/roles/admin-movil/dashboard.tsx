@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1, // Sutil borde inferior para definición
     },
     welcomeLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
-    userName: { fontSize: 24, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
+    userName: { fontSize: 22, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
     userRole: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
 
     dateRow: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', gap: 6, opacity: 0.8 },

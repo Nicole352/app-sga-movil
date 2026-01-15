@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
     headerSubtitle: { fontSize: 13, marginBottom: 16 },
 
     fab: {

@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
     headerSubtitle: { fontSize: 13, marginBottom: 12 },
 
     searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
