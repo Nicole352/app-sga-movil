@@ -441,8 +441,8 @@ export default function AdminCursosScreen() {
     };
 
     // Paginación
-    const totalPages = Math.ceil(cursos.length / itemsPerPage);
-    const paginatedCursos = cursos.slice(
+    const totalPages = Math.ceil(filteredCursos.length / itemsPerPage);
+    const paginatedCursos = filteredCursos.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
@@ -529,7 +529,7 @@ export default function AdminCursosScreen() {
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        totalItems={cursos.length}
+                        totalItems={filteredCursos.length}
                         onPageChange={setCurrentPage}
                         theme={theme}
                         itemLabel="cursos"

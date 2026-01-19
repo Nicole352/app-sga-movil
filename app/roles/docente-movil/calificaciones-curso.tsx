@@ -10,7 +10,8 @@ import {
   Platform,
   Modal,
   Dimensions,
-  RefreshControl
+  RefreshControl,
+  TextInput
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -434,6 +435,7 @@ export default function CalificacionesCursoScreen() {
   // Filtros
   const [moduloActivo, setModuloActivo] = useState<string>("todos");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "aprobados" | "reprobados">("todos");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     getUserData().then(user => setUserId(user?.id_usuario));
@@ -533,10 +535,22 @@ export default function CalificacionesCursoScreen() {
 
   useEffect(() => {
     let result = [...estudiantes];
+
+    // Filtrar por ID, Nombre o Apellido
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(e =>
+        (e.nombre?.toLowerCase() || '').includes(query) ||
+        (e.apellido?.toLowerCase() || '').includes(query) ||
+        (e.identificacion || '').includes(query)
+      );
+    }
+
     if (filtroEstado === 'aprobados') result = result.filter(e => (e.promedio_global || 0) >= 7);
     else if (filtroEstado === 'reprobados') result = result.filter(e => (e.promedio_global || 0) < 7);
+
     setFilteredEstudiantes(result);
-  }, [filtroEstado, estudiantes]);
+  }, [filtroEstado, estudiantes, searchQuery]);
 
 
 
@@ -585,6 +599,27 @@ export default function CalificacionesCursoScreen() {
         >
           {/* Filtros */}
           <View style={[styles.filtersCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+
+            {/* Search Bar */}
+            <View style={{ marginBottom: 15 }}>
+              <Text style={[styles.label, { color: theme.textMuted }]}>BUSCAR ESTUDIANTE</Text>
+              <View style={[styles.searchInputContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Ionicons name="search" size={18} color={theme.textMuted} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[styles.searchInput, { color: theme.text }]}
+                  placeholder="Buscar por nombre, apellido o ID..."
+                  placeholderTextColor={theme.textMuted}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1.4 }}>
                 <Text style={[styles.label, { color: theme.textMuted }]}>Módulo</Text>
@@ -798,6 +833,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
   },
   modalContent: {
     borderTopLeftRadius: 30,

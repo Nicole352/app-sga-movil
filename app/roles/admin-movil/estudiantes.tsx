@@ -390,7 +390,7 @@ export default function AdminEstudiantesScreen() {
 
                 {/* Filtros Botones */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ gap: 6 }}>
-                    {['todos', 'activo', 'inactivo', 'pendiente'].map((f) => (
+                    {['todos', 'activo', 'inactivo'].map((f) => (
                         <TouchableOpacity
                             key={f}
                             style={[
