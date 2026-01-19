@@ -75,6 +75,7 @@ export default function PagosMensuales() {
   const [selectedCuota, setSelectedCuota] = useState<Cuota | null>(null);
   const [selectedCurso, setSelectedCurso] = useState<CursoConPagos | null>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [tooltipsVisible, setTooltipsVisible] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
     const loadDarkMode = async () => {
@@ -230,6 +231,28 @@ export default function PagosMensuales() {
         await loadCuotasMatricula(curso.id_matricula);
       }
     }
+  };
+
+  // Validar si una cuota puede ser pagada (todas las anteriores deben estar verificadas)
+  const puedePagarCuota = (cuota: Cuota, todasLasCuotas: Cuota[]) => {
+    // Si es la cuota #1, siempre se puede pagar
+    if (cuota.numero_cuota === 1) {
+      return { puede: true, mensaje: '' };
+    }
+
+    // Verificar que todas las cuotas anteriores estén verificadas
+    const cuotasAnteriores = todasLasCuotas.filter(c => c.numero_cuota < cuota.numero_cuota);
+    const cuotasNoVerificadas = cuotasAnteriores.filter(c => c.estado !== 'verificado');
+
+    if (cuotasNoVerificadas.length > 0) {
+      const numerosNoVerificados = cuotasNoVerificadas.map(c => `#${c.numero_cuota}`).join(', ');
+      return {
+        puede: false,
+        mensaje: `Debes pagar y verificar ${cuotasNoVerificadas.length === 1 ? 'la cuota' : 'las cuotas'} ${numerosNoVerificados} antes de pagar esta cuota`
+      };
+    }
+
+    return { puede: true, mensaje: '' };
   };
 
   const handlePagarCuota = (cuota: Cuota, curso: CursoConPagos) => {
@@ -514,25 +537,67 @@ export default function PagosMensuales() {
 
                         {loadingCuotas[curso.id_matricula] ? (
                           <Text style={{ textAlign: 'center', margin: 20, color: theme.textSecondary }}>Cargando...</Text>
-                        ) : (cuotasPorCurso[curso.id_matricula] || []).map((cuota) => (
-                          <TouchableOpacity
-                            key={cuota.id_pago}
-                            style={[styles.quotaItem, { backgroundColor: theme.bg, borderColor: theme.border }]}
-                            onPress={() => cuota.estado === 'pendiente' && handlePagarCuota(cuota, curso)}
-                            disabled={cuota.estado !== 'pendiente'}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={[styles.quotaName, { color: theme.text }]}>Cuota #{cuota.numero_cuota}</Text>
-                              <Text style={[styles.quotaDate, { color: theme.textSecondary }]}>Vence: {formatearFecha(cuota.fecha_vencimiento)}</Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                              <Text style={[styles.quotaAmount, { color: theme.text }]}>${formatearMonto(cuota.monto)}</Text>
-                              <View style={[styles.statusBadge, { backgroundColor: getEstadoColor(cuota.estado) + '20' }]}>
-                                <Text style={[styles.statusText, { color: getEstadoColor(cuota.estado) }]}>{getEstadoTexto(cuota.estado)}</Text>
+                        ) : (cuotasPorCurso[curso.id_matricula] || []).map((cuota) => {
+                          const todasLasCuotas = cuotasPorCurso[curso.id_matricula] || [];
+                          const validacion = puedePagarCuota(cuota, todasLasCuotas);
+                          const puedeInteractuar = cuota.estado === 'pendiente' && validacion.puede;
+
+                          return (
+                            <TouchableOpacity
+                              key={cuota.id_pago}
+                              style={[
+                                styles.quotaItem,
+                                {
+                                  backgroundColor: theme.bg,
+                                  borderColor: !validacion.puede && cuota.estado === 'pendiente' ? '#9ca3af' : theme.border,
+                                  opacity: !validacion.puede && cuota.estado === 'pendiente' ? 0.6 : 1
+                                }
+                              ]}
+                              onPress={() => puedeInteractuar && handlePagarCuota(cuota, curso)}
+                              onLongPress={() => {
+                                if (!validacion.puede && cuota.estado === 'pendiente') {
+                                  Alert.alert('Cuota Bloqueada', validacion.mensaje);
+                                }
+                              }}
+                              disabled={!puedeInteractuar}
+                            >
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={[styles.quotaName, { color: theme.text }]}>Cuota #{cuota.numero_cuota}</Text>
+                                  {!validacion.puede && cuota.estado === 'pendiente' && (
+                                    <Ionicons name="lock-closed" size={14} color="#9ca3af" />
+                                  )}
+                                </View>
+                                <Text style={[styles.quotaDate, { color: theme.textSecondary }]}>Vence: {formatearFecha(cuota.fecha_vencimiento)}</Text>
+                                {!validacion.puede && cuota.estado === 'pendiente' && (
+                                  <Text style={[styles.quotaDate, { color: '#9ca3af', fontSize: 10, marginTop: 4 }]}>Mantén presionado para más info</Text>
+                                )}
                               </View>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
+                              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                                <Text style={[styles.quotaAmount, { color: theme.text }]}>${formatearMonto(cuota.monto)}</Text>
+                                <View style={[
+                                  styles.statusBadge,
+                                  {
+                                    backgroundColor: !validacion.puede && cuota.estado === 'pendiente'
+                                      ? '#9ca3af20'
+                                      : getEstadoColor(cuota.estado) + '20'
+                                  }
+                                ]}>
+                                  <Text style={[
+                                    styles.statusText,
+                                    {
+                                      color: !validacion.puede && cuota.estado === 'pendiente'
+                                        ? '#9ca3af'
+                                        : getEstadoColor(cuota.estado)
+                                    }
+                                  ]}>
+                                    {!validacion.puede && cuota.estado === 'pendiente' ? 'Bloqueado' : getEstadoTexto(cuota.estado)}
+                                  </Text>
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </Animated.View>
                     )}
                   </View>
