@@ -470,14 +470,15 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     welcomeCardContent: {
-        paddingTop: 16,
-        paddingBottom: 24,
-        paddingHorizontal: 24,
-        borderBottomLeftRadius: 32, // Efecto curvado "Nike" más pronunciado
-        borderBottomRightRadius: 32,
+        paddingTop: 10,
+        paddingBottom: 25,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
         justifyContent: 'space-between',
         height: 160,
         borderBottomWidth: 1, // Sutil borde inferior para definición
+        zIndex: 1
     },
     welcomeLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
     userName: { fontSize: 22, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },

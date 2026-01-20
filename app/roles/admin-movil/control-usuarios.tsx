@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 4,
-        paddingTop: 16,
+        paddingTop: 10,
         paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,

@@ -1193,7 +1193,7 @@ const DetailItem = ({ label, value, theme, isCurrency }: any) => (
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        paddingTop: 16,
+        paddingTop: 10,
         paddingBottom: 16,
         paddingHorizontal: 15,
         borderBottomLeftRadius: 24,

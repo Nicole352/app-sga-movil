@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingTop: 10,
     paddingBottom: 10,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,

@@ -542,7 +542,6 @@ export default function EstudianteLayout() {
           name="detallecursoestudiante"
           options={{
             href: null, // Esto oculta la pantalla de los tabs
-            headerShown: false,
           }}
         />
         <Tabs.Screen

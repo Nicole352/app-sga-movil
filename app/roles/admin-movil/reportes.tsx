@@ -405,6 +405,10 @@ export default function AdminReportesScreen() {
 
                 setDatosReporte(datosProcessados || []);
                 setEstadisticas(data.data.estadisticas);
+
+                if (!datosProcessados || datosProcessados.length === 0) {
+                    Alert.alert('Aviso', 'No se encontraron datos con los filtros seleccionados');
+                }
             } else {
                 Alert.alert('Error', data.message || 'Error al generar el reporte');
             }
@@ -557,6 +561,35 @@ export default function AdminReportesScreen() {
 
     const formatMonto = (monto: number) => {
         return `$${Number(monto).toFixed(2)}`;
+    };
+
+    const getEmptyMessage = () => {
+        const busqueda = (busquedaRapida).trim();
+
+        if (vistaActual === 'historial') {
+            if (filtroTipoHistorial !== 'todos') return "No se encontraron reportes de este tipo en el historial";
+            return "No hay reportes generados aún";
+        }
+
+        if (busqueda) return `No se encontraron resultados para "${busqueda}"`;
+
+        switch (tipoReporte) {
+            case 'estudiantes':
+                // Nota: filtroCursoEstudiante es string '' o 'numeric_id', evaluar si tiene valor
+                if (filtroCursoEstudiante) return "No hay estudiantes registrados en este curso para el período seleccionado";
+                if (filtroEstadoEstudiante !== 'todos') return `No hay estudiantes con estado "${filtroEstadoEstudiante}" en este período`;
+                return "No hay estudiantes registrados en este período";
+            case 'cursos':
+                if (filtroEstadoCurso !== 'todos') return `No hay cursos con estado "${filtroEstadoCurso}" en este período`;
+                return "No hay cursos registrados en este período";
+            case 'financiero':
+                if (filtroEstadoPago !== 'todos') return `No hay pagos con estado "${filtroEstadoPago}" en este período`;
+                if (filtroMetodoPago !== 'todos') return `No hay pagos realizados con "${filtroMetodoPago}" en este período`;
+                if (filtroCursoFinanciero) return "No hay registros financieros para este curso en el período seleccionado";
+                return "No hay registros financieros en este período";
+            default:
+                return "No se encontraron datos";
+        }
     };
 
     // Filtrar y ordenar datos
@@ -1228,6 +1261,14 @@ export default function AdminReportesScreen() {
                                             itemLabel="registros"
                                         />
                                     }
+                                    ListEmptyComponent={
+                                        <View style={styles.emptyContainer}>
+                                            <Ionicons name="search-outline" size={48} color={theme.textMuted} />
+                                            <Text style={[styles.emptyText, { color: theme.textSecondary, textAlign: 'center', paddingHorizontal: 20 }]}>
+                                                {getEmptyMessage()}
+                                            </Text>
+                                        </View>
+                                    }
                                 />
                             </View>
                         )}
@@ -1321,7 +1362,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
         marginBottom: 4,
-        paddingTop: 16,
+        paddingTop: 10,
         paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,

@@ -814,7 +814,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 10 : 0,
+    paddingTop: 10,
     paddingBottom: 20,
     borderBottomWidth: 1,
     borderBottomLeftRadius: 24,

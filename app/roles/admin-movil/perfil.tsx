@@ -658,17 +658,18 @@ export default function PerfilAdmin() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     header: {
-        paddingTop: 40,
+        marginBottom: 20,
+        paddingTop: 10,
         paddingBottom: 30,
         paddingHorizontal: 20,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
         alignItems: 'center',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5
     },
     headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 },
     headerTitle: { fontSize: 22, fontWeight: '700' },

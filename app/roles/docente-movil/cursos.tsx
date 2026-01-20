@@ -188,7 +188,7 @@ export default function MisCursosScreen() {
         >
           <Text style={[
             styles.tabText,
-            { color: activeTab === 'activos' ? '#000' : theme.textSecondary }
+            { color: activeTab === 'activos' ? '#fff' : theme.textSecondary }
           ]}>
             Cursos Activos
           </Text>
@@ -209,7 +209,7 @@ export default function MisCursosScreen() {
         >
           <Text style={[
             styles.tabText,
-            { color: activeTab === 'finalizados' ? '#000' : theme.textSecondary }
+            { color: activeTab === 'finalizados' ? '#fff' : theme.textSecondary }
           ]}>
             Finalizados
           </Text>
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 40 : 20, // Aggressive reduction
+    paddingTop: 10,
     paddingBottom: 10, // Aggressive reduction
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20, // Slightly smaller radius for tighter look

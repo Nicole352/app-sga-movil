@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     marginBottom: 20, // Keep this as container margin
   },
   headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 40 : 20, // Aggressive reduction
+    paddingTop: 10,
     paddingBottom: 15, // Aggressive reduction
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: -25, // Overlap header
+    marginTop: -10,
     gap: 10,
     zIndex: 10,
   },

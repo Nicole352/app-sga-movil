@@ -370,7 +370,7 @@ export default function DashboardSuperAdmin() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 25,
+    paddingTop: 10,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

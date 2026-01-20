@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 45, // Reduced
+    paddingTop: 10,
     paddingBottom: 80, // Reduced bottom padding significantly for overlap
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30, // Keep slightly larger for profile aesthetic

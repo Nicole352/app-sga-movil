@@ -907,16 +907,12 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
         marginBottom: 4,
-        paddingTop: 16,
+        paddingTop: 10,
         paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3
+        paddingHorizontal: 15,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
     },
     headerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
     headerSubtitle: { fontSize: 13, marginBottom: 12 },

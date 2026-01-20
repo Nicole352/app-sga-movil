@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff' // Default bg for shadow
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingTop: 10,
     paddingBottom: 20,
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
