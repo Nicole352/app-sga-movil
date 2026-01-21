@@ -850,7 +850,7 @@ export default function AdminMatriculasScreen() {
                                 </View>
                             )}
 
-                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                                 <TouchableOpacity
                                     style={{
                                         flex: 1,

@@ -28,13 +28,13 @@ export default function CompactPicker({
 
     const selectedLabel = items.find(i => i.value === selectedValue)?.label || placeholder || items[0]?.label;
 
-    // UI Trigger (Shared for both platforms)
+    // UI Trigger (Shared)
     const trigger = (
         <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setShowModal(true)}
             style={[styles.pickerTrigger, {
-                backgroundColor: theme.cardBg,
+                backgroundColor: theme.inputBg || theme.cardBg,
                 borderColor: theme.border
             }]}
         >
@@ -122,7 +122,7 @@ export default function CompactPicker({
         );
     }
 
-    // IOS: BACK TO NATIVE WHEEL
+    // IOS: WHEEL
     return (
         <>
             {trigger}

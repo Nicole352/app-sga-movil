@@ -6,20 +6,15 @@ import {
     RefreshControl,
     StyleSheet,
     Dimensions,
-    TouchableOpacity,
     StatusBar,
-    Platform,
-    ActivityIndicator,
-    Image // ADDED
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect } from 'expo-router';
+import Svg, { Line, Polygon, Polyline, Circle, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { API_URL } from '../../../constants/config';
 import { getToken, getUserData, getDarkMode } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
-import NotificationBell from '../../../components/NotificationBell'; // ADDED
+import CompactPicker from './components/CompactPicker';
 
 const { width } = Dimensions.get('window');
 
@@ -31,13 +26,11 @@ interface AdminStats {
     totalDocentes: number;
     cursosActivos: number;
     matriculasAceptadas: number;
-    matriculasPendientes: number;
     porcentajeAdministradores: number;
     porcentajeEstudiantes: number;
     porcentajeDocentes: number;
     porcentajeCursos: number;
     porcentajeMatriculasAceptadas: number;
-    porcentajeMatriculasPendientes: number;
 }
 
 interface EstadisticasEstudiantes {
@@ -55,23 +48,26 @@ interface IngresosMes {
     porcentaje_cambio: number;
 }
 
+interface IngresosTendencias {
+    datos: Array<{ mes: string; valor: number }>;
+    promedio: number;
+    total: number;
+    mes_mayor: { mes: string; valor: number };
+}
+
 export default function AdminDashboard() {
-    const router = useRouter();
     const [darkMode, setDarkMode] = useState(false);
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Estados de Datos (Paridad con Web)
+    // Estados de Datos
     const [stats, setStats] = useState<AdminStats>({
         totalAdministradores: 0, totalEstudiantes: 0, estudiantesActivos: 0, totalDocentes: 0,
-        cursosActivos: 0, matriculasAceptadas: 0, matriculasPendientes: 0,
+        cursosActivos: 0, matriculasAceptadas: 0,
         porcentajeAdministradores: 0, porcentajeEstudiantes: 0, porcentajeDocentes: 0,
-        porcentajeCursos: 0, porcentajeMatriculasAceptadas: 0, porcentajeMatriculasPendientes: 0
+        porcentajeCursos: 0, porcentajeMatriculasAceptadas: 0
     });
-    const [matriculasPorMes, setMatriculasPorMes] = useState<any[]>([]);
-    const [actividadReciente, setActividadReciente] = useState<any[]>([]);
-    const [cursosTop, setCursosTop] = useState<any[]>([]);
     const [ingresosMes, setIngresosMes] = useState<IngresosMes>({ ingresos_mes_actual: 0, porcentaje_cambio: 0 });
     const [estadisticasEstudiantes, setEstadisticasEstudiantes] = useState<EstadisticasEstudiantes>({
         estudiantes_activos: 0, estudiantes_inactivos: 0, porcentaje_activos: 0,
@@ -79,6 +75,12 @@ export default function AdminDashboard() {
     });
     const [pagosPendientes, setPagosPendientes] = useState({ total_pendientes: 0 });
     const [proximosVencimientos, setProximosVencimientos] = useState<any[]>([]);
+    const [periodFilter, setPeriodFilter] = useState('month');
+    const [courseFilter, setCourseFilter] = useState('all');
+    const [tiposCursos, setTiposCursos] = useState<Array<{ id_tipo_curso: number; nombre: string }>>([]);
+    const [ingresosTendencias, setIngresosTendencias] = useState<IngresosTendencias>({
+        datos: [], promedio: 0, total: 0, mes_mayor: { mes: '', valor: 0 }
+    });
 
     // TEMA ADMIN (Rojo/Oscuro)
     const theme = darkMode ? {
@@ -88,13 +90,13 @@ export default function AdminDashboard() {
         textSecondary: '#a1a1aa',
         textMuted: '#71717a',
         border: '#27272a',
-        primary: '#ef4444', // Rojo Admin
-        primaryGradient: ['#ef4444', '#dc2626'] as const,
+        primary: '#ef4444',
+        accent: '#ef4444',
         success: '#10b981',
         warning: '#f59e0b',
         info: '#3b82f6',
         purple: '#8b5cf6',
-        cardBorder: 'rgba(239, 68, 68, 0.2)'
+        inputBg: '#1a1a1a'
     } : {
         bg: '#f8fafc',
         cardBg: '#ffffff',
@@ -102,13 +104,13 @@ export default function AdminDashboard() {
         textSecondary: '#475569',
         textMuted: '#64748b',
         border: '#e2e8f0',
-        primary: '#ef4444', // Rojo Admin
-        primaryGradient: ['#ef4444', '#dc2626'] as const,
+        primary: '#ef4444',
+        accent: '#ef4444',
         success: '#059669',
         warning: '#d97706',
         info: '#2563eb',
         purple: '#7c3aed',
-        cardBorder: '#e2e8f0'
+        inputBg: '#f1f5f9'
     };
 
     useFocusEffect(
@@ -123,15 +125,13 @@ export default function AdminDashboard() {
         return () => { eventEmitter.off('themeChanged', themeHandler); };
     }, []);
 
-    // Debug effect para próximos vencimientos
+    // Recargar datos cuando cambien los filtros
     useEffect(() => {
-        console.log('🔍 [State Update] Próximos Vencimientos:', proximosVencimientos);
-    }, [proximosVencimientos]);
-
+        loadData();
+    }, [periodFilter, courseFilter]);
 
     const loadData = async () => {
         try {
-            // setLoading(true); // Evitar flicker excesivo en focus
             const mode = await getDarkMode();
             setDarkMode(mode);
             const user = await getUserData();
@@ -141,29 +141,26 @@ export default function AdminDashboard() {
 
             const headers = { Authorization: `Bearer ${token}` };
 
-            // Promise.all para paridad con Web
             const [
-                statsRes, matriculasRes, actividadRes, cursosTopRes,
-                ingresosRes, estudiantesRes, pagosRes, vencimientosRes
+                statsRes, ingresosRes, estudiantesRes, pagosRes,
+                vencimientosRes, tendenciasRes, tiposCursosRes
             ] = await Promise.all([
-                fetch(`${API_URL}/users/admin-stats`, { headers }),
-                fetch(`${API_URL}/dashboard/matriculas-por-mes`, { headers }),
-                fetch(`${API_URL}/dashboard/actividad-reciente`, { headers }),
-                fetch(`${API_URL}/dashboard/cursos-top-matriculas`, { headers }),
-                fetch(`${API_URL}/dashboard/ingresos-mes-actual`, { headers }),
-                fetch(`${API_URL}/dashboard/estadisticas-estudiantes`, { headers }),
-                fetch(`${API_URL}/dashboard/pagos-pendientes-verificacion`, { headers }),
-                fetch(`${API_URL}/dashboard/proximos-vencimientos`, { headers })
+                fetch(`${API_URL}/users/admin-stats?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/dashboard/ingresos-mes-actual?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/dashboard/estadisticas-estudiantes?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/dashboard/pagos-pendientes-verificacion?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/dashboard/proximos-vencimientos?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/dashboard/ingresos-tendencias?period=${periodFilter}&course=${courseFilter}`, { headers }),
+                fetch(`${API_URL}/tipos-cursos`, { headers })
             ]);
 
             if (statsRes.ok) setStats(await statsRes.json());
-            if (matriculasRes.ok) setMatriculasPorMes(await matriculasRes.json());
-            if (actividadRes.ok) setActividadReciente(await actividadRes.json());
-            if (cursosTopRes.ok) setCursosTop(await cursosTopRes.json());
             if (ingresosRes.ok) setIngresosMes(await ingresosRes.json());
             if (estudiantesRes.ok) setEstadisticasEstudiantes(await estudiantesRes.json());
             if (pagosRes.ok) setPagosPendientes(await pagosRes.json());
             if (vencimientosRes.ok) setProximosVencimientos(await vencimientosRes.json());
+            if (tendenciasRes.ok) setIngresosTendencias(await tendenciasRes.json());
+            if (tiposCursosRes.ok) setTiposCursos(await tiposCursosRes.json());
 
         } catch (error) {
             console.error('Error loading Admin Dashboard:', error);
@@ -178,19 +175,21 @@ export default function AdminDashboard() {
         await loadData();
     };
 
+    const getPeriodLabel = () => {
+        switch (periodFilter) {
+            case 'today': return 'de Hoy';
+            case 'week': return 'de los Últimos 7 Días';
+            case 'month': return 'del Mes';
+            case 'year': return 'del Año';
+            case 'all': return 'Total';
+            default: return 'del Mes';
+        }
+    };
+
     // Componentes de UI
-    const renderStatsCard = (title: string, value: string | number, icon: any, color: string, delay: number, subtitle?: string) => (
-        <View
-            style={[
-                styles.statCard,
-                {
-                    backgroundColor: theme.cardBg,
-                    borderColor: theme.border,
-                    shadowColor: darkMode ? "#000" : "#cbd5e1"
-                }
-            ]}
-        >
-            <View style={[styles.statHeader]}>
+    const renderStatsCard = (title: string, value: string | number, icon: any, color: string, subtitle?: string) => (
+        <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+            <View style={styles.statHeader}>
                 <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
                     <Ionicons name={icon} size={18} color={color} />
                 </View>
@@ -201,30 +200,6 @@ export default function AdminDashboard() {
         </View>
     );
 
-    const renderActivityItem = (item: any, index: number) => {
-        let iconName: any = 'ellipse';
-        let color = theme.textMuted;
-
-        // Mapeo simple de iconos según texto/color de API (Paridad Web)
-        if (item.icono === 'UserPlus') { iconName = 'person-add'; color = theme.success; }
-        else if (item.icono === 'DollarSign') { iconName = 'cash'; color = theme.warning; } // Web usa #f59e0b warning
-        else if (item.icono === 'Award') { iconName = 'ribbon'; color = theme.purple; }
-        else if (item.icono === 'BookOpen') { iconName = 'book'; color = theme.info; }
-        else if (item.icono === 'UserCheck') { iconName = 'checkmark-done-circle'; color = theme.success; }
-
-        return (
-            <View key={index} style={[styles.activityItem, { borderBottomColor: theme.border, borderBottomWidth: index === actividadReciente.length - 1 ? 0 : 1 }]}>
-                <View style={[styles.activityIconBox, { backgroundColor: `${color}15`, borderColor: `${color}30` }]}>
-                    <Ionicons name={iconName} size={16} color={color} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={[styles.activityText, { color: theme.text }]}>{item.texto}</Text>
-                    <Text style={[styles.activityTime, { color: theme.textMuted }]}>{item.tiempo}</Text>
-                </View>
-            </View>
-        );
-    };
-
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
             <StatusBar barStyle="light-content" />
@@ -234,18 +209,9 @@ export default function AdminDashboard() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             >
-                {/* WELCOME CARD (Clean Nike Effect) */}
+                {/* WELCOME CARD */}
                 <View style={styles.welcomeCardContainer}>
-                    {/* Fondo blanco/card con borde inferior estilizado */}
-                    <View
-                        style={[
-                            styles.welcomeCardContent,
-                            {
-                                backgroundColor: theme.cardBg,
-                                borderBottomColor: theme.border,
-                            }
-                        ]}
-                    >
+                    <View style={[styles.welcomeCardContent, { backgroundColor: theme.cardBg, borderBottomColor: theme.border }]}>
                         <View>
                             <Text style={[styles.welcomeLabel, { color: theme.textSecondary }]}>Bienvenido,</Text>
                             <Text style={[styles.userName, { color: theme.text }]}>
@@ -253,7 +219,7 @@ export default function AdminDashboard() {
                             </Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                                 <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                                    <Text style={[styles.userRole, { color: theme.primary, fontWeight: '700' }]}>Administrativo</Text>
+                                    <Text style={[styles.userRole, { color: theme.primary, fontWeight: '700' }]}>ADMINISTRATIVO</Text>
                                 </View>
                             </View>
                         </View>
@@ -267,24 +233,51 @@ export default function AdminDashboard() {
                     </View>
                 </View>
 
-                {/* --- STATS PRINCIPALES --- */}
+                {/* FILTROS */}
+                <View style={[styles.filtersContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                    <CompactPicker
+                        items={[
+                            { label: 'Hoy', value: 'today' },
+                            { label: 'Últimos 7 días', value: 'week' },
+                            { label: 'Este mes', value: 'month' },
+                            { label: 'Este año', value: 'year' },
+                            { label: 'Todo', value: 'all' }
+                        ]}
+                        selectedValue={periodFilter}
+                        onValueChange={setPeriodFilter}
+                        placeholder="Período"
+                        theme={theme}
+                    />
+                    <CompactPicker
+                        items={[
+                            { label: 'Todos', value: 'all' },
+                            ...tiposCursos.map(tc => ({ label: tc.nombre, value: tc.id_tipo_curso.toString() }))
+                        ]}
+                        selectedValue={courseFilter}
+                        onValueChange={setCourseFilter}
+                        placeholder="Curso"
+                        theme={theme}
+                    />
+                </View>
+
+                {/* STATS PRINCIPALES (6 cards en grid 2x3) */}
                 <View style={styles.gridContainer}>
                     <View style={styles.row}>
-                        {renderStatsCard('Estudiantes Total', stats.totalEstudiantes, 'school', theme.info, 0, `+${stats.porcentajeEstudiantes}%`)}
-                        {renderStatsCard('Activos', stats.estudiantesActivos, 'person-circle', theme.success, 100)}
+                        {renderStatsCard('Total Administradores', stats.totalAdministradores, 'shield', theme.primary, `+${stats.porcentajeAdministradores}%`)}
+                        {renderStatsCard('Cursos Activos', stats.cursosActivos, 'library', theme.success, `+${stats.porcentajeCursos}%`)}
                     </View>
                     <View style={styles.row}>
-                        {renderStatsCard('Ingresos Mes', `$${ingresosMes.ingresos_mes_actual.toFixed(2)}`, 'cash', theme.success, 200, `${ingresosMes.porcentaje_cambio >= 0 ? '+' : ''}${ingresosMes.porcentaje_cambio}%`)}
-                        {renderStatsCard('Pagos Pendientes', pagosPendientes.total_pendientes, 'time', theme.warning, 300)}
+                        {renderStatsCard('Total Estudiantes', stats.totalEstudiantes, 'school', theme.info, `+${stats.porcentajeEstudiantes}%`)}
+                        {renderStatsCard('Estudiantes Activos', stats.estudiantesActivos, 'person-circle', theme.success)}
                     </View>
                     <View style={styles.row}>
-                        {renderStatsCard('Matrículas Aceptadas', stats.matriculasAceptadas, 'checkmark-circle', theme.purple, 400)}
-                        {renderStatsCard('Cursos Activos', stats.cursosActivos, 'library', theme.primary, 500)}
+                        {renderStatsCard('Total Docentes', stats.totalDocentes, 'people', theme.warning, `+${stats.porcentajeDocentes}%`)}
+                        {renderStatsCard('Matrículas Aceptadas', stats.matriculasAceptadas, 'checkmark-circle', theme.purple, `+${stats.porcentajeMatriculasAceptadas}%`)}
                     </View>
                 </View>
 
-                {/* --- TASA DE RETENCIÓN & APROBACIÓN --- */}
-                <View style={[styles.sectionContainer, { marginTop: 10 }]}>
+                {/* TASAS (3 cards horizontales) */}
+                <View style={styles.sectionContainer}>
                     <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Indicadores Académicos</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}>
                         <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
@@ -295,14 +288,14 @@ export default function AdminDashboard() {
                             </View>
                         </View>
                         <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
-                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Tasa Retención</Text>
-                            <Text style={{ color: theme.purple, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_retencion}%</Text>
+                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Tasa Graduación</Text>
+                            <Text style={{ color: theme.purple, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_graduacion}%</Text>
                             <View style={[styles.miniBarBG, { backgroundColor: `${theme.purple}20`, marginTop: 6 }]}>
-                                <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_retencion}%`, backgroundColor: theme.purple }]} />
+                                <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_graduacion}%`, backgroundColor: theme.purple }]} />
                             </View>
                         </View>
                         <View style={[styles.kpiCard, { backgroundColor: theme.cardBg, borderColor: theme.border, borderWidth: 1 }]}>
-                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Ocupación</Text>
+                            <Text style={{ color: theme.textMuted, fontSize: 11 }}>Ocupación Cursos</Text>
                             <Text style={{ color: theme.info, fontSize: 18, fontWeight: '700', marginTop: 2 }}>{estadisticasEstudiantes.tasa_ocupacion}%</Text>
                             <View style={[styles.miniBarBG, { backgroundColor: `${theme.info}20`, marginTop: 6 }]}>
                                 <View style={[styles.miniBarFill, { width: `${estadisticasEstudiantes.tasa_ocupacion}%`, backgroundColor: theme.info }]} />
@@ -311,143 +304,194 @@ export default function AdminDashboard() {
                     </ScrollView>
                 </View>
 
-                {/* --- PAGOS PENDIENTES VERIFICACIÓN --- */}
-                <View style={styles.sectionContainer}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Pagos Pendientes Verificación</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20, alignItems: 'center', borderColor: theme.border, borderWidth: 1 }]}>
-                        {/* Gráfico Circular */}
-                        <View style={{ width: 120, height: 120, marginBottom: 16, position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-                            {/* Círculo de fondo */}
-                            <View style={{
-                                position: 'absolute',
-                                width: 120,
-                                height: 120,
-                                borderRadius: 60,
-                                borderWidth: 14,
-                                borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                            }} />
-                            {/* Círculo de progreso (naranja) */}
-                            <View style={{
-                                position: 'absolute',
-                                width: 120,
-                                height: 120,
-                                borderRadius: 60,
-                                borderWidth: 14,
-                                borderColor: theme.warning,
-                                borderTopColor: 'transparent',
-                                borderRightColor: 'transparent',
-                                transform: [{ rotate: '-90deg' }]
-                            }} />
-                            {/* Número central */}
-                            <View style={{ alignItems: 'center' }}>
-                                <Text style={{ color: theme.warning, fontSize: 32, fontWeight: '700' }}>
-                                    {loading ? '...' : pagosPendientes.total_pendientes}
-                                </Text>
-                                <Text style={{ color: theme.textMuted, fontSize: 11 }}>pagos</Text>
-                            </View>
+                {/* MÉTRICAS (3 cards) */}
+                <View style={[styles.gridContainer, { marginTop: 10 }]}>
+                    {/* Ingresos */}
+                    <View style={[styles.metricCard, { backgroundColor: theme.cardBg, borderColor: `${theme.success}50`, borderWidth: 1.5 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <Ionicons name="cash" size={14} color={theme.success} />
+                            <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600' }}>Ingresos {getPeriodLabel()}</Text>
                         </View>
-                        <Text style={{ color: theme.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                            Esperando aprobación del admin
+                        <Text style={{ color: theme.success, fontSize: 20, fontWeight: '700' }}>
+                            ${(ingresosTendencias?.total || 0).toFixed(2)}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <Ionicons name="trending-up" size={10} color={ingresosMes.porcentaje_cambio >= 0 ? theme.success : theme.primary} />
+                            <Text style={{ color: ingresosMes.porcentaje_cambio >= 0 ? theme.success : theme.primary, fontSize: 10, fontWeight: '700' }}>
+                                {ingresosMes.porcentaje_cambio >= 0 ? '+' : ''}{ingresosMes.porcentaje_cambio}%
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Estudiantes Activos */}
+                    <View style={[styles.metricCard, { backgroundColor: theme.cardBg, borderColor: `${theme.info}50`, borderWidth: 1.5 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <Ionicons name="people" size={14} color={theme.info} />
+                            <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600' }}>Estudiantes Activos</Text>
+                        </View>
+                        <Text style={{ color: theme.info, fontSize: 20, fontWeight: '700' }}>
+                            {estadisticasEstudiantes.porcentaje_activos}%
+                        </Text>
+                        <View style={{ height: 4, backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderRadius: 2, marginTop: 6 }}>
+                            <View style={{ height: '100%', borderRadius: 2, backgroundColor: theme.info, width: `${estadisticasEstudiantes.porcentaje_activos}%` }} />
+                        </View>
+                        <Text style={{ color: theme.textMuted, fontSize: 9, marginTop: 4 }}>
+                            {estadisticasEstudiantes.estudiantes_activos} de {estadisticasEstudiantes.estudiantes_activos + estadisticasEstudiantes.estudiantes_inactivos}
                         </Text>
                     </View>
-                </View>
 
-                {/* --- PRÓXIMOS VENCIMIENTOS --- */}
-                <View style={styles.sectionContainer}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, alignItems: 'center', marginBottom: 12 }}>
-                        <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>Próximos Vencimientos</Text>
-                        {proximosVencimientos.length > 0 &&
-                            <View style={{ backgroundColor: theme.primary + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
-                                <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '700' }}>{proximosVencimientos.length} pendientes</Text>
-                            </View>
-                        }
-                    </View>
-
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20 }]}>
-                        {proximosVencimientos.length === 0 ? (
-                            <View style={{ padding: 20, alignItems: 'center' }}>
-                                <Ionicons name="checkmark-circle-outline" size={30} color={theme.textMuted} />
-                                <Text style={{ marginTop: 8, color: theme.textMuted }}>No hay pagos próximos a vencer</Text>
-                            </View>
-                        ) : (
-                            proximosVencimientos.map((item, idx) => {
-                                const dias = item.dias_restantes;
-                                const urgenciaColor = dias <= 2 ? theme.primary : dias <= 5 ? theme.warning : theme.success;
-                                return (
-                                    <View key={idx} style={{ marginBottom: 12, paddingBottom: 12, borderBottomWidth: idx === proximosVencimientos.length - 1 ? 0 : 1, borderBottomColor: theme.border }}>
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>{item.nombre_estudiante}</Text>
-                                                <Text style={{ color: theme.textSecondary, fontSize: 11 }}>{item.nombre_curso} • Cuota #{item.numero_cuota}</Text>
-                                            </View>
-                                            <View style={{ alignItems: 'flex-end' }}>
-                                                <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }}>${item.monto}</Text>
-                                                <Text style={{ color: urgenciaColor, fontSize: 10, fontWeight: '700' }}>
-                                                    {dias === 0 ? 'HOY' : `${dias} días`}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                )
-                            })
-                        )}
+                    {/* Tasa Retención */}
+                    <View style={[styles.metricCard, { backgroundColor: theme.cardBg, borderColor: `${theme.purple}50`, borderWidth: 1.5 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                            <Ionicons name="ribbon" size={14} color={theme.purple} />
+                            <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600' }}>Tasa de Retención</Text>
+                        </View>
+                        <Text style={{ color: theme.purple, fontSize: 20, fontWeight: '700' }}>
+                            {estadisticasEstudiantes.tasa_retencion}%
+                        </Text>
+                        <Text style={{ color: theme.textMuted, fontSize: 9, marginTop: 4 }}>Estudiantes que completan</Text>
                     </View>
                 </View>
 
-                {/* --- MATRÍCULAS POR MES (Gráfico Barras) --- */}
-                <View style={styles.sectionContainer}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Matrículas (Últimos 6 meses)</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20, borderColor: theme.border, borderWidth: 1 }]}>
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 150, gap: 10 }}>
-                            {matriculasPorMes.length > 0 ? matriculasPorMes.map((m, i) => (
-                                <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-                                    <View style={{
-                                        height: m.valor === 0 ? 5 : `${(m.valor / (Math.max(...matriculasPorMes.map(x => x.valor)) || 1)) * 100}%`,
-                                        width: '100%',
-                                        backgroundColor: theme.primary,
-                                        borderRadius: 4,
-                                        opacity: 0.8
-                                    }} />
-                                    <Text style={{ marginTop: 6, fontSize: 10, color: theme.textSecondary }}>{m.mes.substring(0, 3)}</Text>
+                {/* SECCIÓN: Pagos Pendientes + Tendencias + Próximos Vencimientos */}
+                <View style={{ marginTop: 16 }}>
+                    {/* Pagos Pendientes */}
+                    <View style={styles.sectionContainer}>
+                        <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>
+                            Pagos Pendientes Verificación {getPeriodLabel()}
+                        </Text>
+                        <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 20, alignItems: 'center', borderColor: theme.border, borderWidth: 1 }]}>
+                            <View style={{ width: 120, height: 120, marginBottom: 16, position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                                <View style={{
+                                    position: 'absolute', width: 120, height: 120, borderRadius: 60,
+                                    borderWidth: 14, borderColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                                }} />
+                                <View style={{
+                                    position: 'absolute', width: 120, height: 120, borderRadius: 60,
+                                    borderWidth: 14, borderColor: theme.warning,
+                                    borderTopColor: 'transparent', borderRightColor: 'transparent',
+                                    transform: [{ rotate: '-90deg' }]
+                                }} />
+                                <View style={{ alignItems: 'center' }}>
+                                    <Text style={{ color: theme.warning, fontSize: 32, fontWeight: '700' }}>
+                                        {loading ? '...' : pagosPendientes.total_pendientes}
+                                    </Text>
+                                    <Text style={{ color: theme.textMuted, fontSize: 11 }}>pagos</Text>
                                 </View>
-                            )) : (
-                                <Text style={{ color: theme.textMuted }}>No hay datos de historial</Text>
-                            )}
+                            </View>
+                            <Text style={{ color: theme.textSecondary, fontSize: 12, textAlign: 'center' }}>
+                                Esperando aprobación del admin
+                            </Text>
                         </View>
                     </View>
-                </View>
 
-                {/* --- CURSOS TOP --- */}
-                <View style={styles.sectionContainer}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Top Cursos</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20 }]}>
-                        {cursosTop.length === 0 ? (
-                            <Text style={{ padding: 20, textAlign: 'center', color: theme.textMuted }}>Sin datos</Text>
-                        ) : (
-                            cursosTop.map((curso, idx) => (
-                                <View key={idx} style={{ marginBottom: 16 }}>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                                        <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600', flex: 1 }} numberOfLines={1}>{curso.nombre_curso}</Text>
-                                        <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{curso.total_matriculas} Est.</Text>
-                                    </View>
-                                    <View style={{ height: 6, backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderRadius: 3 }}>
-                                        <View style={{ height: '100%', borderRadius: 3, backgroundColor: curso.color, width: `${(curso.total_matriculas / (cursosTop[0]?.total_matriculas || 1)) * 100}%` }} />
-                                    </View>
+                    {/* TENDENCIAS (NUEVO - matching web) */}
+                    <View style={styles.sectionContainer}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 8 }}>
+                            <Ionicons name="trending-up" size={16} color={theme.success} />
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>
+                                Tendencias {getPeriodLabel()}
+                            </Text>
+                        </View>
+                        <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, padding: 16, borderColor: theme.border, borderWidth: 1 }]}>
+                            {/* Gráfico de líneas SVG */}
+                            <View style={{ height: 120, marginBottom: 12 }}>
+                                <Svg width="100%" height="120" viewBox="0 0 300 100" preserveAspectRatio="none">
+                                    {/* Grid lines */}
+                                    {[0, 1, 2, 3].map(i => (
+                                        <Line key={i} x1="0" y1={i * 25} x2="300" y2={i * 25} stroke={darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} strokeWidth="1" />
+                                    ))}
+
+                                    {ingresosTendencias.datos.length > 0 && (() => {
+                                        const maxValor = Math.max(...ingresosTendencias.datos.map(d => d.valor), 1);
+                                        const points = ingresosTendencias.datos.map((d, i) => {
+                                            const x = (i / (ingresosTendencias.datos.length - 1)) * 300;
+                                            const y = 100 - ((d.valor / maxValor) * 80);
+                                            return `${x},${y}`;
+                                        }).join(' ');
+
+                                        return (
+                                            <G>
+                                                <Defs>
+                                                    <LinearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                        <Stop offset="0%" stopColor="#22c55e" />
+                                                        <Stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                                                    </LinearGradient>
+                                                </Defs>
+                                                <Polygon points={`0,100 ${points} 300,100`} fill="url(#greenGradient)" opacity="0.2" />
+                                                <Polyline points={points} fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                {ingresosTendencias.datos.map((d, i) => {
+                                                    const x = (i / (ingresosTendencias.datos.length - 1)) * 300;
+                                                    const y = 100 - ((d.valor / maxValor) * 80);
+                                                    const isMax = d.mes === ingresosTendencias.mes_mayor.mes;
+                                                    return (
+                                                        <Circle key={i} cx={x} cy={y} r={isMax ? 4 : 2.5} fill={isMax ? "#22c55e" : theme.cardBg} stroke="#22c55e" strokeWidth="1.5" />
+                                                    );
+                                                })}
+                                            </G>
+                                        );
+                                    })()}
+                                </Svg>
+                            </View>
+
+                            {/* Stats */}
+                            <View style={{ gap: 8 }}>
+                                <View style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(34,197,94,0.06)', borderRadius: 8, padding: 10 }}>
+                                    <Text style={{ fontSize: 11, color: theme.textMuted, marginBottom: 2 }}>Total</Text>
+                                    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.success }}>
+                                        ${(ingresosTendencias?.total || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </Text>
                                 </View>
-                            ))
-                        )}
+                                <View style={{ backgroundColor: darkMode ? 'rgba(34,197,94,0.1)' : 'rgba(34,197,94,0.05)', borderRadius: 8, padding: 10 }}>
+                                    <Text style={{ fontSize: 11, color: theme.textMuted, marginBottom: 2 }}>Mejor</Text>
+                                    <Text style={{ fontSize: 14, fontWeight: '700', color: theme.success }}>
+                                        {loading ? '...' : ingresosTendencias.mes_mayor.mes}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
                     </View>
-                </View>
 
-                {/* --- ACTIVIDAD RECIENTE --- */}
-                <View style={styles.sectionContainer}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, paddingHorizontal: 20 }]}>Actividad Reciente</Text>
-                    <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20, paddingVertical: 8, borderColor: theme.border, borderWidth: 1 }]}>
-                        {actividadReciente.length === 0 ? (
-                            <Text style={{ padding: 20, textAlign: 'center', color: theme.textMuted }}>No hay actividad reciente</Text>
-                        ) : (
-                            actividadReciente.map((item, idx) => renderActivityItem(item, idx))
-                        )}
+                    {/* Próximos Vencimientos */}
+                    <View style={styles.sectionContainer}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, alignItems: 'center', marginBottom: 12 }}>
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>Próximos Vencimientos (7 días)</Text>
+                            {proximosVencimientos.length > 0 &&
+                                <View style={{ backgroundColor: theme.primary + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+                                    <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '700' }}>{proximosVencimientos.length} pendientes</Text>
+                                </View>
+                            }
+                        </View>
+
+                        <View style={[styles.cardList, { backgroundColor: theme.cardBg, marginHorizontal: 20 }]}>
+                            {proximosVencimientos.length === 0 ? (
+                                <View style={{ padding: 20, alignItems: 'center' }}>
+                                    <Ionicons name="checkmark-circle-outline" size={30} color={theme.textMuted} />
+                                    <Text style={{ marginTop: 8, color: theme.textMuted }}>No hay pagos próximos a vencer</Text>
+                                </View>
+                            ) : (
+                                proximosVencimientos.map((item, idx) => {
+                                    const dias = item.dias_restantes;
+                                    const urgenciaColor = dias <= 2 ? theme.primary : dias <= 5 ? theme.warning : theme.success;
+                                    return (
+                                        <View key={idx} style={{ marginBottom: 12, paddingBottom: 12, borderBottomWidth: idx === proximosVencimientos.length - 1 ? 0 : 1, borderBottomColor: theme.border }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>{item.nombre_estudiante}</Text>
+                                                    <Text style={{ color: theme.textSecondary, fontSize: 11 }}>{item.nombre_curso} • Cuota #{item.numero_cuota}</Text>
+                                                </View>
+                                                <View style={{ alignItems: 'flex-end' }}>
+                                                    <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }}>${item.monto}</Text>
+                                                    <Text style={{ color: urgenciaColor, fontSize: 10, fontWeight: '700' }}>
+                                                        {dias === 0 ? 'HOY' : `${dias} días`}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    )
+                                })
+                            )}
+                        </View>
                     </View>
                 </View>
 
@@ -458,10 +502,8 @@ export default function AdminDashboard() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    // WELCOME CARD REFACTOR
     welcomeCardContainer: {
         marginBottom: 20,
-        // Eliminamos shadow del contenedor para que el "recorte" sea limpio, o lo aplicamos suave
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
@@ -477,17 +519,25 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 30,
         justifyContent: 'space-between',
         height: 160,
-        borderBottomWidth: 1, // Sutil borde inferior para definición
+        borderBottomWidth: 1,
         zIndex: 1
     },
     welcomeLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
     userName: { fontSize: 22, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
     userRole: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
-
     dateRow: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', gap: 6, opacity: 0.8 },
     dateText: { fontSize: 12, textTransform: 'capitalize', fontWeight: '500' },
 
-    gridContainer: { paddingHorizontal: 20, marginTop: -40, zIndex: 20 }, // Higher zIndex to overlap header
+    filtersContainer: {
+        marginHorizontal: 20,
+        marginBottom: 28,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 0
+    },
+
+    gridContainer: { paddingHorizontal: 20, marginTop: -40, zIndex: 20 },
     row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
     statCard: { flex: 1, padding: 10, borderRadius: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
     statHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
@@ -502,10 +552,7 @@ const styles = StyleSheet.create({
     miniBarBG: { height: 3, width: '100%', borderRadius: 1.5, marginTop: 6 },
     miniBarFill: { height: '100%', borderRadius: 2 },
 
-    cardList: { borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
+    metricCard: { flex: 1, padding: 12, borderRadius: 12, marginBottom: 8 },
 
-    activityItem: { flexDirection: 'row', paddingVertical: 12, alignItems: 'center' },
-    activityIconBox: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
-    activityText: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
-    activityTime: { fontSize: 11, marginTop: 2 }
+    cardList: { borderRadius: 16, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
 });
