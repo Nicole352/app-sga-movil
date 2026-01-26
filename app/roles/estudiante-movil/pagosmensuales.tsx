@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions, KeyboardAvoidingView, Image } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -661,9 +661,27 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
   const [archivoComprobante, setArchivoComprobante] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const bancos = [
-    'Banco Pichincha', 'Banco del Pacífico', 'Produbanco'
-  ];
+
+  // Bank details mapping
+  const bankDetails = {
+    'Banco Pichincha': {
+      qr: 'https://res.cloudinary.com/di090ggjn/image/upload/v1764906337/sutkifytxyh6co1radby.jpg',
+      cuenta: '2203141379 (Cuenta de ahorros)',
+      titular: 'JÉSSICA VELEZ'
+    },
+    'Banco del Pacífico': {
+      qr: 'https://res.cloudinary.com/di090ggjn/image/upload/v1764906371/wbohej8ytmanqzkrhkbv.jpg',
+      cuenta: '00000-000 (Cuenta corriente)',
+      titular: 'JÉSSICA VELEZ'
+    },
+    'Produbanco': {
+      qr: null,
+      cuenta: '12060263933 (Cuenta de ahorros)',
+      titular: 'RICARDO XAVIER PILAGUANO'
+    }
+  };
+
+  const bancos = Object.keys(bankDetails);
 
   const getFechaEcuador = () => {
     const now = new Date();
@@ -936,6 +954,66 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+
+                {/* BANK DETAILS CARD - Dynamic Display */}
+                {bancoComprobante && bancoComprobante in bankDetails && (
+                  <View style={{
+                    backgroundColor: theme.cardBg,
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 15,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                    flexDirection: 'row',
+                    gap: 12,
+                    alignItems: 'center'
+                  }}>
+                    {/* QR Code Section */}
+                    <View style={{
+                      width: 80,
+                      height: 80,
+                      backgroundColor: '#fff',
+                      borderRadius: 8,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: theme.border
+                    }}>
+                      {bankDetails[bancoComprobante as keyof typeof bankDetails]?.qr ? (
+                        <Image
+                          source={{ uri: bankDetails[bancoComprobante as keyof typeof bankDetails].qr! }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Ionicons name="qr-code-outline" size={32} color={theme.textMuted} />
+                      )}
+                    </View>
+
+                    {/* Account Details Section */}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: theme.warning, marginBottom: 4 }}>
+                        Datos para Transferencias
+                      </Text>
+                      <View style={{ gap: 2 }}>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                          <Text style={{ fontWeight: '600' }}>Banco: </Text>{bancoComprobante}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                          <Text style={{ fontWeight: '600' }}>Cuenta: </Text>{bankDetails[bancoComprobante as keyof typeof bankDetails]?.cuenta}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                          <Text style={{ fontWeight: '600' }}>Titular: </Text>{bankDetails[bancoComprobante as keyof typeof bankDetails]?.titular}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>
+                          <Text style={{ fontWeight: '600' }}>Monto: </Text>
+                          <Text style={{ color: theme.success, fontWeight: '700' }}>${parseFloat(montoPagar || '0').toFixed(2)}</Text>
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
 
                 <Text style={[styles.label, { color: theme.textSecondary }]}>Número de Comprobante</Text>
                 <TextInput

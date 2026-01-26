@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, Swi
 import * as ImagePicker from 'expo-image-picker';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BarChart3, Users, Shield, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { storage, getToken, setUserData as saveUserData } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -294,7 +295,7 @@ export default function SuperAdminLayout() {
           options={{
             title: 'Resumen',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={30} color={color} />
+              <BarChart3 size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -303,7 +304,7 @@ export default function SuperAdminLayout() {
           options={{
             title: 'Admins',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "people" : "people-outline"} size={30} color={color} />
+              <Users size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -312,7 +313,7 @@ export default function SuperAdminLayout() {
           options={{
             title: 'Auditoría',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={30} color={color} />
+              <Shield size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -321,7 +322,7 @@ export default function SuperAdminLayout() {
           options={{
             title: 'Ajustes',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "settings" : "settings-outline"} size={30} color={color} />
+              <Settings size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -348,7 +349,7 @@ export default function SuperAdminLayout() {
             style={[styles.drawerContent, { backgroundColor: theme.cardBg }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <ScrollView>
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 1 }}>
               {/* Header del drawer */}
               <View style={styles.drawerHeader}>
                 <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>

@@ -460,7 +460,7 @@ export default function AdminCursosScreen() {
                     }
                 ]}
             >
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Cursos</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Cursos</Text>
                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y administra los cursos</Text>
 
                 <View style={[styles.searchContainer, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: 1 }]}>

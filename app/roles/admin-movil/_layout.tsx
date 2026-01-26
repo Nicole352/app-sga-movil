@@ -1,5 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BarChart3, NotebookPen, ClipboardCheck, GraduationCap, CreditCard, FilePieChart, ShieldCheck } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -362,7 +363,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Dashboard',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
+                            <BarChart3 size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -371,7 +372,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Cursos',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+                            <NotebookPen size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -381,7 +382,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Matrículas',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "document-text" : "document-text-outline"} size={28} color={color} />
+                            <ClipboardCheck size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -391,7 +392,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Estudiantes',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "people" : "people-outline"} size={28} color={color} />
+                            <GraduationCap size={29} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -401,17 +402,7 @@ export default function AdminLayout() {
                     options={{
                         title: 'Pagos',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "wallet" : "wallet-outline"} size={28} color={color} />
-                        ),
-                    }}
-                />
-
-                <Tabs.Screen
-                    name="reportes"
-                    options={{
-                        title: 'Reportes',
-                        tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "bar-chart" : "bar-chart-outline"} size={28} color={color} />
+                            <CreditCard size={26} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -421,7 +412,17 @@ export default function AdminLayout() {
                     options={{
                         title: 'Usuarios',
                         tabBarIcon: ({ color, size, focused }) => (
-                            <Ionicons name={focused ? "people-circle" : "people-circle-outline"} size={28} color={color} />
+                            <ShieldCheck size={26} color={color} strokeWidth={focused ? 2.5 : 2} />
+                        ),
+                    }}
+                />
+
+                <Tabs.Screen
+                    name="reportes"
+                    options={{
+                        title: 'Reportes',
+                        tabBarIcon: ({ color, size, focused }) => (
+                            <FilePieChart size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
                         ),
                     }}
                 />
@@ -451,7 +452,7 @@ export default function AdminLayout() {
             <Modal visible={showProfileDrawer} animationType="slide" transparent onRequestClose={() => setShowProfileDrawer(false)}>
                 <TouchableOpacity style={styles.drawerOverlay} activeOpacity={1} onPress={() => setShowProfileDrawer(false)}>
                     <TouchableOpacity activeOpacity={1} style={[styles.drawerContent, { backgroundColor: theme.cardBg }]} onPress={(e) => e.stopPropagation()}>
-                        <ScrollView>
+                        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 1 }}>
                             <View style={styles.drawerHeader}>
                                 <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>
                                     <Ionicons name="close" size={28} color={theme.text} />

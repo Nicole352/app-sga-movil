@@ -163,7 +163,7 @@ export default function MisCursosScreen() {
         >
           <View style={styles.headerContent}>
             <View>
-              <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Cursos</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Mis Cursos Asignados</Text>
               <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tus cursos y estudiantes</Text>
             </View>
             <Ionicons name="book" size={28} color={theme.accent} />

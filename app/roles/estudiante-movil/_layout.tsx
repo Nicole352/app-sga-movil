@@ -1,5 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BookOpen, Calendar, Award, TrendingUp, FileText } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -488,7 +489,7 @@ export default function EstudianteLayout() {
           options={{
             title: 'Mi Aula',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+              <BookOpen size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -497,7 +498,7 @@ export default function EstudianteLayout() {
           options={{
             title: 'Horario',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={28} color={color} />
+              <Calendar size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -506,16 +507,7 @@ export default function EstudianteLayout() {
           options={{
             title: 'Notas',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "ribbon" : "ribbon-outline"} size={28} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="historial"
-          options={{
-            title: 'Historial',
-            tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "time" : "time-outline"} size={28} color={color} />
+              <Award size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -524,7 +516,16 @@ export default function EstudianteLayout() {
           options={{
             title: 'Servicios',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "grid" : "grid-outline"} size={28} color={color} />
+              <FileText size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="historial"
+          options={{
+            title: 'Historial',
+            tabBarIcon: ({ color, size, focused }) => (
+              <TrendingUp size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -575,7 +576,7 @@ export default function EstudianteLayout() {
             style={[styles.drawerContent, { backgroundColor: theme.cardBg }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <ScrollView>
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 1 }}>
               {/* Header del drawer */}
               <View style={styles.drawerHeader}>
                 <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>

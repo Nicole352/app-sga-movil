@@ -528,7 +528,7 @@ export default function AuditoriaScreen() {
         ]}
       >
         <Text style={[styles.headerTitle, { color: theme.text }]}>Historial de Auditoría</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Seguimiento completo de operaciones del sistema</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Seguimiento completo de todas las operaciones del sistema</Text>
       </View>
 
       {/* Stats Cards */}

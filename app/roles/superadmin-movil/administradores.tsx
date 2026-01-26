@@ -492,8 +492,8 @@ export default function AdministradoresScreen() {
           }
         ]}
       >
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Administradores</Text>
-        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Administra los usuarios con permisos administrativos</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Administrativos</Text>
+        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Administra los usuarios con permisos administrativos del sistema</Text>
       </View>
 
       <View style={styles.filtersSection}>

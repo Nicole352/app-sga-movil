@@ -423,7 +423,7 @@ export default function AdminMatriculasScreen() {
                     }
                 ]}
             >
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Matrículas</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Matrículas</Text>
                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y administra las solicitudes</Text>
 
                 {/* Search */}

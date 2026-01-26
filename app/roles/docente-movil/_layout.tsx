@@ -1,5 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BarChart3, BookOpen, Users, ClipboardList, Award, Calendar } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Switch, Alert, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -408,7 +409,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Mi Aula',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} size={28} color={color} />
+              <BarChart3 size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -417,7 +418,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Cursos',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "book" : "book-outline"} size={28} color={color} />
+              <BookOpen size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -426,7 +427,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Estudiantes',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "people" : "people-outline"} size={28} color={color} />
+              <Users size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -435,7 +436,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Asistencia',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={28} color={color} />
+              <ClipboardList size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -444,7 +445,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Notas',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "school" : "school-outline"} size={28} color={color} />
+              <Award size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -453,7 +454,7 @@ export default function DocenteLayout() {
           options={{
             title: 'Horario',
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={28} color={color} />
+              <Calendar size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -521,7 +522,7 @@ export default function DocenteLayout() {
             style={[styles.drawerContent, { backgroundColor: theme.cardBg }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <ScrollView>
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 1 }}>
               <View style={styles.drawerHeader}>
                 <TouchableOpacity onPress={() => setShowProfileDrawer(false)}>
                   <Ionicons name="close" size={28} color={theme.text} />

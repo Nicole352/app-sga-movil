@@ -606,7 +606,7 @@ export default function AdminPagosScreen() {
                     }
                 ]}
             >
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Pagos</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Pagos Mensuales</Text>
                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Verifica y administra los pagos mensuales</Text>
 
                 {/* Search */}

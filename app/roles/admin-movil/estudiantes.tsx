@@ -368,7 +368,7 @@ export default function AdminEstudiantesScreen() {
                     }
                 ]}
             >
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Estudiantes</Text>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Estudiantes</Text>
                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona y administra los estudiantes</Text>
 
                 {/* Search */}

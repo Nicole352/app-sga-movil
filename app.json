@@ -4,7 +4,7 @@
     "slug": "movil-sga-belleza",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/custom-icon.png",
     "scheme": "movilsgabelleza",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -16,7 +16,7 @@
       "package": "com.sgabelleza.movil",
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/custom-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -24,12 +24,13 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES"
-      ]
+      ],
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/custom-icon.png"
     },
     "plugins": [
       "expo-router"
