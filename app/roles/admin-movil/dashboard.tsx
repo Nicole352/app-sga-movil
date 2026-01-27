@@ -191,7 +191,7 @@ export default function AdminDashboard() {
         <View style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
             <View style={styles.statHeader}>
                 <View style={[styles.iconContainer, { backgroundColor: `${color}15` }]}>
-                    <Ionicons name={icon} size={18} color={color} />
+                    <Ionicons name={icon} size={16} color={color} />
                 </View>
                 {subtitle && <Text style={{ fontSize: 10, color: color, fontWeight: '700' }}>{subtitle}</Text>}
             </View>
@@ -530,20 +530,20 @@ const styles = StyleSheet.create({
 
     filtersContainer: {
         marginHorizontal: 20,
-        marginBottom: 28,
+        marginBottom: 12,
         padding: 12,
         borderRadius: 12,
         borderWidth: 1,
         gap: 0
     },
 
-    gridContainer: { paddingHorizontal: 20, marginTop: -40, zIndex: 20 },
-    row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-    statCard: { flex: 1, padding: 10, borderRadius: 16, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-    statHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
+    gridContainer: { paddingHorizontal: 20, marginTop: 0, zIndex: 20 },
+    row: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+    statCard: { flex: 1, padding: 8, borderRadius: 12, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+    statHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 },
     iconContainer: { padding: 5, borderRadius: 8 },
-    statValue: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
-    statLabel: { fontSize: 10, fontWeight: '500' },
+    statValue: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
+    statLabel: { fontSize: 9, fontWeight: '500' },
 
     sectionContainer: { marginBottom: 16 },
     sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 8 },

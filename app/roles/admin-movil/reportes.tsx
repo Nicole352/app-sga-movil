@@ -1388,7 +1388,7 @@ const styles = StyleSheet.create({
     tabActive: {}, // Handled inline now
     tabText: { fontWeight: '600', fontSize: 13 },
     content: { padding: 20 },
-    section: { marginBottom: 20 },
+    section: { marginBottom: 15 },
     sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
     tipoReporteContainer: { flexDirection: 'row', gap: 8 },
     tipoReporteBtn: {
@@ -1399,8 +1399,8 @@ const styles = StyleSheet.create({
         borderWidth: 2,
     },
     tipoReporteText: { fontSize: 11, fontWeight: '600', marginTop: 4 },
-    filterRow: { marginBottom: 12 },
-    filterLabel: { fontSize: 12, marginBottom: 6, fontWeight: '600' },
+    filterRow: { marginBottom: 8 },
+    filterLabel: { fontSize: 12, marginBottom: 4, fontWeight: '600' },
     generateBtn: {
         flexDirection: 'row',
         alignItems: 'center',

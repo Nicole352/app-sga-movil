@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     },
     filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
-    listContent: { padding: 20, paddingBottom: 100 },
+    listContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 },
     card: {
         borderRadius: 16,
         padding: 16,

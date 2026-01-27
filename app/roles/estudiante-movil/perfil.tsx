@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions, Platform } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, StyleSheet, RefreshControl, Modal, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_URL } from '../../../constants/config';
@@ -47,6 +47,10 @@ export default function PerfilEstudiante() {
     password_nueva: '',
     confirmar_password: ''
   });
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const direccionRef = useRef<TextInput>(null);
+  const contactoEmergenciaRef = useRef<TextInput>(null);
 
   const theme = darkMode
     ? {
@@ -157,6 +161,57 @@ export default function PerfilEstudiante() {
       const token = await getToken();
       if (!token || !estudiante) return;
 
+      // --- VALIDACIONES DE TELÉFONO ---
+      const telefono = formData.telefono?.trim() || '';
+
+      if (telefono) {
+        // 1. Debe empezar con 09
+        if (!telefono.startsWith('09')) {
+          Alert.alert('Formato Incorrecto', 'El teléfono debe empezar con 09');
+          return;
+        }
+
+        // 2. Debe tener 10 dígitos
+        if (telefono.length !== 10 || !/^\d+$/.test(telefono)) {
+          Alert.alert('Número Inválido', 'El teléfono debe tener exactamente 10 números');
+          return;
+        }
+      }
+
+      // --- VALIDACIONES DE CONTACTO DE EMERGENCIA ---
+      const contacto = formData.contacto_emergencia?.trim() || '';
+      const telefonoPersonal = formData.telefono?.trim() || '';
+
+      if (contacto) {
+        // 1. Debe empezar con 09
+        if (!contacto.startsWith('09')) {
+          Alert.alert('Formato Incorrecto', 'El contacto de emergencia debe empezar con 09');
+          return;
+        }
+
+        // 2. Debe tener 10 dígitos
+        if (contacto.length !== 10 || !/^\d+$/.test(contacto)) {
+          Alert.alert('Número Inválido', 'El contacto de emergencia debe tener exactamente 10 números');
+          return;
+        }
+
+        // 3. No puede ser igual al teléfono personal
+        if (contacto === telefonoPersonal) {
+          Alert.alert('Atención', 'El contacto de emergencia no puede ser igual a tu número personal');
+          return;
+        }
+      }
+
+      // --- VALIDACIÓN DE EMAIL ---
+      const email = formData.email?.trim() || '';
+      if (email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          Alert.alert('Email Inválido', 'Por favor ingresa un email válido');
+          return;
+        }
+      }
+
       const cleanedData = {
         nombres: formData.nombres || '',
         apellidos: formData.apellidos || '',
@@ -166,7 +221,7 @@ export default function PerfilEstudiante() {
         fecha_nacimiento: formData.fecha_nacimiento || null,
         genero: formData.genero || '',
         identificacion: formData.identificacion || '',
-        contacto_emergencia: formData.contacto_emergencia || ''
+        contacto_emergencia: contacto
       };
 
       const response = await fetch(`${API_URL}/usuarios/mi-perfil`, {
@@ -188,7 +243,7 @@ export default function PerfilEstudiante() {
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Error al actualizar el perfil');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Error al actualizar el perfil');
     }
   };
 
@@ -271,394 +326,464 @@ export default function PerfilEstudiante() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
-        }
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
-        <Animated.View entering={FadeInDown.duration(400)}>
-          <View
-            style={[
-              styles.header,
-              {
-                backgroundColor: theme.cardBg,
-                borderBottomColor: theme.border,
-                borderBottomWidth: 1,
-              }
-            ]}
-          >
-            <View style={styles.headerContent}>
-              <View>
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
-                <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tu información</Text>
-              </View>
-              <Ionicons name="person-circle" size={32} color={theme.accent} />
-            </View>
-
-            {/* AVATAR */}
-            <TouchableOpacity
-              style={styles.avatarContainer}
-              onPress={() => setShowPhotoPreview(true)}
+        <ScrollView
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
+          }
+        >
+          {/* PREMIUM HEADER - CLEAN NIKE EFFECT */}
+          <Animated.View entering={FadeInDown.duration(400)}>
+            <View
+              style={[
+                styles.header,
+                {
+                  backgroundColor: theme.cardBg,
+                  borderBottomColor: theme.border,
+                  borderBottomWidth: 1,
+                }
+              ]}
             >
-              {fotoUrl ? (
-                <Image source={{ uri: fotoUrl }} style={[styles.avatar, { borderColor: theme.cardBg }]} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent, borderColor: theme.cardBg }]}>
-                  <Text style={styles.avatarText}>{getInitials()}</Text>
+              <View style={styles.headerContent}>
+                <View>
+                  <Text style={[styles.headerTitle, { color: theme.text }]}>Mi Perfil</Text>
+                  <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona tu información</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-
-            <Text style={[styles.userName, { color: theme.text }]}>
-              {estudiante?.nombres || estudiante?.nombre} {estudiante?.apellidos || estudiante?.apellido}
-            </Text>
-            <Text style={[styles.userRole, { color: theme.textMuted }]}>Estudiante</Text>
-          </View>
-        </Animated.View>
-
-        {/* ANIMATED TABS */}
-        <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              {
-                backgroundColor: activeTab === 'info' ? theme.accent : theme.inputBg,
-                borderColor: activeTab === 'info' ? theme.accent : theme.border,
-              }
-            ]}
-            onPress={() => setActiveTab('info')}
-          >
-            <Ionicons
-              name="person"
-              size={18}
-              color={activeTab === 'info' ? '#fff' : theme.textMuted}
-            />
-            <Text style={[
-              styles.tabText,
-              { color: activeTab === 'info' ? '#fff' : theme.textMuted }
-            ]}>
-              Información
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              {
-                backgroundColor: activeTab === 'password' ? theme.accent : theme.inputBg,
-                borderColor: activeTab === 'password' ? theme.accent : theme.border,
-              }
-            ]}
-            onPress={() => setActiveTab('password')}
-          >
-            <Ionicons
-              name="lock-closed"
-              size={18}
-              color={activeTab === 'password' ? '#fff' : theme.textMuted}
-            />
-            <Text style={[
-              styles.tabText,
-              { color: activeTab === 'password' ? '#fff' : theme.textMuted }
-            ]}>
-              Seguridad
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* TAB CONTENT */}
-        <View style={styles.content}>
-          {activeTab === 'info' ? (
-            <Animated.View entering={FadeInUp.duration(300)}>
-              {/* Read-Only Info Card */}
-              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información del Sistema</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Identificación</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>
-                    {estudiante?.identificacion || estudiante?.cedula || 'No especificado'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Estado</Text>
-                  <Text style={[styles.infoValue, { color: theme.success }]}>
-                    {estudiante?.estado || 'Activo'}
-                  </Text>
-                </View>
+                <Ionicons name="person-circle" size={32} color={theme.accent} />
               </View>
 
-              {/* Editable Info Card */}
-              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="person-outline" size={20} color={theme.accent} />
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>Información Personal</Text>
-                  {!isEditing && (
-                    <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
-                      <Ionicons name="create-outline" size={20} color={theme.accent} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.formGrid}>
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nombres</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.nombres || ''}
-                      onChangeText={(text) => setFormData({ ...formData, nombres: text })}
-                      editable={isEditing}
-                      placeholder="Nombres"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Apellidos</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.apellidos || ''}
-                      onChangeText={(text) => setFormData({ ...formData, apellidos: text })}
-                      editable={isEditing}
-                      placeholder="Apellidos"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Email</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.email || ''}
-                      onChangeText={(text) => setFormData({ ...formData, email: text })}
-                      editable={isEditing}
-                      placeholder="Email"
-                      placeholderTextColor={theme.textMuted}
-                      keyboardType="email-address"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Teléfono</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.telefono || ''}
-                      onChangeText={(text) => setFormData({ ...formData, telefono: text })}
-                      editable={isEditing}
-                      placeholder="Teléfono"
-                      placeholderTextColor={theme.textMuted}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Dirección</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.direccion || ''}
-                      onChangeText={(text) => setFormData({ ...formData, direccion: text })}
-                      editable={isEditing}
-                      placeholder="Dirección"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contacto de Emergencia</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: isEditing ? theme.inputBg : 'transparent',
-                          borderColor: theme.border,
-                          color: theme.text
-                        }
-                      ]}
-                      value={formData.contacto_emergencia || ''}
-                      onChangeText={(text) => setFormData({ ...formData, contacto_emergencia: text })}
-                      editable={isEditing}
-                      placeholder="Nombre y Teléfono"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                  </View>
-                </View>
-
-                {isEditing && (
-                  <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.cancelButton, { borderColor: theme.border }]}
-                      onPress={() => {
-                        setIsEditing(false);
-                        fetchPerfil();
-                      }}
-                    >
-                      <Text style={[styles.buttonText, { color: theme.textSecondary }]}>Cancelar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.saveButton, { backgroundColor: theme.accent }]}
-                      onPress={handleSave}
-                    >
-                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                      <Text style={[styles.buttonText, { color: '#fff' }]}>Guardar</Text>
-                    </TouchableOpacity>
+              {/* AVATAR */}
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={() => setShowPhotoPreview(true)}
+              >
+                {fotoUrl ? (
+                  <Image source={{ uri: fotoUrl }} style={[styles.avatar, { borderColor: theme.cardBg }]} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: theme.accent, borderColor: theme.cardBg }]}>
+                    <Text style={styles.avatarText}>{getInitials()}</Text>
                   </View>
                 )}
-              </View>
-            </Animated.View>
-          ) : (
-            <Animated.View entering={FadeInUp.duration(300)}>
-              <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="lock-closed-outline" size={20} color={theme.accent} />
-                  <Text style={[styles.cardTitle, { color: theme.text }]}>Cambiar Contraseña</Text>
-                </View>
+              </TouchableOpacity>
 
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contraseña Actual</Text>
-                  <View style={styles.passwordContainer}>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
-                      value={passwordData.password_actual}
-                      onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
-                      secureTextEntry={!showCurrentPassword}
-                      placeholder="••••••••"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                    >
-                      <Ionicons
-                        name={showCurrentPassword ? 'eye-off' : 'eye'}
-                        size={20}
-                        color={theme.textMuted}
-                      />
-                    </TouchableOpacity>
+              <Text style={[styles.userName, { color: theme.text }]}>
+                {estudiante?.nombres || estudiante?.nombre} {estudiante?.apellidos || estudiante?.apellido}
+              </Text>
+              <Text style={[styles.userRole, { color: theme.textMuted }]}>Estudiante</Text>
+            </View>
+          </Animated.View>
+
+          {/* ANIMATED TABS */}
+          <View style={[styles.tabsContainer, { backgroundColor: theme.bg }]}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: activeTab === 'info' ? theme.accent : theme.inputBg,
+                  borderColor: activeTab === 'info' ? theme.accent : theme.border,
+                }
+              ]}
+              onPress={() => setActiveTab('info')}
+            >
+              <Ionicons
+                name="person"
+                size={18}
+                color={activeTab === 'info' ? '#fff' : theme.textMuted}
+              />
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'info' ? '#fff' : theme.textMuted }
+              ]}>
+                Información
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: activeTab === 'password' ? theme.accent : theme.inputBg,
+                  borderColor: activeTab === 'password' ? theme.accent : theme.border,
+                }
+              ]}
+              onPress={() => setActiveTab('password')}
+            >
+              <Ionicons
+                name="lock-closed"
+                size={18}
+                color={activeTab === 'password' ? '#fff' : theme.textMuted}
+              />
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'password' ? '#fff' : theme.textMuted }
+              ]}>
+                Seguridad
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* TAB CONTENT */}
+          <View style={styles.content}>
+            {activeTab === 'info' ? (
+              <Animated.View entering={FadeInUp.duration(300)}>
+                {/* Read-Only Info Card */}
+                <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>Información del Sistema</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Identificación</Text>
+                    <Text style={[styles.infoValue, { color: theme.text }]}>
+                      {estudiante?.identificacion || estudiante?.cedula || 'No especificado'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Estado</Text>
+                    <Text style={[styles.infoValue, { color: theme.success }]}>
+                      {estudiante?.estado || 'Activo'}
+                    </Text>
                   </View>
                 </View>
 
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nueva Contraseña</Text>
-                  <View style={styles.passwordContainer}>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
-                      value={passwordData.password_nueva}
-                      onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
-                      secureTextEntry={!showNewPassword}
-                      placeholder="Mínimo 8 caracteres"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      <Ionicons
-                        name={showNewPassword ? 'eye-off' : 'eye'}
-                        size={20}
-                        color={theme.textMuted}
-                      />
-                    </TouchableOpacity>
+                {/* Editable Info Card */}
+                <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="person-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>Información Personal</Text>
+                    {!isEditing && (
+                      <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
+                        <Ionicons name="create-outline" size={20} color={theme.accent} />
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {/* Password Strength Checklist */}
-                  {passwordData.password_nueva.length > 0 && (
-                    <View style={{ marginTop: 10, gap: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name={passwordData.password_nueva.length >= 8 ? "checkmark-circle" : "ellipse-outline"} size={14} color={passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted} />
-                        <Text style={{ fontSize: 12, color: passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted }}>Mínimo 8 caracteres</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name={/[A-Z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                        <Text style={{ fontSize: 12, color: /[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una mayúscula</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name={/[a-z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                        <Text style={{ fontSize: 12, color: /[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una minúscula</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name={/[0-9]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
-                        <Text style={{ fontSize: 12, color: /[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Un número</Text>
-                      </View>
+                  <View style={styles.formGrid}>
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nombres</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.nombres || ''}
+                        onChangeText={(text) => {
+                          // Solo letras y espacios, convertir a mayúsculas
+                          const cleanText = text.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').toUpperCase();
+                          setFormData({ ...formData, nombres: cleanText });
+                        }}
+                        editable={isEditing}
+                        placeholder="Nombres"
+                        placeholderTextColor={theme.textMuted}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Apellidos</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.apellidos || ''}
+                        onChangeText={(text) => {
+                          // Solo letras y espacios, convertir a mayúsculas
+                          const cleanText = text.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ ]/g, '').toUpperCase();
+                          setFormData({ ...formData, apellidos: cleanText });
+                        }}
+                        editable={isEditing}
+                        placeholder="Apellidos"
+                        placeholderTextColor={theme.textMuted}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Email</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.email || ''}
+                        onChangeText={(text) => {
+                          // Convertir a minúsculas y eliminar espacios
+                          const cleanEmail = text.toLowerCase().replace(/\s/g, '');
+                          setFormData({ ...formData, email: cleanEmail });
+                        }}
+                        editable={isEditing}
+                        placeholder="Email"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Teléfono</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.telefono || ''}
+                        onChangeText={(text) => {
+                          // Solo números, máximo 10 dígitos
+                          const cleanText = text.replace(/[^0-9]/g, '').slice(0, 10);
+                          setFormData({ ...formData, telefono: cleanText });
+                        }}
+                        editable={isEditing}
+                        placeholder="0987654321"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Dirección</Text>
+                      <TextInput
+                        ref={direccionRef}
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.direccion || ''}
+                        onChangeText={(text) => setFormData({ ...formData, direccion: text })}
+                        editable={isEditing}
+                        placeholder="Dirección"
+                        placeholderTextColor={theme.textMuted}
+                        onFocus={() => {
+                          if (isEditing && scrollViewRef.current) {
+                            setTimeout(() => {
+                              scrollViewRef.current?.scrollTo({ y: 400, animated: true });
+                            }, 100);
+                          }
+                        }}
+                      />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contacto de Emergencia</Text>
+                      <TextInput
+                        ref={contactoEmergenciaRef}
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: isEditing ? theme.inputBg : 'transparent',
+                            borderColor: theme.border,
+                            color: theme.text
+                          }
+                        ]}
+                        value={formData.contacto_emergencia || ''}
+                        onChangeText={(text) => {
+                          // Solo números, máximo 10 dígitos
+                          const cleanText = text.replace(/[^0-9]/g, '').slice(0, 10);
+                          setFormData({ ...formData, contacto_emergencia: cleanText });
+                        }}
+                        editable={isEditing}
+                        placeholder="0987654321"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                        onFocus={() => {
+                          if (isEditing && scrollViewRef.current) {
+                            setTimeout(() => {
+                              scrollViewRef.current?.scrollTo({ y: 500, animated: true });
+                            }, 100);
+                          }
+                        }}
+                      />
+                    </View>
+                  </View>
+
+                  {isEditing && (
+                    <View style={styles.buttonRow}>
+                      <TouchableOpacity
+                        style={[styles.button, styles.cancelButton, { borderColor: theme.border }]}
+                        onPress={() => {
+                          setIsEditing(false);
+                          fetchPerfil();
+                        }}
+                      >
+                        <Text style={[styles.buttonText, { color: theme.textSecondary }]}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.saveButton, { backgroundColor: theme.accent }]}
+                        onPress={handleSave}
+                      >
+                        <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                        <Text style={[styles.buttonText, { color: '#fff' }]}>Guardar</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Confirmar Nueva Contraseña</Text>
-                  <View style={styles.passwordContainer}>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
-                      value={passwordData.confirmar_password}
-                      onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
-                      secureTextEntry={!showConfirmPassword}
-                      placeholder="Repite la contraseña"
-                      placeholderTextColor={theme.textMuted}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      <Ionicons
-                        name={showConfirmPassword ? 'eye-off' : 'eye'}
-                        size={20}
-                        color={theme.textMuted}
-                      />
-                    </TouchableOpacity>
+              </Animated.View>
+            ) : (
+              <Animated.View entering={FadeInUp.duration(300)}>
+                <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="lock-closed-outline" size={20} color={theme.accent} />
+                    <Text style={[styles.cardTitle, { color: theme.text }]}>Cambiar Contraseña</Text>
                   </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Contraseña Actual</Text>
+                    <View style={styles.passwordContainer}>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                        value={passwordData.password_actual}
+                        onChangeText={(text) => setPasswordData({ ...passwordData, password_actual: text })}
+                        secureTextEntry={!showCurrentPassword}
+                        placeholder="••••••••"
+                        placeholderTextColor={theme.textMuted}
+                        onFocus={() => {
+                          if (scrollViewRef.current) {
+                            setTimeout(() => {
+                              scrollViewRef.current?.scrollTo({ y: 150, animated: true });
+                            }, 100);
+                          }
+                        }}
+                      />
+                      <TouchableOpacity
+                        style={styles.eyeButton}
+                        onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        <Ionicons
+                          name={showCurrentPassword ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={theme.textMuted}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Nueva Contraseña</Text>
+                    <View style={styles.passwordContainer}>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                        value={passwordData.password_nueva}
+                        onChangeText={(text) => setPasswordData({ ...passwordData, password_nueva: text })}
+                        secureTextEntry={!showNewPassword}
+                        placeholder="Mínimo 8 caracteres"
+                        placeholderTextColor={theme.textMuted}
+                        onFocus={() => {
+                          if (scrollViewRef.current) {
+                            setTimeout(() => {
+                              scrollViewRef.current?.scrollTo({ y: 250, animated: true });
+                            }, 100);
+                          }
+                        }}
+                      />
+                      <TouchableOpacity
+                        style={styles.eyeButton}
+                        onPress={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        <Ionicons
+                          name={showNewPassword ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={theme.textMuted}
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Password Strength Checklist */}
+                    {passwordData.password_nueva.length > 0 && (
+                      <View style={{ marginTop: 10, gap: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name={passwordData.password_nueva.length >= 8 ? "checkmark-circle" : "ellipse-outline"} size={14} color={passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted} />
+                          <Text style={{ fontSize: 12, color: passwordData.password_nueva.length >= 8 ? theme.success : theme.textMuted }}>Mínimo 8 caracteres</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name={/[A-Z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                          <Text style={{ fontSize: 12, color: /[A-Z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una mayúscula</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name={/[a-z]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                          <Text style={{ fontSize: 12, color: /[a-z]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Una minúscula</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name={/[0-9]/.test(passwordData.password_nueva) ? "checkmark-circle" : "ellipse-outline"} size={14} color={/[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted} />
+                          <Text style={{ fontSize: 12, color: /[0-9]/.test(passwordData.password_nueva) ? theme.success : theme.textMuted }}>Un número</Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={[styles.inputLabel, { color: theme.textMuted }]}>Confirmar Nueva Contraseña</Text>
+                    <View style={styles.passwordContainer}>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, flex: 1 }]}
+                        value={passwordData.confirmar_password}
+                        onChangeText={(text) => setPasswordData({ ...passwordData, confirmar_password: text })}
+                        secureTextEntry={!showConfirmPassword}
+                        placeholder="Repite la contraseña"
+                        placeholderTextColor={theme.textMuted}
+                        onFocus={() => {
+                          if (scrollViewRef.current) {
+                            setTimeout(() => {
+                              scrollViewRef.current?.scrollTo({ y: 350, animated: true });
+                            }, 100);
+                          }
+                        }}
+                      />
+                      <TouchableOpacity
+                        style={styles.eyeButton}
+                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        <Ionicons
+                          name={showConfirmPassword ? 'eye-off' : 'eye'}
+                          size={20}
+                          color={theme.textMuted}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton, { backgroundColor: theme.accent, marginTop: 8 }]}
+                    onPress={handleChangePassword}
+                  >
+                    <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                    <Text style={[styles.buttonText, { color: '#fff' }]}>Cambiar Contraseña</Text>
+                  </TouchableOpacity>
                 </View>
+              </Animated.View>
+            )}
+          </View>
 
-                <TouchableOpacity
-                  style={[styles.button, styles.saveButton, { backgroundColor: theme.accent, marginTop: 8 }]}
-                  onPress={handleChangePassword}
-                >
-                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
-                  <Text style={[styles.buttonText, { color: '#fff' }]}>Cambiar Contraseña</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Photo Preview Modal */}
       <Modal visible={showPhotoPreview} transparent animationType="fade">

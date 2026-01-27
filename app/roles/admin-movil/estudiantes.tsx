@@ -389,7 +389,11 @@ export default function AdminEstudiantesScreen() {
                 </View>
 
                 {/* Filtros Botones */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ gap: 6 }}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterRow}
+                >
                     {['todos', 'activo', 'inactivo'].map((f) => (
                         <TouchableOpacity
                             key={f}
@@ -677,7 +681,6 @@ export default function AdminEstudiantesScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     summaryCard: {
-        marginBottom: 4,
         paddingTop: 10,
         paddingBottom: 16,
         paddingHorizontal: 15,
@@ -686,10 +689,11 @@ const styles = StyleSheet.create({
         shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
     },
     headerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
-    headerSubtitle: { fontSize: 13, marginBottom: 12 },
+    headerSubtitle: { fontSize: 13, marginBottom: 16 },
 
-    searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 15 },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 20 },
     searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
+    filterRow: { flexDirection: 'row', gap: 6, justifyContent: 'space-between' },
 
     filterButton: {
         paddingHorizontal: 13,
@@ -701,7 +705,7 @@ const styles = StyleSheet.create({
     },
     filterButtonText: { fontSize: 12.5, textAlign: 'center', fontWeight: '600' },
 
-    listContent: { padding: 20, paddingBottom: 100 },
+    listContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 },
     card: {
         borderRadius: 16,
         padding: 12,

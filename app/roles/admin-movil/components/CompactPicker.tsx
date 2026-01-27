@@ -157,8 +157,8 @@ export default function CompactPicker({
 const styles = StyleSheet.create({
     pickerTrigger: {
         borderRadius: 12,
-        borderWidth: 1.5,
-        height: 54,
+        borderWidth: 1,
+        height: 46,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 14,

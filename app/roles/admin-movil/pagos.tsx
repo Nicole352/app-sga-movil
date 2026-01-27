@@ -1244,7 +1244,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
 
-    listContent: { padding: 15, paddingBottom: 10 },
+    listContent: { paddingHorizontal: 20, paddingTop: 5, paddingBottom: 100 },
     card: {
         borderRadius: 16,
         padding: 16,

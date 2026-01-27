@@ -511,7 +511,7 @@ export default function ControlUsuariosScreen() {
             {/* HEADER CLEAN NIKE EFFECT */}
             <View
                 style={[
-                    styles.header,
+                    styles.summaryCard,
                     {
                         backgroundColor: theme.cardBg,
                         borderBottomColor: theme.border,
@@ -521,12 +521,9 @@ export default function ControlUsuariosScreen() {
             >
                 <Text style={[styles.headerTitle, { color: theme.text }]}>Control de Usuarios</Text>
                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Gestiona todos los usuarios del sistema</Text>
-            </View>
 
-            {/* FILTROS */}
-            <View style={styles.filters}>
-                <View style={[styles.searchContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                    <Ionicons name="search" size={20} color={theme.textMuted} />
+                <View style={[styles.searchContainer, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: 1 }]}>
+                    <Ionicons name="search" size={20} color={theme.textMuted} style={{ marginLeft: 10 }} />
                     <TextInput
                         style={[styles.searchInput, { color: theme.text }]}
                         placeholder="Buscar por nombre, identificación o email..."
@@ -537,9 +534,17 @@ export default function ControlUsuariosScreen() {
                             setPage(1);
                         }}
                     />
+                    {search.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearch('')} style={{ padding: 8 }}>
+                            <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+                        </TouchableOpacity>
+                    )}
                 </View>
+            </View>
 
-                <View style={styles.filterRow}>
+            {/* FILTROS */}
+            <View style={styles.filters}>
+                <View style={[styles.filterRow, { marginTop: 10 }]}>
                     <View style={{ flex: 1 }}>
                         <CompactPicker
                             items={[
@@ -868,50 +873,29 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        marginBottom: 4,
+    summaryCard: {
         paddingTop: 10,
         paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3
+        paddingHorizontal: 15,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
     },
     headerTitle: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
     headerSubtitle: { fontSize: 13, marginBottom: 16 },
-    filters: {
-        padding: 20,
-        gap: 12,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        height: 48,
-        gap: 8,
-    },
-    searchInput: {
-        flex: 1,
-        fontSize: 14,
-    },
-    filterRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    listContent: {
-        padding: 20,
-        paddingTop: 0,
-    },
+
+    filters: { paddingHorizontal: 20, paddingBottom: 2 },
+
+    searchContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, height: 44, marginBottom: 0 },
+    searchInput: { flex: 1, paddingHorizontal: 10, fontSize: 15 },
+
+    filterRow: { flexDirection: 'row', gap: 10 },
+
+    listContent: { paddingHorizontal: 20, paddingTop: 5, paddingBottom: 100 },
     userCard: {
         borderRadius: 12,
         borderWidth: 1,
-        padding: 10,
+        padding: 10, 
         marginBottom: 8,
     },
     userHeader: {
