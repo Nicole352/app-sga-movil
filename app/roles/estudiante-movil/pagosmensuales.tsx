@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions, KeyboardAvoidingView, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, StyleSheet, RefreshControl, Platform, StatusBar, Dimensions, KeyboardAvoidingView, Image, ActivityIndicator } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
 import { getToken, storage, getUserData } from '../../../services/storage';
@@ -76,6 +78,7 @@ export default function PagosMensuales() {
   const [selectedCurso, setSelectedCurso] = useState<CursoConPagos | null>(null);
   const [userData, setUserData] = useState<any>(null);
   const [tooltipsVisible, setTooltipsVisible] = useState<{ [key: number]: boolean }>({});
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
 
   useEffect(() => {
     const loadDarkMode = async () => {
@@ -303,6 +306,44 @@ export default function PagosMensuales() {
     return numero.toFixed(2);
   };
 
+  const descargarExcel = async () => {
+    try {
+      setDownloadingExcel(true);
+      const token = await getToken();
+      if (!token) return Alert.alert('Error', 'No autorizado');
+
+      const url = `${API_URL}/pagos-mensuales/reporte-estudiante`;
+      const nombreArchivo = `Mis_Pagos.xlsx`;
+
+      // @ts-ignore
+      const tempDir = Platform.OS === 'ios' ? FileSystem.documentDirectory : FileSystem.cacheDirectory;
+      const fileUri = `${tempDir}${nombreArchivo}`;
+
+      // @ts-ignore
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (downloadResult.status === 200) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Mis Pagos'
+          });
+        } else {
+          Alert.alert('Éxito', 'Reporte descargado');
+        }
+      } else {
+        Alert.alert('Error', 'Error al descargar el reporte');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Error', 'No se pudo descargar el reporte');
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
   const formatearFecha = (fechaString: string) => {
     const fecha = new Date(fechaString);
     return fecha.toLocaleDateString('es-ES', {
@@ -380,12 +421,32 @@ export default function PagosMensuales() {
           ]}
         >
           <View style={styles.headerContent}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.headerTitle, { color: theme.text }]}>Gestión de Pagos</Text>
               <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Tus finanzas al día</Text>
             </View>
-            <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
-              <Ionicons name="card" size={24} color={theme.accent} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={descargarExcel}
+                disabled={downloadingExcel}
+                style={{
+                  width: 45,
+                  height: 45,
+                  borderRadius: 15,
+                  backgroundColor: theme.accent + '15',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                {downloadingExcel ? (
+                  <ActivityIndicator size="small" color={theme.accent} />
+                ) : (
+                  <Ionicons name="download-outline" size={24} color={theme.accent} />
+                )}
+              </TouchableOpacity>
+              <View style={[styles.headerIconContainer, { backgroundColor: theme.accent + '15' }]}>
+                <Ionicons name="card" size={24} color={theme.accent} />
+              </View>
             </View>
           </View>
         </View>
@@ -1127,7 +1188,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 120 },
 
   dashboardContainer: {
     paddingVertical: 20,

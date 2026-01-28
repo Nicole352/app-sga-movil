@@ -1,8 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Platform, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { API_URL } from '../../../constants/config';
 import { getToken, storage } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
@@ -42,6 +44,7 @@ export default function HistorialAcademico() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [vistaActual, setVistaActual] = useState<'activos' | 'finalizados'>('activos');
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const theme = darkMode ? {
     bg: '#0a0a0a',
@@ -135,6 +138,48 @@ export default function HistorialAcademico() {
     ] as const;
     // Special gradients for dark mode can be added here if needed, keeping simple for now
     return gradients[index % gradients.length];
+  };
+
+  const descargarNotas = async (idCurso: number, nombreCurso: string) => {
+    try {
+      setDownloadingId(idCurso);
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'No se pudo verificar la sesión');
+        return;
+      }
+
+      const url = `${API_URL}/calificaciones/reporte-estudiante/${idCurso}`;
+      const dateStr = new Date().toISOString().split('T')[0];
+      const nombreArchivo = `Notas_${nombreCurso.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+
+      // @ts-ignore
+      const tempDir = Platform.OS === 'ios' ? FileSystem.documentDirectory : FileSystem.cacheDirectory;
+      const fileUri = `${tempDir}${nombreArchivo}`;
+
+      // @ts-ignore
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (downloadResult.status === 200) {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Guardar Notas'
+          });
+        } else {
+          Alert.alert('Éxito', 'Archivo descargado');
+        }
+      } else {
+        Alert.alert('Error', 'Hubo un problema al descargar el archivo');
+      }
+    } catch (error) {
+      console.error('Error descarga:', error);
+      Alert.alert('Error', 'Error al descargar el archivo');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const renderCursoCard = (curso: Curso, index: number) => {
@@ -277,6 +322,38 @@ export default function HistorialAcademico() {
                   </View>
                 </>
               )}
+            </View>
+
+            {/* Download Button */}
+            <View style={{ padding: 16, paddingTop: 0 }}>
+              <TouchableOpacity
+                onPress={() => descargarNotas(curso.id_curso, curso.nombre)}
+                disabled={downloadingId === curso.id_curso}
+                style={{
+                  backgroundColor: darkMode ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
+                  borderWidth: 1,
+                  borderColor: darkMode ? 'rgba(245, 158, 11, 0.3)' : '#fcd34d',
+                  borderRadius: 12,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                {downloadingId === curso.id_curso ? (
+                  <ActivityIndicator size="small" color={theme.accent} />
+                ) : (
+                  <Ionicons name="documents-outline" size={18} color={theme.accent} />
+                )}
+                <Text style={{
+                  color: theme.accent,
+                  fontWeight: '700',
+                  fontSize: 13
+                }}>
+                  {downloadingId === curso.id_curso ? 'Descargando...' : 'Descargar Notas'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -461,7 +538,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   cardContainer: {
     marginBottom: 20,

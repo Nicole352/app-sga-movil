@@ -14,8 +14,24 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Picker } from '@react-native-picker/picker';
+
+// Configurar calendario en español
+LocaleConfig.locales['es'] = {
+    monthNames: [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ],
+    monthNamesShort: ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Jun.', 'Jul.', 'Ago.', 'Sep.', 'Oct.', 'Nov.', 'Dic.'],
+    dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+    dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+    today: 'Hoy'
+};
+LocaleConfig.defaultLocale = 'es';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
@@ -79,13 +95,15 @@ const CompactPicker = ({
     selectedValue,
     onValueChange,
     placeholder,
-    theme
+    theme,
+    style
 }: {
     items: PickerItem[],
     selectedValue: string,
     onValueChange: (val: string) => void,
     placeholder?: string,
-    theme: any
+    theme: any,
+    style?: any
 }) => {
     const [showModal, setShowModal] = useState(false);
 
@@ -117,7 +135,7 @@ const CompactPicker = ({
 
     if (Platform.OS === 'android') {
         return (
-            <>
+            <View style={style}>
                 {trigger}
                 <Modal
                     animationType="slide"
@@ -181,13 +199,13 @@ const CompactPicker = ({
                         </Animated.View>
                     </TouchableOpacity>
                 </Modal>
-            </>
+            </View>
         );
     }
 
     // IOS: WHEEL
     return (
-        <>
+        <View style={style}>
             {trigger}
             <Modal animationType="slide" transparent={true} visible={showModal} onRequestClose={() => setShowModal(false)}>
                 <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -213,7 +231,7 @@ const CompactPicker = ({
                     </View>
                 </View>
             </Modal>
-        </>
+        </View>
     );
 };
 
@@ -227,8 +245,13 @@ export default function TomarAsistenciaScreen() {
     const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
     const [fecha, setFecha] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showMainCalendar, setShowMainCalendar] = useState(false);
     const [asistencias, setAsistencias] = useState<Map<number, RegistroAsistencia>>(new Map());
     const [darkMode, setDarkMode] = useState(false);
+    const [downloadingExcel, setDownloadingExcel] = useState(false);
+    const [showRangeModal, setShowRangeModal] = useState(false);
+    const [fechaInicio, setFechaInicio] = useState(new Date());
+    const [fechaFin, setFechaFin] = useState(new Date());
 
     // Cargar Docente, Cursos y Tema
     useEffect(() => {
@@ -242,6 +265,18 @@ export default function TomarAsistenciaScreen() {
             eventEmitter.off('themeChanged', themeHandler);
         };
     }, []);
+
+    // Recargar asistencia cuando cambia la fecha o el curso
+    useEffect(() => {
+        if (cursoSeleccionado) {
+            const cursoObj = cursos.find(c => c.codigo === cursoSeleccionado);
+            if (cursoObj) {
+                loadAsistenciaExistente(cursoObj.id_curso, fecha);
+            }
+        } else {
+            setAsistencias(new Map());
+        }
+    }, [fecha, cursoSeleccionado]);
 
     const loadTheme = async () => {
         const isDark = await getDarkMode();
@@ -327,7 +362,7 @@ export default function TomarAsistenciaScreen() {
             if (res.ok) {
                 const data = await res.json();
                 const map = new Map();
-                if (data.asistencias) {
+                if (data.asistencias && Array.isArray(data.asistencias)) {
                     data.asistencias.forEach((a: any) => {
                         map.set(a.id_estudiante, {
                             estado: a.estado,
@@ -336,8 +371,9 @@ export default function TomarAsistenciaScreen() {
                             documento_nombre: a.documento_nombre_original
                         });
                     });
-                    setAsistencias(map);
                 }
+                // Actualizar estado siempre, incluso si el mapa está vacío (borra asistencia anterior)
+                setAsistencias(map);
             }
         } catch (e) { console.error("Error loading existing attendance", e); }
     };
@@ -396,6 +432,134 @@ export default function TomarAsistenciaScreen() {
             }
         } catch (err) {
             console.log("Picking cancelled or failed", err);
+        }
+    };
+
+    const descargarExcelFecha = async () => {
+        try {
+            if (!cursoSeleccionado) {
+                Alert.alert('Error', 'Seleccione un curso primero');
+                return;
+            }
+
+            setDownloadingExcel(true);
+            const token = await getToken();
+            const cursoObj = cursos.find(c => c.codigo === cursoSeleccionado);
+
+            if (!token || !cursoObj) {
+                Alert.alert('Error', 'No se pudo obtener el token de autenticación');
+                return;
+            }
+
+
+            // Formatear fecha en zona horaria local (evitar conversión a UTC)
+            const year = fecha.getFullYear();
+            const month = String(fecha.getMonth() + 1).padStart(2, '0');
+            const day = String(fecha.getDate()).padStart(2, '0');
+            const fechaStr = `${year}-${month}-${day}`;
+            const url = `${API_URL}/asistencias/excel/fecha/${cursoObj.id_curso}/${fechaStr}`;
+            const nombreArchivo = `Asistencia_${cursoObj.nombre.replace(/\s+/g, '_')}_${fechaStr}.xlsx`;
+            // @ts-ignore - documentDirectory y cacheDirectory existen en runtime
+            const tempDir = Platform.OS === 'ios' ? FileSystem.documentDirectory : FileSystem.cacheDirectory;
+            const fileUri = `${tempDir}${nombreArchivo}`;
+
+            // Descargar archivo
+            // @ts-ignore - downloadAsync existe en runtime
+            const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (downloadResult.status === 200) {
+                // Compartir archivo
+                const canShare = await Sharing.isAvailableAsync();
+                if (canShare) {
+                    await Sharing.shareAsync(downloadResult.uri, {
+                        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        dialogTitle: 'Guardar Reporte de Asistencia'
+                    });
+                } else {
+                    Alert.alert('Éxito', `Archivo descargado en: ${downloadResult.uri}`);
+                }
+            } else {
+                Alert.alert('Error', 'No se pudo descargar el archivo Excel');
+            }
+        } catch (error) {
+            console.error('Error descargando Excel:', error);
+            Alert.alert('Error', 'Ocurrió un error al generar el reporte Excel');
+        } finally {
+            setDownloadingExcel(false);
+        }
+    };
+
+    const descargarExcelRango = async () => {
+        try {
+            if (!cursoSeleccionado) {
+                Alert.alert('Error', 'Seleccione un curso primero');
+                return;
+            }
+
+            if (fechaInicio > fechaFin) {
+                Alert.alert('Error', 'La fecha de inicio debe ser anterior a la fecha fin');
+                return;
+            }
+
+            setDownloadingExcel(true);
+            const token = await getToken();
+            const cursoObj = cursos.find(c => c.codigo === cursoSeleccionado);
+
+            if (!token || !cursoObj) {
+                Alert.alert('Error', 'No se pudo obtener el token de autenticación');
+                return;
+            }
+
+
+            // Formatear fechas en zona horaria local (evitar conversión a UTC)
+            const yearInicio = fechaInicio.getFullYear();
+            const monthInicio = String(fechaInicio.getMonth() + 1).padStart(2, '0');
+            const dayInicio = String(fechaInicio.getDate()).padStart(2, '0');
+            const fechaInicioStr = `${yearInicio}-${monthInicio}-${dayInicio}`;
+
+            const yearFin = fechaFin.getFullYear();
+            const monthFin = String(fechaFin.getMonth() + 1).padStart(2, '0');
+            const dayFin = String(fechaFin.getDate()).padStart(2, '0');
+            const fechaFinStr = `${yearFin}-${monthFin}-${dayFin}`;
+
+            const url = `${API_URL}/asistencias/excel/rango/${cursoObj.id_curso}?fecha_inicio=${fechaInicioStr}&fecha_fin=${fechaFinStr}`;
+            const nombreArchivo = `Reporte_Asistencia_${cursoObj.nombre.replace(/\s+/g, '_')}_${fechaInicioStr}_a_${fechaFinStr}.xlsx`;
+            // @ts-ignore - documentDirectory y cacheDirectory existen en runtime
+            const tempDir = Platform.OS === 'ios' ? FileSystem.documentDirectory : FileSystem.cacheDirectory;
+            const fileUri = `${tempDir}${nombreArchivo}`;
+
+            // Descargar archivo
+            // @ts-ignore - downloadAsync existe en runtime
+            const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (downloadResult.status === 200) {
+                setShowRangeModal(false);
+                // Compartir archivo
+                const canShare = await Sharing.isAvailableAsync();
+                if (canShare) {
+                    await Sharing.shareAsync(downloadResult.uri, {
+                        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        dialogTitle: 'Guardar Reporte de Asistencia'
+                    });
+                } else {
+                    Alert.alert('Éxito', `Archivo descargado en: ${downloadResult.uri}`);
+                }
+            } else {
+                Alert.alert('Error', 'No se pudo descargar el archivo Excel');
+            }
+        } catch (error) {
+            console.error('Error descargando Excel por rango:', error);
+            Alert.alert('Error', 'Ocurrió un error al generar el reporte Excel');
+        } finally {
+            setDownloadingExcel(false);
         }
     };
 
@@ -517,11 +681,30 @@ export default function TomarAsistenciaScreen() {
                         ]}
                     >
                         <View style={styles.headerContent}>
-                            <View style={{ flexDirection: 'column', gap: 4 }}>
+                            <View style={{ flexDirection: 'column', gap: 4, flex: 1 }}>
                                 <Text style={[styles.headerTitle, { color: theme.text }]}>Tomar Asistencia</Text>
                                 <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Registra la asistencia diaria</Text>
                             </View>
-                            <Ionicons name="calendar" size={28} color={theme.primary} />
+                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                                <TouchableOpacity
+                                    onPress={descargarExcelFecha}
+                                    disabled={downloadingExcel || !cursoSeleccionado}
+                                    style={[styles.headerIcon, { backgroundColor: theme.primary + '15' }]}
+                                >
+                                    {downloadingExcel ? (
+                                        <ActivityIndicator size="small" color={theme.primary} />
+                                    ) : (
+                                        <Ionicons name="download-outline" size={20} color={cursoSeleccionado ? theme.primary : theme.textMuted} />
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setShowRangeModal(true)}
+                                    disabled={downloadingExcel || !cursoSeleccionado}
+                                    style={[styles.headerIcon, { backgroundColor: theme.success + '15' }]}
+                                >
+                                    <Ionicons name="calendar-outline" size={20} color={cursoSeleccionado ? theme.success : theme.textMuted} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 </Animated.View>
@@ -532,7 +715,7 @@ export default function TomarAsistenciaScreen() {
                 {/* Filtros */}
                 <View style={[styles.filtersCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
 
-                    <Text style={[styles.label, { color: theme.textMuted }]}>Seleccionar Curso:</Text>
+                    <Text style={[styles.label, { color: theme.textMuted, marginBottom: 2 }]}>Seleccionar Curso:</Text>
                     <CompactPicker
                         items={[
                             { label: "Seleccione un curso...", value: "" },
@@ -542,19 +725,59 @@ export default function TomarAsistenciaScreen() {
                         onValueChange={handleCursoChange}
                         placeholder="Seleccione un curso"
                         theme={theme}
+                        style={{ marginBottom: 2 }}
                     />
 
-                    <View style={{ marginTop: 12 }}>
-                        <Text style={[styles.label, { color: theme.textMuted }]}>Fecha:</Text>
+                    <View style={{ marginTop: 6 }}>
+                        <Text style={[styles.label, { color: theme.textMuted, marginBottom: 2 }]}>Fecha:</Text>
                         <TouchableOpacity
                             style={[styles.dateSelector, { backgroundColor: theme.inputBg }]}
-                            onPress={() => setShowDatePicker(true)}
+                            onPress={() => setShowMainCalendar(!showMainCalendar)}
                         >
-                            <Ionicons name="calendar-outline" size={20} color={theme.text} />
-                            <Text style={[styles.dateText, { color: theme.text }]}>
+                            <Ionicons name="calendar-outline" size={18} color={theme.text} />
+                            <Text style={[styles.dateText, { color: theme.text, flex: 1, fontSize: 13 }]}>
                                 {fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </Text>
+                            <Ionicons
+                                name={showMainCalendar ? "chevron-up" : "chevron-down"}
+                                size={18}
+                                color={theme.textMuted}
+                            />
                         </TouchableOpacity>
+
+                        {showMainCalendar && (
+                            <View style={{ marginTop: 8 }}>
+                                <Calendar
+                                    current={fecha.toISOString().split('T')[0]}
+                                    maxDate={(() => {
+                                        const today = new Date();
+                                        const year = today.getFullYear();
+                                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                                        const day = String(today.getDate()).padStart(2, '0');
+                                        return `${year}-${month}-${day}`;
+                                    })()}
+                                    onDayPress={(day: any) => {
+                                        setFecha(new Date(day.year, day.month - 1, day.day));
+                                        setShowMainCalendar(false);
+                                    }}
+                                    theme={{
+                                        backgroundColor: theme.cardBg,
+                                        calendarBackground: theme.cardBg,
+                                        textSectionTitleColor: theme.text,
+                                        selectedDayBackgroundColor: theme.primary,
+                                        selectedDayTextColor: '#ffffff',
+                                        todayTextColor: theme.primary,
+                                        dayTextColor: theme.text,
+                                        textDisabledColor: theme.textMuted,
+                                        monthTextColor: theme.text,
+                                        arrowColor: theme.primary,
+                                        textDayFontSize: 14,
+                                        textMonthFontSize: 16,
+                                        textDayHeaderFontSize: 12
+                                    }}
+                                />
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -657,6 +880,134 @@ export default function TomarAsistenciaScreen() {
                     <View style={{ height: 40 }} />
                 </ScrollView>
             </View>
+
+            {/* Modal para Rango de Fechas */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={showRangeModal}
+                onRequestClose={() => setShowRangeModal(false)}
+            >
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowRangeModal(false)}
+                    style={styles.modalOverlay}
+                >
+                    <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                        <Animated.View
+                            entering={FadeInDown.duration(300)}
+                            style={[styles.modalContent, { backgroundColor: theme.cardBg, maxHeight: '90%' }]}
+                        >
+                            <View style={[styles.modalIndicator, { backgroundColor: theme.border }]} />
+
+                            <View style={styles.modalHeader}>
+                                <View>
+                                    <Text style={[styles.modalTitle, { color: theme.text }]}>Descargar Reporte por Rango</Text>
+                                    <Text style={{ color: theme.textMuted, fontSize: 12 }}>Selecciona el período de fechas</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setShowRangeModal(false)} style={styles.modalCloseBtn}>
+                                    <Ionicons name="close" size={24} color={theme.text} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView style={{ paddingHorizontal: 4 }} showsVerticalScrollIndicator={false}>
+                                <View style={{ marginBottom: 16 }}>
+                                    <Text style={[styles.label, { color: theme.textMuted, marginBottom: 8 }]}>Fecha Inicio:</Text>
+                                    <Calendar
+                                        current={`${fechaInicio.getFullYear()}-${String(fechaInicio.getMonth() + 1).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`}
+                                        maxDate={(() => {
+                                            const today = new Date();
+                                            const year = today.getFullYear();
+                                            const month = String(today.getMonth() + 1).padStart(2, '0');
+                                            const day = String(today.getDate()).padStart(2, '0');
+                                            return `${year}-${month}-${day}`;
+                                        })()}
+                                        onDayPress={(day: any) => {
+                                            setFechaInicio(new Date(day.year, day.month - 1, day.day));
+                                        }}
+                                        markedDates={{
+                                            [`${fechaInicio.getFullYear()}-${String(fechaInicio.getMonth() + 1).padStart(2, '0')}-${String(fechaInicio.getDate()).padStart(2, '0')}`]: {
+                                                selected: true,
+                                                selectedColor: theme.primary
+                                            }
+                                        }}
+                                        theme={{
+                                            backgroundColor: theme.cardBg,
+                                            calendarBackground: theme.cardBg,
+                                            textSectionTitleColor: theme.text,
+                                            selectedDayBackgroundColor: theme.primary,
+                                            selectedDayTextColor: '#ffffff',
+                                            todayTextColor: theme.primary,
+                                            dayTextColor: theme.text,
+                                            textDisabledColor: theme.textMuted,
+                                            monthTextColor: theme.text,
+                                            arrowColor: theme.primary,
+                                            textDayFontSize: 14,
+                                            textMonthFontSize: 16,
+                                            textDayHeaderFontSize: 12
+                                        }}
+                                    />
+                                </View>
+
+                                <View style={{ marginBottom: 20 }}>
+                                    <Text style={[styles.label, { color: theme.textMuted, marginBottom: 8 }]}>Fecha Fin:</Text>
+                                    <Calendar
+                                        current={`${fechaFin.getFullYear()}-${String(fechaFin.getMonth() + 1).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`}
+                                        maxDate={(() => {
+                                            const today = new Date();
+                                            const year = today.getFullYear();
+                                            const month = String(today.getMonth() + 1).padStart(2, '0');
+                                            const day = String(today.getDate()).padStart(2, '0');
+                                            return `${year}-${month}-${day}`;
+                                        })()}
+                                        onDayPress={(day: any) => {
+                                            setFechaFin(new Date(day.year, day.month - 1, day.day));
+                                        }}
+                                        markedDates={{
+                                            [`${fechaFin.getFullYear()}-${String(fechaFin.getMonth() + 1).padStart(2, '0')}-${String(fechaFin.getDate()).padStart(2, '0')}`]: {
+                                                selected: true,
+                                                selectedColor: theme.success
+                                            }
+                                        }}
+                                        theme={{
+                                            backgroundColor: theme.cardBg,
+                                            calendarBackground: theme.cardBg,
+                                            textSectionTitleColor: theme.text,
+                                            selectedDayBackgroundColor: theme.success,
+                                            selectedDayTextColor: '#ffffff',
+                                            todayTextColor: theme.success,
+                                            dayTextColor: theme.text,
+                                            textDisabledColor: theme.textMuted,
+                                            monthTextColor: theme.text,
+                                            arrowColor: theme.success,
+                                            textDayFontSize: 14,
+                                            textMonthFontSize: 16,
+                                            textDayHeaderFontSize: 12
+                                        }}
+                                    />
+                                </View>
+
+                                <TouchableOpacity
+                                    style={[styles.saveButton, { marginTop: 10, marginBottom: 20 }]}
+                                    onPress={descargarExcelRango}
+                                    disabled={downloadingExcel}
+                                >
+                                    {downloadingExcel ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="download-outline" size={20} color="#fff" />
+                                            <Text style={styles.saveText}>Descargar Reporte</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </Animated.View>
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
+
+
         </View>
     );
 }
@@ -693,6 +1044,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: 'rgba(255,255,255,0.9)',
     },
+    headerIcon: {
+        padding: 6,
+        borderRadius: 10,
+    },
     content: {
         flex: 1,
         padding: 16,
@@ -700,8 +1055,8 @@ const styles = StyleSheet.create({
     filtersCard: {
         backgroundColor: theme.cardBg,
         borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
+        padding: 10, // Reducido más (era 12)
+        marginBottom: 8, // Reducido más (era 12)
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -786,7 +1141,8 @@ const styles = StyleSheet.create({
     dateSelector: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
+        padding: 8, // Reducido más (era 10)
+        height: 48, // Altura fija para igualar al picker
         borderRadius: 8,
         backgroundColor: '#f1f5f9',
         gap: 8,

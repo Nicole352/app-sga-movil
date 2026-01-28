@@ -21,6 +21,8 @@ import { API_URL } from '../../../constants/config';
 import { getToken, getDarkMode, getUserData } from '../../../services/storage';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSocket } from '../../../hooks/useSocket';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 const { width } = Dimensions.get('window');
 
@@ -436,6 +438,7 @@ export default function CalificacionesCursoScreen() {
   const [moduloActivo, setModuloActivo] = useState<string>("todos");
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "aprobados" | "reprobados">("todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
 
   useEffect(() => {
     getUserData().then(user => setUserId(user?.id_usuario));
@@ -552,6 +555,51 @@ export default function CalificacionesCursoScreen() {
     setFilteredEstudiantes(result);
   }, [filtroEstado, estudiantes, searchQuery]);
 
+  const descargarExcel = async () => {
+    try {
+      setDownloadingExcel(true);
+      const token = await getToken();
+      if (!token || !id_curso) {
+        Alert.alert('Error', 'No se pudo obtener el token de autenticación');
+        return;
+      }
+
+      const url = `${API_URL}/calificaciones/curso/${id_curso}/excel`;
+      const dateStr = new Date().toISOString().split('T')[0];
+      const nombreArchivo = `Calificaciones_${cursoNombre.replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+      // @ts-ignore - documentDirectory y cacheDirectory existen en runtime
+      const tempDir = Platform.OS === 'ios' ? FileSystem.documentDirectory : FileSystem.cacheDirectory;
+      const fileUri = `${tempDir}${nombreArchivo}`;
+
+      // Descargar archivo
+      // @ts-ignore - downloadAsync existe en runtime
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (downloadResult.status === 200) {
+        // Compartir archivo
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Guardar Reporte de Calificaciones'
+          });
+        } else {
+          Alert.alert('Éxito', `Archivo descargado en: ${downloadResult.uri}`);
+        }
+      } else {
+        Alert.alert('Error', 'No se pudo descargar el archivo Excel');
+      }
+    } catch (error) {
+      console.error('Error descargando Excel:', error);
+      Alert.alert('Error', 'Ocurrió un error al generar el reporte Excel');
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
 
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -572,6 +620,17 @@ export default function CalificacionesCursoScreen() {
               <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>Calificaciones</Text>
               <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]} numberOfLines={1}>{cursoNombre}</Text>
             </View>
+            <TouchableOpacity
+              onPress={descargarExcel}
+              disabled={downloadingExcel || loading}
+              style={[styles.headerIcon, { backgroundColor: theme.success + '15', marginRight: 8 }]}
+            >
+              {downloadingExcel ? (
+                <ActivityIndicator size="small" color={theme.success} />
+              ) : (
+                <Ionicons name="download-outline" size={20} color={theme.success} />
+              )}
+            </TouchableOpacity>
             <View style={[styles.headerIcon, { backgroundColor: theme.primary + '15' }]}>
               <Ionicons name="school-outline" size={20} color={theme.primary} />
             </View>
@@ -750,7 +809,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 24, backgroundColor: '#e2e8f0' },
 
   // Lista
-  listContainer: { gap: 12 },
+  listContainer: { gap: 12, paddingBottom: 100 },
   emptyState: { alignItems: 'center', marginTop: 40, padding: 20 },
 
   // Tarjeta Estudiante
