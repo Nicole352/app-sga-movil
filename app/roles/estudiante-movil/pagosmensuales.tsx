@@ -719,6 +719,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
   const [numeroComprobante, setNumeroComprobante] = useState('');
   const [bancoComprobante, setBancoComprobante] = useState('');
   const [recibidoPor, setRecibidoPor] = useState('');
+  const [bancoOtro, setBancoOtro] = useState('');
   const [archivoComprobante, setArchivoComprobante] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -732,7 +733,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
     },
     'Banco del Pacífico': {
       qr: 'https://res.cloudinary.com/di090ggjn/image/upload/v1764906371/wbohej8ytmanqzkrhkbv.jpg',
-      cuenta: '00000-000 (Cuenta corriente)',
+      cuenta: '7508166 (Cuenta corriente)',
       titular: 'JÉSSICA VELEZ'
     },
     'Produbanco': {
@@ -742,7 +743,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
     }
   };
 
-  const bancos = Object.keys(bankDetails);
+  const bancos = [...Object.keys(bankDetails), 'Otro'];
 
   const getFechaEcuador = () => {
     const now = new Date();
@@ -761,6 +762,7 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
       setMetodoPago('transferencia');
       setNumeroComprobante('');
       setBancoComprobante('');
+      setBancoOtro('');
       setRecibidoPor('');
       setArchivoComprobante(null);
     }
@@ -906,7 +908,11 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
       formData.append('numero_comprobante', numeroComprobante);
 
       if (metodoPago === 'transferencia') {
-        formData.append('banco_comprobante', bancoComprobante);
+        if (bancoComprobante === 'Otro') {
+          formData.append('banco_comprobante', bancoOtro);
+        } else {
+          formData.append('banco_comprobante', bancoComprobante);
+        }
         formData.append('fecha_transferencia', getFechaEcuador());
       } else {
         formData.append('banco_comprobante', 'N/A');
@@ -1008,13 +1014,56 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
                   {bancos.map(b => (
                     <TouchableOpacity
                       key={b}
-                      onPress={() => setBancoComprobante(b)}
+                      onPress={() => {
+                        setBancoComprobante(b);
+                        if (b !== 'Otro') setBancoOtro('');
+                      }}
                       style={[styles.bankChip, bancoComprobante === b ? { backgroundColor: theme.info, borderColor: theme.info } : { borderColor: theme.border }]}
                     >
                       <Text style={{ color: bancoComprobante === b ? '#fff' : theme.textSecondary, fontSize: 12, fontWeight: '600' }}>{b}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+
+                {/* Conditional Input for 'Otro' Banco */}
+                {bancoComprobante === 'Otro' && (
+                  <View style={{ marginBottom: 15 }}>
+                    <Text style={[styles.label, { color: theme.textSecondary }]}>Escribe el nombre del banco</Text>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                      placeholder="Ej: Banco Guayaquil"
+                      placeholderTextColor={theme.textMuted}
+                      value={bancoOtro}
+                      onChangeText={(t) => {
+                        // Title Case Formatting
+                        const formatted = t.toLowerCase().replace(/(?:^|\s)\S/g, function (a) { return a.toUpperCase(); });
+                        setBancoOtro(formatted);
+                      }}
+                    />
+
+                    {/* Warning Messages */}
+                    <View style={{
+                      marginTop: 12,
+                      padding: 12,
+                      backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(251, 191, 36, 0.35)',
+                      flexDirection: 'row',
+                      gap: 10
+                    }}>
+                      <Ionicons name="information-circle" size={24} color="#f59e0b" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.warning, fontWeight: '700', fontSize: 13, marginBottom: 4 }}>
+                          Importante: Cargos adicionales
+                        </Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18 }}>
+                          Si realizas la transferencia desde otro banco, tu banco puede cobrar comisión. Este cargo NO está incluido en el precio del curso.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
 
                 {/* BANK DETAILS CARD - Dynamic Display */}
                 {bancoComprobante && bancoComprobante in bankDetails && (
@@ -1029,28 +1078,26 @@ function ModalPago({ visible, cuota, curso, onClose, onSuccess, darkMode, theme 
                     gap: 12,
                     alignItems: 'center'
                   }}>
-                    {/* QR Code Section */}
-                    <View style={{
-                      width: 80,
-                      height: 80,
-                      backgroundColor: '#fff',
-                      borderRadius: 8,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      overflow: 'hidden',
-                      borderWidth: 1,
-                      borderColor: theme.border
-                    }}>
-                      {bankDetails[bancoComprobante as keyof typeof bankDetails]?.qr ? (
+                    {/* QR Code Section - Only show if QR exists */}
+                    {bankDetails[bancoComprobante as keyof typeof bankDetails]?.qr && (
+                      <View style={{
+                        width: 80,
+                        height: 80,
+                        backgroundColor: '#fff',
+                        borderRadius: 8,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        borderWidth: 1,
+                        borderColor: theme.border
+                      }}>
                         <Image
                           source={{ uri: bankDetails[bancoComprobante as keyof typeof bankDetails].qr! }}
                           style={{ width: '100%', height: '100%' }}
                           resizeMode="cover"
                         />
-                      ) : (
-                        <Ionicons name="qr-code-outline" size={32} color={theme.textMuted} />
-                      )}
-                    </View>
+                      </View>
+                    )}
 
                     {/* Account Details Section */}
                     <View style={{ flex: 1 }}>
