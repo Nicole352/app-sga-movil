@@ -150,10 +150,26 @@ export default function PagosMensuales() {
     'pago_verificado_estudiante': (data: any) => {
       console.log('Pago verificado:', data.numero_cuota);
       fetchData();
+      // Recargar cuotas del curso expandido si existe
+      if (cursoExpandido) {
+        loadCuotasMatricula(cursoExpandido);
+      }
     },
     'pago_rechazado': (data: any) => {
       console.log('Pago rechazado:', data.numero_cuota);
       fetchData();
+      // Recargar cuotas del curso expandido si existe
+      if (cursoExpandido) {
+        loadCuotasMatricula(cursoExpandido);
+      }
+    },
+    'pago_realizado_estudiante': (data: any) => {
+      console.log('Pago realizado desde otra plataforma (web/móvil):', data.id_pago);
+      fetchData();
+      // Recargar cuotas del curso expandido si existe
+      if (cursoExpandido) {
+        loadCuotasMatricula(cursoExpandido);
+      }
     }
   };
 
