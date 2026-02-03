@@ -113,6 +113,8 @@ export default function AdministradoresScreen() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [telefonoError, setTelefonoError] = useState<string | null>(null);
 
   const theme = darkMode ? {
     bg: '#0a0a0a',
@@ -247,8 +249,14 @@ export default function AdministradoresScreen() {
 
   const handleCreate = async () => {
     try {
-      if (!formData.cedula || !formData.nombre || !formData.apellido || !formData.email || !formData.password) {
-        Alert.alert('Error', 'Completa los campos obligatorios (*)');
+      if (!formData.cedula || !formData.nombre || !formData.apellido || !formData.email || !formData.password ||
+        !formData.telefono || !formData.fecha_nacimiento || !formData.direccion || !formData.genero) {
+        Alert.alert('Error', 'Completa todos los campos obligatorios (*)');
+        return;
+      }
+
+      if (emailError || telefonoError) {
+        Alert.alert('Error', 'Por favor corrige los errores antes de continuar');
         return;
       }
 
@@ -289,6 +297,18 @@ export default function AdministradoresScreen() {
 
   const handleUpdate = async () => {
     if (!selectedAdmin) return;
+
+    if (!formData.nombre || !formData.apellido || !formData.email ||
+      !formData.telefono || !formData.fecha_nacimiento || !formData.direccion || !formData.genero) {
+      Alert.alert('Error', 'Completa todos los campos obligatorios (*)');
+      return;
+    }
+
+    if (emailError || telefonoError) {
+      Alert.alert('Error', 'Por favor corrige los errores antes de continuar');
+      return;
+    }
+
     try {
       const token = await getToken();
       const roleName = roles.find(r => r.id_rol === Number(formData.rolId))?.nombre_rol || 'administrativo';
@@ -443,6 +463,8 @@ export default function AdministradoresScreen() {
               rolId: item.rolId ? String(item.rolId) : '',
               permisos: item.permisos || []
             });
+            setEmailError(null);
+            setTelefonoError(null);
             setShowEditModal(true);
           }}
         >
@@ -559,6 +581,8 @@ export default function AdministradoresScreen() {
           resetForm();
           const newPass = generateSecurePassword();
           setFormData(prev => ({ ...prev, password: newPass, confirmPassword: newPass }));
+          setEmailError(null);
+          setTelefonoError(null);
           setShowCreateModal(true);
         }}
       >
@@ -618,26 +642,44 @@ export default function AdministradoresScreen() {
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: theme.text }]}>Email *</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+                  style={[styles.input, { backgroundColor: theme.inputBg, borderColor: emailError ? theme.danger : theme.border, color: theme.text }]}
                   value={formData.email}
-                  onChangeText={t => setFormData({ ...formData, email: t.toLowerCase() })}
+                  onChangeText={t => {
+                    const val = t.toLowerCase();
+                    setFormData({ ...formData, email: val });
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      setEmailError('Formato de email inválido');
+                    } else {
+                      setEmailError(null);
+                    }
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
+                {emailError && <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4 }}>{emailError}</Text>}
               </View>
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Teléfono</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Teléfono *</Text>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+                  style={[styles.input, { backgroundColor: theme.inputBg, borderColor: telefonoError ? theme.danger : theme.border, color: theme.text }]}
                   value={formData.telefono}
-                  onChangeText={t => setFormData({ ...formData, telefono: t.replace(/\D/g, '') })}
+                  onChangeText={t => {
+                    const val = t.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, telefono: val });
+                    if (val.length > 0 && !val.startsWith('09')) {
+                      setTelefonoError('El número debe empezar con 09');
+                    } else {
+                      setTelefonoError(null);
+                    }
+                  }}
                   keyboardType="phone-pad"
                 />
+                {telefonoError && <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4 }}>{telefonoError}</Text>}
               </View>
 
               {/* Fecha Nacimiento */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Fecha de Nacimiento</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Fecha de Nacimiento *</Text>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
                   style={[styles.input, { justifyContent: 'center', backgroundColor: theme.inputBg, borderColor: theme.border }]}
@@ -660,7 +702,7 @@ export default function AdministradoresScreen() {
 
               {/* Género */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Género</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Género *</Text>
                 <CompactPicker
                   items={[
                     { label: 'Seleccionar', value: '' },
@@ -677,7 +719,7 @@ export default function AdministradoresScreen() {
 
               {/* Dirección */}
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: theme.text }]}>Dirección</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Dirección *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text, height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
                   value={formData.direccion}
