@@ -63,6 +63,7 @@ export default function AdminReportesScreen() {
 
     // Tipo de reporte
     const [tipoReporte, setTipoReporte] = useState<TipoReporte>('estudiantes');
+    const [showHelperMessage, setShowHelperMessage] = useState(true);
 
     // Períodos
     const [periodosDisponibles, setPeriodosDisponibles] = useState<Periodo[]>([]);
@@ -1073,7 +1074,14 @@ export default function AdminReportesScreen() {
                                         styles.tipoReporteBtn,
                                         { backgroundColor: tipoReporte === 'estudiantes' ? theme.primary + '20' : theme.cardBg, borderColor: tipoReporte === 'estudiantes' ? theme.primary : theme.border }
                                     ]}
-                                    onPress={() => setTipoReporte('estudiantes')}
+                                    onPress={() => {
+                                        setTipoReporte('estudiantes');
+                                        setDatosReporte([]);
+                                        setEstadisticas(null);
+                                        setBusquedaRapida('');
+                                        setCurrentPage(1);
+                                        setShowHelperMessage(true);
+                                    }}
                                 >
                                     <Ionicons name="people" size={20} color={tipoReporte === 'estudiantes' ? theme.primary : theme.textMuted} />
                                     <Text style={[styles.tipoReporteText, { color: tipoReporte === 'estudiantes' ? theme.primary : theme.text }]}>Estudiantes</Text>
@@ -1084,7 +1092,14 @@ export default function AdminReportesScreen() {
                                         styles.tipoReporteBtn,
                                         { backgroundColor: tipoReporte === 'cursos' ? theme.primary + '20' : theme.cardBg, borderColor: tipoReporte === 'cursos' ? theme.primary : theme.border }
                                     ]}
-                                    onPress={() => setTipoReporte('cursos')}
+                                    onPress={() => {
+                                        setTipoReporte('cursos');
+                                        setDatosReporte([]);
+                                        setEstadisticas(null);
+                                        setBusquedaRapida('');
+                                        setCurrentPage(1);
+                                        setShowHelperMessage(true);
+                                    }}
                                 >
                                     <Ionicons name="book" size={20} color={tipoReporte === 'cursos' ? theme.primary : theme.textMuted} />
                                     <Text style={[styles.tipoReporteText, { color: tipoReporte === 'cursos' ? theme.primary : theme.text }]}>Cursos</Text>
@@ -1095,13 +1110,33 @@ export default function AdminReportesScreen() {
                                         styles.tipoReporteBtn,
                                         { backgroundColor: tipoReporte === 'financiero' ? theme.primary + '20' : theme.cardBg, borderColor: tipoReporte === 'financiero' ? theme.primary : theme.border }
                                     ]}
-                                    onPress={() => setTipoReporte('financiero')}
+                                    onPress={() => {
+                                        setTipoReporte('financiero');
+                                        setDatosReporte([]);
+                                        setEstadisticas(null);
+                                        setBusquedaRapida('');
+                                        setCurrentPage(1);
+                                        setShowHelperMessage(true);
+                                    }}
                                 >
                                     <Ionicons name="cash" size={20} color={tipoReporte === 'financiero' ? theme.primary : theme.textMuted} />
                                     <Text style={[styles.tipoReporteText, { color: tipoReporte === 'financiero' ? theme.primary : theme.text }]}>Financiero</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
+
+                        {/* Mensaje de ayuda cuando no hay datos */}
+                        {datosReporte.length === 0 && showHelperMessage && (
+                            <View style={[styles.helperMessageContainer, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
+                                <Ionicons name="information-circle" size={20} color={theme.primary} />
+                                <Text style={[styles.helperMessageText, { color: theme.text }]}>
+                                    Configura los filtros y presiona el botón <Text style={{ color: theme.primary, fontWeight: '700' }}>Generar Reporte</Text> de abajo para visualizar el reporte de {tipoReporte === 'estudiantes' ? 'Estudiantes' : tipoReporte === 'cursos' ? 'Cursos' : 'Financiero'}
+                                </Text>
+                                <TouchableOpacity onPress={() => setShowHelperMessage(false)} style={{ padding: 4 }}>
+                                    <Ionicons name="close" size={20} color={theme.textMuted} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                         {/* Selector de Período */}
                         <View style={styles.section}>
@@ -1142,7 +1177,6 @@ export default function AdminReportesScreen() {
                                 </>
                             )}
                         </TouchableOpacity>
-
 
 
                         {/* Lista de Datos */}
@@ -1387,8 +1421,8 @@ const styles = StyleSheet.create({
     },
     tabActive: {}, // Handled inline now
     tabText: { fontWeight: '600', fontSize: 13 },
-    content: { padding: 20 },
-    section: { marginBottom: 15 },
+    content: { paddingTop: 5, paddingHorizontal: 20, paddingBottom: 20 },
+    section: { marginBottom: 3 },
     sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 12 },
     tipoReporteContainer: { flexDirection: 'row', gap: 8 },
     tipoReporteBtn: {
@@ -1406,9 +1440,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        padding: 16,
+        padding: 14,
         borderRadius: 12,
-        marginBottom: 20,
+        marginBottom: 10,
     },
     generateBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
     metricsScroll: { marginBottom: 10 },
@@ -1537,5 +1571,19 @@ const styles = StyleSheet.create({
     sortBtnText: {
         fontSize: 12,
         fontWeight: '600',
+    },
+    helperMessageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        marginTop: 10,
+    },
+    helperMessageText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
     },
 });

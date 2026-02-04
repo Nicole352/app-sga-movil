@@ -205,7 +205,7 @@ export default function AdminDashboard() {
             <StatusBar barStyle="light-content" />
 
             <ScrollView
-                contentContainerStyle={{ paddingBottom: 100 }}
+                contentContainerStyle={{ paddingBottom: 10 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
             >
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     welcomeCardContainer: {
-        marginBottom: 20,
+        marginBottom: 8,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
@@ -513,24 +513,24 @@ const styles = StyleSheet.create({
     },
     welcomeCardContent: {
         paddingTop: 10,
-        paddingBottom: 25,
+        paddingBottom: 15,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
         justifyContent: 'space-between',
-        height: 160,
+        height: 145,
         borderBottomWidth: 1,
         zIndex: 1
     },
-    welcomeLabel: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
-    userName: { fontSize: 22, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
-    userRole: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
+    welcomeLabel: { fontSize: 13, fontWeight: '500', marginBottom: 2 },
+    userName: { fontSize: 20, fontWeight: '800', marginBottom: 4, letterSpacing: -0.5 },
+    userRole: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
     dateRow: { flexDirection: 'row', alignItems: 'center', marginTop: 'auto', gap: 6, opacity: 0.8 },
     dateText: { fontSize: 12, textTransform: 'capitalize', fontWeight: '500' },
 
     filtersContainer: {
         marginHorizontal: 20,
-        marginBottom: 12,
+        marginBottom: 8,
         padding: 12,
         borderRadius: 12,
         borderWidth: 1,

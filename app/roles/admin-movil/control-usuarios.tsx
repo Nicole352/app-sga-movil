@@ -891,11 +891,11 @@ const styles = StyleSheet.create({
 
     filterRow: { flexDirection: 'row', gap: 10 },
 
-    listContent: { paddingHorizontal: 20, paddingTop: 5, paddingBottom: 100 },
+    listContent: { paddingHorizontal: 20, paddingTop: 5, paddingBottom: 10 },
     userCard: {
         borderRadius: 12,
         borderWidth: 1,
-        padding: 10, 
+        padding: 10,
         marginBottom: 8,
     },
     userHeader: {
