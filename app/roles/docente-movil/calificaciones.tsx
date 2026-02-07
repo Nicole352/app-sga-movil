@@ -93,9 +93,10 @@ export default function CalificacionesScreen() {
     const cursoEstado = curso.estado || 'activo';
 
     if (activeTab === 'activos') {
-      return (cursoEstado === 'activo' || cursoEstado === 'planificado') && fechaFin >= hoy;
+      // Incluir cancelados (cerrados) como activos si la fecha es vigente
+      return (cursoEstado === 'activo' || cursoEstado === 'planificado' || cursoEstado === 'cancelado') && fechaFin >= hoy;
     } else {
-      return cursoEstado === 'finalizado' || cursoEstado === 'cancelado' || fechaFin < hoy;
+      return cursoEstado === 'finalizado' || fechaFin < hoy;
     }
   });
 

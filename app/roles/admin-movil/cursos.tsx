@@ -24,6 +24,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_URL } from '../../../constants/config';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import { Lock, Unlock } from 'lucide-react-native';
 
 interface Course {
     id_curso: number;
@@ -355,6 +356,47 @@ export default function AdminCursosScreen() {
         );
     };
 
+    const handleToggleMatricula = async (curso: Course) => {
+        // Determinar el nuevo estado
+        let target: Course['estado'];
+        if (curso.estado === 'cancelado') {
+            // Si está cancelado (matrículas cerradas), reabrir
+            const hoy = new Date();
+            const fechaInicio = new Date(curso.fecha_inicio);
+            target = fechaInicio <= hoy ? 'activo' : 'planificado';
+        } else {
+            // Si no está cancelado, cerrar matrículas
+            target = 'cancelado';
+        }
+
+        try {
+            const token = await getToken();
+            const response = await fetch(`${API_URL}/cursos/${curso.id_curso}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ estado: target })
+            });
+
+            if (response.ok) {
+                await fetchCursos();
+                Alert.alert(
+                    'Éxito',
+                    target === 'cancelado'
+                        ? 'Matrículas cerradas. El curso sigue activo pero no acepta nuevas inscripciones.'
+                        : 'Matrículas abiertas. El curso ahora acepta nuevas inscripciones.'
+                );
+            } else {
+                Alert.alert('Error', 'No se pudo actualizar el estado del curso');
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Error de red al actualizar');
+        }
+    };
+
     const onRefresh = async () => {
         setRefreshing(true);
         await fetchCursos();
@@ -382,7 +424,7 @@ export default function AdminCursosScreen() {
             case 'activo': return theme.primary;
             case 'planificado': return theme.warning;
             case 'finalizado': return theme.textMuted;
-            case 'cancelado': return theme.danger;
+            case 'cancelado': return '#fb923c'; // Naranja para matrículas cerradas
             default: return theme.primary;
         }
     };
@@ -411,12 +453,42 @@ export default function AdminCursosScreen() {
                                 <Text style={[styles.codeText, { color: theme.primary }]}>{item.codigo_curso}</Text>
                             </View>
                             <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-                                <Text style={[styles.statusText, { color: statusColor }]}>{item.estado}</Text>
+                                <Text style={[styles.statusText, { color: statusColor }]}>
+                                    {item.estado === 'cancelado' ? 'Matrículas Cerradas' : item.estado}
+                                </Text>
                             </View>
                         </View>
                         <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>{item.nombre}</Text>
                         <Text style={[styles.horarioText, { color: theme.textSecondary }]}>{(item.horario || 'Horario no definido').toUpperCase()}</Text>
                     </View>
+
+                    {/* Botón de Toggle Matrículas - Estilo Mejorado */}
+                    <TouchableOpacity
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            handleToggleMatricula(item);
+                        }}
+                        style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 10,
+                            backgroundColor: item.estado === 'cancelado' ? '#10b981' : '#ef4444',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginLeft: 8,
+                            shadowColor: item.estado === 'cancelado' ? '#10b981' : '#ef4444',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.3,
+                            shadowRadius: 3,
+                            elevation: 4
+                        }}
+                    >
+                        {item.estado === 'cancelado' ? (
+                            <Unlock size={18} color="#ffffff" strokeWidth={2.5} />
+                        ) : (
+                            <Lock size={18} color="#ffffff" strokeWidth={2.5} />
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -503,7 +575,7 @@ export default function AdminCursosScreen() {
                                     fontWeight: filterEstado === f ? '700' : '600'
                                 }
                             ]}>
-                                {f.charAt(0).toUpperCase() + f.slice(1)}
+                                {f === 'cancelado' ? 'Matrículas Cerradas' : f.charAt(0).toUpperCase() + f.slice(1)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -558,11 +630,12 @@ export default function AdminCursosScreen() {
                 transparent
                 onRequestClose={() => setShowModal(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={{ flex: 1, justifyContent: 'flex-end' }}
-                    >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                >
+                    <View style={styles.modalOverlay}>
                         <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
                             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                                 <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -575,6 +648,7 @@ export default function AdminCursosScreen() {
 
                             <ScrollView
                                 style={styles.modalForm}
+                                contentContainerStyle={{ paddingBottom: 20 }}
                                 keyboardShouldPersistTaps="handled"
                                 showsVerticalScrollIndicator={false}
                             >
@@ -633,7 +707,7 @@ export default function AdminCursosScreen() {
                                         items={[
                                             { label: "Activo", value: "activo" },
                                             { label: "Finalizado", value: "finalizado" },
-                                            { label: "Cancelado", value: "cancelado" }
+                                            { label: "Matrículas Cerradas", value: "cancelado" }
                                         ]}
                                         selectedValue={estado}
                                         onValueChange={setEstado}
@@ -722,8 +796,8 @@ export default function AdminCursosScreen() {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
-                </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

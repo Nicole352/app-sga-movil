@@ -93,13 +93,14 @@ export default function MisCursosScreen() {
       setFilteredCursos(cursos.filter(curso => {
         const fechaFin = new Date(curso.fecha_fin);
         fechaFin.setHours(0, 0, 0, 0);
-        return (curso.estado === 'activo' || curso.estado === 'planificado') && fechaFin >= hoy;
+        // Incluir cancelados (cerrados) como activos si la fecha es vigente
+        return (curso.estado === 'activo' || curso.estado === 'planificado' || curso.estado === 'cancelado') && fechaFin >= hoy;
       }));
     } else {
       setFilteredCursos(cursos.filter(curso => {
         const fechaFin = new Date(curso.fecha_fin);
         fechaFin.setHours(0, 0, 0, 0);
-        return curso.estado === 'finalizado' || curso.estado === 'cancelado' || fechaFin < hoy;
+        return curso.estado === 'finalizado' || fechaFin < hoy;
       }));
     }
   };
