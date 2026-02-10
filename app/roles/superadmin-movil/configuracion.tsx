@@ -385,7 +385,6 @@ export default function ConfiguracionScreen() {
           )}
         </View>
 
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -441,7 +440,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 14, fontWeight: '700' },
 
   // Content
-  content: { padding: 16, paddingTop: 24 },
+  content: { padding: 16, paddingTop: 12 },
 
   // Profile Card
   profileCard: {

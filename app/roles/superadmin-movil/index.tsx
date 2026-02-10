@@ -248,32 +248,31 @@ export default function DashboardSuperAdmin() {
         </View>
       </View>
 
-      {/* Stats Cards - Overlapping Header */}
-      <View style={styles.statsGrid}>
-        {systemTiles.slice(0, 3).map((tile, index) => (
-          <View key={index} style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <View style={[styles.statIconContainer, { backgroundColor: `${tile.color}15` }]}>
-              <Ionicons name={tile.icon as any} size={16} color={tile.color} />
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={[styles.statValue, { color: theme.text }]}>{tile.value}</Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>{tile.title}</Text>
-            </View>
-            {tile.progress !== undefined && (
-              <View style={[styles.progressBar, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                <View style={[styles.progressFill, { width: `${tile.progress}%`, backgroundColor: getStatusColor(tile.progress, 100) }]} />
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
-
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
+        {/* Stats Cards - Now inside ScrollView */}
+        <View style={styles.statsGrid}>
+          {systemTiles.slice(0, 3).map((tile, index) => (
+            <View key={index} style={[styles.statCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+              <View style={[styles.statIconContainer, { backgroundColor: `${tile.color}15` }]}>
+                <Ionicons name={tile.icon as any} size={16} color={tile.color} />
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={[styles.statValue, { color: theme.text }]}>{tile.value}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]} numberOfLines={1}>{tile.title}</Text>
+              </View>
+              {tile.progress !== undefined && (
+                <View style={[styles.progressBar, { backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <View style={[styles.progressFill, { width: `${tile.progress}%`, backgroundColor: getStatusColor(tile.progress, 100) }]} />
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
         {/* Remaining System Metrics */}
         <View style={styles.grid}>
           {systemTiles.slice(3).map((tile, index) => (
@@ -361,7 +360,6 @@ export default function DashboardSuperAdmin() {
           )}
         </View>
 
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -370,11 +368,11 @@ export default function DashboardSuperAdmin() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 10,
-    paddingBottom: 25,
+    paddingTop: 8,
+    paddingBottom: 15,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -391,8 +389,7 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 20,
+    marginTop: 4,
     gap: 10,
     zIndex: 10,
   },
@@ -420,62 +417,65 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 13, fontWeight: '700' },
 
   // Content
-  content: { padding: 16, paddingTop: 24 },
+  content: { padding: 16, paddingTop: 12 },
   grid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 12,
     marginBottom: 16,
   },
   metricCard: {
-    width: '48%',
-    borderRadius: 12,
-    padding: 12,
+    flex: 1,
+    borderRadius: 10,
+    padding: 8,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
+    alignItems: 'center',
   },
   metricHeader: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 4,
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    marginBottom: 2,
   },
-  metricTitle: { fontSize: 12, fontWeight: '600', flex: 1 },
-  metricValue: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
+  metricTitle: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  metricValue: { fontSize: 13, fontWeight: '700', marginBottom: 2, textAlign: 'center' },
   progressBar: { height: 4, borderRadius: 2, overflow: 'hidden' },
   progressFill: { height: '100%' },
 
   // Sections
   section: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700' },
+  sectionTitle: { fontSize: 15, fontWeight: '700' },
 
   // Database
   dbGrid: {
@@ -486,44 +486,44 @@ const styles = StyleSheet.create({
   },
   dbCard: {
     width: '48%',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     borderWidth: 1,
   },
-  dbLabel: { fontSize: 11, marginBottom: 4 },
-  dbValue: { fontSize: 20, fontWeight: '700' },
+  dbLabel: { fontSize: 10, marginBottom: 2 },
+  dbValue: { fontSize: 16, fontWeight: '700' },
   poolSection: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
   },
-  poolTitle: { fontSize: 12, fontWeight: '600', marginBottom: 8 },
-  poolBar: { height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
+  poolTitle: { fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  poolBar: { height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
   poolFill: { height: '100%', backgroundColor: '#3b82f6' },
   poolStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  poolText: { fontSize: 12 },
+  poolText: { fontSize: 11 },
 
   // Logs
   logsContainer: { gap: 12 },
   logItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    gap: 12,
+    gap: 10,
   },
   logIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
   logContent: { flex: 1 },
-  logMessage: { fontSize: 13, fontWeight: '500', marginBottom: 4, fontFamily: 'monospace' },
-  logTime: { fontSize: 11 },
+  logMessage: { fontSize: 12, fontWeight: '500', marginBottom: 2, fontFamily: 'monospace' },
+  logTime: { fontSize: 10 },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 14, marginTop: 12 },
+  emptyText: { fontSize: 14, marginTop: 10 },
 });

@@ -578,7 +578,6 @@ export default function AuditoriaScreen() {
             <CompactPicker
               items={[
                 { label: 'Todos', value: '' },
-                { label: 'Superadmin', value: 'superadmin' },
                 { label: 'Administrativo', value: 'administrativo' },
                 { label: 'Docente', value: 'docente' },
                 { label: 'Estudiante', value: 'estudiante' },
@@ -615,7 +614,7 @@ export default function AuditoriaScreen() {
             <Pagination
               currentPage={paginaActual}
               totalPages={totalPaginas}
-              totalItems={stats.total}
+              totalItems={auditorias.length}
               onPageChange={setPaginaActual}
               theme={theme}
               itemLabel="registros"
@@ -633,18 +632,18 @@ export default function AuditoriaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 10,
-    paddingBottom: 25,
+    paddingTop: 8,
+    paddingBottom: 15,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2 },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
 
   // Stats Cards
@@ -652,7 +651,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginTop: 20,
+    marginTop: 12,
     gap: 10,
     zIndex: 10,
   },
@@ -680,7 +679,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 14, fontWeight: '700' },
 
   // Filters - Compact
-  filtersSection: { padding: 16, paddingTop: 16 },
+  filtersSection: { padding: 16, paddingTop: 12, paddingBottom: 8 },
   filtersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   filtersTitle: { fontSize: 16, fontWeight: '700' },
   clearButton: { fontSize: 13, fontWeight: '600' },

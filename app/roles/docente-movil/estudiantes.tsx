@@ -7,6 +7,9 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getToken, getDarkMode } from '../../../services/storage';
 import { API_URL } from '../../../constants/config';
 import { eventEmitter } from '../../../services/eventEmitter';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import Pagination from './components/Pagination';
 
 interface Estudiante {
   id_usuario: number;
@@ -182,8 +185,19 @@ export default function MisEstudiantesScreen() {
   const [cursoFiltro, setCursoFiltro] = useState<string>('');
   const [estadoFiltro, setEstadoFiltro] = useState<'todos' | 'activos' | 'finalizados'>('todos');
 
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentPage(1); // Reset pagination when screen gains focus
+      loadData();
+    }, [])
+  );
+
   useEffect(() => {
-    loadData();
+    // loadData(); // Handled by useFocusEffect now
 
     const themeHandler = (isDark: boolean) => setDarkMode(isDark);
     eventEmitter.on('themeChanged', themeHandler);
@@ -275,7 +289,7 @@ export default function MisEstudiantesScreen() {
     const studentEstado = est.estado_curso || 'activo';
 
     const matchEstado = estadoFiltro === 'todos' ||
-      (estadoFiltro === 'activos' && studentEstado === 'activo') ||
+      (estadoFiltro === 'activos' && (studentEstado === 'activo' || studentEstado === 'cancelado')) ||
       (estadoFiltro === 'finalizados' && studentEstado === 'finalizado');
 
     return matchTexto && matchCurso && matchEstado;
@@ -291,13 +305,8 @@ export default function MisEstudiantesScreen() {
     const studentEstado = estado || 'activo';
     switch (studentEstado) {
       case 'activo':
-        return { bg: 'rgba(16, 185, 129, 0.2)', color: theme.green };
-      case 'finalizado':
-        return { bg: 'rgba(156, 163, 175, 0.2)', color: theme.textMuted };
-      case 'planificado':
-        return { bg: 'rgba(245, 158, 11, 0.2)', color: theme.orange };
       case 'cancelado':
-        return { bg: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' };
+        return { bg: 'rgba(16, 185, 129, 0.2)', color: theme.green };
       default:
         return { bg: 'rgba(156, 163, 175, 0.2)', color: theme.textMuted };
     }
@@ -306,10 +315,8 @@ export default function MisEstudiantesScreen() {
   const getEstadoText = (estado?: string) => {
     const studentEstado = estado || 'activo';
     switch (studentEstado) {
-      case 'activo': return 'Activo';
-      case 'finalizado': return 'Finalizado';
-      case 'planificado': return 'Planificado';
-      case 'cancelado': return 'Cancelado';
+      case 'activo':
+      case 'cancelado': return 'Activo';
       default: return 'Activo';
     }
   };
@@ -319,6 +326,13 @@ export default function MisEstudiantesScreen() {
     : '0.0';
 
   const destacados = estudiantesFiltrados.filter(e => e.promedio && e.promedio >= 8).length;
+
+  // Lógica de Paginación
+  const totalPages = Math.ceil(estudiantesFiltrados.length / itemsPerPage);
+  const paginatedEstudiantes = estudiantesFiltrados.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
@@ -445,7 +459,7 @@ export default function MisEstudiantesScreen() {
           </View>
         ) : (
           <View style={styles.estudiantesList}>
-            {estudiantesFiltrados.map((estudiante) => {
+            {paginatedEstudiantes.map((estudiante) => {
               const estadoColor = getEstadoColor(estudiante.estado_curso);
               const estadoText = getEstadoText(estudiante.estado_curso);
 
@@ -506,6 +520,14 @@ export default function MisEstudiantesScreen() {
                 </View>
               );
             })}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={paginatedEstudiantes.length}
+              onPageChange={setCurrentPage}
+              theme={theme}
+              itemLabel="estudiantes"
+            />
           </View>
         )}
       </ScrollView>

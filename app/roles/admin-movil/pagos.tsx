@@ -143,6 +143,7 @@ export default function AdminPagosScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setCurrentPage(1); // Reset pagination when screen gains focus
             loadData();
         }, [filterEstado])
     );
@@ -746,7 +747,7 @@ export default function AdminPagosScreen() {
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        totalItems={estudiantesFiltrados.length}
+                        totalItems={paginatedEstudiantes.length}
                         onPageChange={setCurrentPage}
                         theme={theme}
                         itemLabel="estudiantes"

@@ -19,7 +19,8 @@ export default function Pagination({
     theme,
     itemLabel = 'items'
 }: PaginationProps) {
-    if (totalItems === 0) return null;
+    // Siempre mostrar la paginación para que el usuario vea el conteo de items
+    // Los botones se deshabilitarán automáticamente cuando sea necesario
 
     return (
         <View style={[styles.container, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
@@ -56,10 +57,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        marginHorizontal: 20,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        marginHorizontal: 15,
         marginTop: 10,
-        marginBottom: 10,
+        marginBottom: 15,
         borderRadius: 12,
         borderWidth: 1,
     },

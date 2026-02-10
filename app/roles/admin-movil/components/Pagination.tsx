@@ -19,7 +19,8 @@ export default function Pagination({
     theme,
     itemLabel = 'items'
 }: PaginationProps) {
-    if (totalPages <= 1) return null;
+    // Siempre mostrar la paginación para que el usuario vea el conteo de items
+    // Los botones se deshabilitarán automáticamente cuando sea necesario
 
     return (
         <View style={[styles.container, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>

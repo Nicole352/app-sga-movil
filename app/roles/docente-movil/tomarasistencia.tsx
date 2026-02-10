@@ -37,6 +37,9 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { API_URL } from '../../../constants/config';
 import { getToken, getUserData, getDarkMode } from '../../../services/storage';
 import { eventEmitter } from '../../../services/eventEmitter';
+import Pagination from './components/Pagination';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
 
 // function to get theme based on dark mode
@@ -66,6 +69,7 @@ interface Curso {
     id_curso: number;
     codigo: string;
     nombre: string;
+    horario: string;
 }
 
 interface Estudiante {
@@ -253,6 +257,16 @@ export default function TomarAsistenciaScreen() {
     const [fechaInicio, setFechaInicio] = useState(new Date());
     const [fechaFin, setFechaFin] = useState(new Date());
 
+    // Paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    useFocusEffect(
+        useCallback(() => {
+            setCurrentPage(1); // Reset pagination when screen gains focus
+        }, [])
+    );
+
     // Cargar Docente, Cursos y Tema
     useEffect(() => {
         loadTheme();
@@ -308,7 +322,8 @@ export default function TomarAsistenciaScreen() {
                     const cursosMapeados = data.map((c: any) => ({
                         id_curso: c.id_curso,
                         codigo: c.codigo_curso,
-                        nombre: c.nombre_curso || c.nombre // Ajustar según respuesta real
+                        nombre: c.nombre_curso || c.nombre, // Ajustar según respuesta real
+                        horario: c.horario || ''
                     }));
                     setCursos(cursosMapeados);
                 }
@@ -719,7 +734,10 @@ export default function TomarAsistenciaScreen() {
                     <CompactPicker
                         items={[
                             { label: "Seleccione un curso...", value: "" },
-                            ...cursos.map(c => ({ label: `${c.codigo} - ${c.nombre}`, value: c.codigo }))
+                            ...cursos.map(c => {
+                                const horarioCapitalizado = c.horario.charAt(0).toUpperCase() + c.horario.slice(1);
+                                return { label: `${c.codigo} - ${c.nombre} - ${horarioCapitalizado}`, value: c.codigo };
+                            })
                         ]}
                         selectedValue={cursoSeleccionado}
                         onValueChange={handleCursoChange}
@@ -833,52 +851,78 @@ export default function TomarAsistenciaScreen() {
                     />
                 )}
 
-                {/* Lista Estudiantes */}
-                <ScrollView style={styles.listContainer}>
-                    {loading ? (
-                        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
-                    ) : estudiantes.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Ionicons name="people-outline" size={48} color={theme.textMuted} />
-                            <Text style={[styles.emptyText, { color: theme.textMuted }]}>
-                                {cursoSeleccionado ? "No hay estudiantes en este curso" : "Seleccione un curso para ver estudiantes"}
-                            </Text>
-                        </View>
-                    ) : (
-                        estudiantes.map((est) => (
-                            <View key={est.id_estudiante} style={[styles.studentCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                                <View style={styles.studentInfo}>
-                                    <View style={[styles.avatar, { backgroundColor: theme.primary + '20' }]}>
-                                        <Text style={[styles.avatarText, { color: theme.primary }]}>{est.nombre.charAt(0)}{est.apellido.charAt(0)}</Text>
+
+                {/* Lógica de Paginación */}
+                {(() => {
+                    // Calcular estudiantes paginados
+                    const totalPages = Math.ceil(estudiantes.length / itemsPerPage);
+                    const paginatedEstudiantes = estudiantes.slice(
+                        (currentPage - 1) * itemsPerPage,
+                        currentPage * itemsPerPage
+                    );
+
+                    return (
+                        <>
+                            {/* Lista Estudiantes */}
+                            <ScrollView style={styles.listContainer}>
+                                {loading ? (
+                                    <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 20 }} />
+                                ) : estudiantes.length === 0 ? (
+                                    <View style={styles.emptyState}>
+                                        <Ionicons name="people-outline" size={48} color={theme.textMuted} />
+                                        <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                                            {cursoSeleccionado ? "No hay estudiantes en este curso" : "Seleccione un curso para ver estudiantes"}
+                                        </Text>
                                     </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={[styles.studentName, { color: theme.text }]} numberOfLines={1}>{est.apellido} {est.nombre}</Text>
-                                        <Text style={[styles.studentId, { color: theme.textMuted }]}>{est.cedula}</Text>
-                                    </View>
-                                    {asistencias.get(est.id_estudiante)?.tiene_documento && (
-                                        <Ionicons name="attach" size={20} color={theme.primary} />
-                                    )}
-                                </View>
+                                ) : (
+                                    <>
+                                        {paginatedEstudiantes.map((est) => (
+                                            <View key={est.id_estudiante} style={[styles.studentCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+                                                <View style={styles.studentInfo}>
+                                                    <View style={[styles.avatar, { backgroundColor: theme.primary + '20' }]}>
+                                                        <Text style={[styles.avatarText, { color: theme.primary }]}>{est.nombre.charAt(0)}{est.apellido.charAt(0)}</Text>
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.studentName, { color: theme.text }]} numberOfLines={1}>{est.apellido} {est.nombre}</Text>
+                                                        <Text style={[styles.studentId, { color: theme.textMuted }]}>{est.cedula}</Text>
+                                                    </View>
+                                                    {asistencias.get(est.id_estudiante)?.tiene_documento && (
+                                                        <Ionicons name="attach" size={20} color={theme.primary} />
+                                                    )}
+                                                </View>
 
-                                <View style={styles.actionsRow}>
-                                    {renderEstadoButton(est, 'P', 'presente', theme.success)}
-                                    {renderEstadoButton(est, 'A', 'ausente', theme.error)}
-                                    {renderEstadoButton(est, 'T', 'tardanza', theme.warning)}
-                                    {renderEstadoButton(est, 'J', 'justificado', theme.primary)}
-                                </View>
-                            </View>
-                        ))
-                    )}
-                    <View style={{ height: 20 }} />
+                                                <View style={styles.actionsRow}>
+                                                    {renderEstadoButton(est, 'P', 'presente', theme.success)}
+                                                    {renderEstadoButton(est, 'A', 'ausente', theme.error)}
+                                                    {renderEstadoButton(est, 'T', 'tardanza', theme.warning)}
+                                                    {renderEstadoButton(est, 'J', 'justificado', theme.primary)}
+                                                </View>
+                                            </View>
+                                        ))}
 
-                    {/* Footer Actions moved inside ScrollView */}
-                    <TouchableOpacity style={styles.saveButton} onPress={guardarAsistencia}>
-                        <Ionicons name="save-outline" size={20} color="#fff" />
-                        <Text style={styles.saveText}>Guardar Asistencia</Text>
-                    </TouchableOpacity>
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={totalPages}
+                                            totalItems={paginatedEstudiantes.length}
+                                            onPageChange={setCurrentPage}
+                                            theme={theme}
+                                            itemLabel="estudiantes"
+                                        />
+                                    </>
+                                )}
+                                <View style={{ height: 20 }} />
 
-                    <View style={{ height: 40 }} />
-                </ScrollView>
+                                {/* Footer Actions moved inside ScrollView */}
+                                <TouchableOpacity style={styles.saveButton} onPress={guardarAsistencia}>
+                                    <Ionicons name="save-outline" size={20} color="#fff" />
+                                    <Text style={styles.saveText}>Guardar Asistencia</Text>
+                                </TouchableOpacity>
+
+                                <View style={{ height: 10 }} />
+                            </ScrollView>
+                        </>
+                    );
+                })()}
             </View>
 
             {/* Modal para Rango de Fechas */}

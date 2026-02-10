@@ -563,14 +563,16 @@ export default function AdministradoresScreen() {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={theme.primary} />
             }
-          />
-          <Pagination
-            currentPage={page}
-            totalPages={filteredAndPaginatedData.totalPages}
-            totalItems={filteredAndPaginatedData.totalItems}
-            onPageChange={setPage}
-            theme={theme}
-            itemLabel="admins"
+            ListFooterComponent={
+              <Pagination
+                currentPage={page}
+                totalPages={filteredAndPaginatedData.totalPages}
+                totalItems={filteredAndPaginatedData.items.length}
+                onPageChange={setPage}
+                theme={theme}
+                itemLabel="Usuarios"
+              />
+            }
           />
         </>
       )}
@@ -867,20 +869,20 @@ export default function AdministradoresScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 10,
-    paddingBottom: 25,
+    paddingTop: 8,
+    paddingBottom: 15,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 2 },
   headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  filtersSection: { padding: 20 },
+  filtersSection: { padding: 16, paddingBottom: 12 },
   searchContainer: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, height: 48, gap: 8
   },
@@ -888,9 +890,9 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { marginTop: 12, fontSize: 14 },
-  listContent: { padding: 20, paddingTop: 0 },
+  listContent: { padding: 16, paddingTop: 0 },
   adminCard: {
-    borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 16,
+    borderRadius: 16, borderWidth: 1, padding: 16, marginBottom: 12,
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },

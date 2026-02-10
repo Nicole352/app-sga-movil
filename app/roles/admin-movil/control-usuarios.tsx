@@ -140,6 +140,12 @@ export default function ControlUsuariosScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setPage(1); // Reset pagination ONLY when screen gains focus
+        }, [])
+    );
+
+    useFocusEffect(
+        useCallback(() => {
             cargarUsuarios();
         }, [search, rolFilter, estadoFilter, page])
     );
@@ -607,7 +613,7 @@ export default function ControlUsuariosScreen() {
                             <Pagination
                                 currentPage={page}
                                 totalPages={totalPages}
-                                totalItems={totalItems}
+                                totalItems={usuarios.length}
                                 onPageChange={setPage}
                                 theme={theme}
                                 itemLabel="usuarios"

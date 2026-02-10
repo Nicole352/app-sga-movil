@@ -140,6 +140,7 @@ export default function AdminReportesScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setCurrentPage(1); // Reset pagination when screen gains focus
             loadInitialData();
         }, [])
     );
@@ -1289,7 +1290,7 @@ export default function AdminReportesScreen() {
                                         <Pagination
                                             currentPage={currentPage}
                                             totalPages={totalPages}
-                                            totalItems={datosReporte.length}
+                                            totalItems={paginatedData.length}
                                             onPageChange={setCurrentPage}
                                             theme={theme}
                                             itemLabel="registros"
@@ -1363,7 +1364,7 @@ export default function AdminReportesScreen() {
                                     <Pagination
                                         currentPage={currentPage}
                                         totalPages={totalPagesHistorial}
-                                        totalItems={historialFiltrado.length}
+                                        totalItems={paginatedHistorial.length}
                                         onPageChange={setCurrentPage}
                                         theme={theme}
                                         itemLabel="reportes"

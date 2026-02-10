@@ -402,12 +402,14 @@ export default function DocenteLayout() {
             height: 60 + insets.bottom,
             paddingTop: 12,
           },
+          tabBarItemStyle: { display: 'none' },
         }}
       >
         <Tabs.Screen
           name="dashboard"
           options={{
             title: 'Mi Aula',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <BarChart3 size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -417,6 +419,7 @@ export default function DocenteLayout() {
           name="cursos"
           options={{
             title: 'Cursos',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <BookOpen size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -426,6 +429,7 @@ export default function DocenteLayout() {
           name="estudiantes"
           options={{
             title: 'Estudiantes',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <Users size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -435,6 +439,7 @@ export default function DocenteLayout() {
           name="tomarasistencia"
           options={{
             title: 'Asistencia',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <ClipboardList size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -444,6 +449,7 @@ export default function DocenteLayout() {
           name="calificaciones"
           options={{
             title: 'Notas',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <Award size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -453,6 +459,7 @@ export default function DocenteLayout() {
           name="horario"
           options={{
             title: 'Horario',
+            tabBarItemStyle: { display: 'flex' },
             tabBarIcon: ({ color, size, focused }) => (
               <Calendar size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
@@ -462,10 +469,6 @@ export default function DocenteLayout() {
           name="perfil"
           options={{
             href: null,
-            title: 'Perfil',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
-            ),
           }}
         />
         <Tabs.Screen

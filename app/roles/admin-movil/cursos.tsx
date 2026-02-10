@@ -111,6 +111,7 @@ export default function AdminCursosScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setCurrentPage(1); // Reset pagination when screen gains focus
             fetchCursos();
             fetchTiposCursos();
         }, [])
@@ -601,7 +602,7 @@ export default function AdminCursosScreen() {
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        totalItems={filteredCursos.length}
+                        totalItems={paginatedCursos.length}
                         onPageChange={setCurrentPage}
                         theme={theme}
                         itemLabel="cursos"

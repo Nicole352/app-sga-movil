@@ -23,6 +23,9 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSocket } from '../../../hooks/useSocket';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import Pagination from './components/Pagination';
+import { useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -246,7 +249,7 @@ const StudentCard = React.memo(({
 
   // Datos para vista detallada (agrupación de tareas)
   const groupedTasks = useMemo(() => {
-    if (moduloActivo === 'todos' || moduloActivo === 'resumen_global') return [];
+    if (moduloActivo === 'todos') return [];
 
     // Filtrar tareas del módulo
     const tareasModulo = tareas.filter(t => t.modulo_nombre === moduloActivo);
@@ -300,7 +303,7 @@ const StudentCard = React.memo(({
 
       {expanded && (
         <Animated.View entering={FadeInDown.duration(200)} style={[styles.cardBody, { borderTopColor: theme.border }]}>
-          {moduloActivo === 'todos' || moduloActivo === 'resumen_global' ? (
+          {moduloActivo === 'todos' ? (
             // VISTA DE TODOS LOS MÓDULOS (RESUMEN)
             <View style={styles.modulesGrid}>
               {modulosList.map((mod, idx) => {
@@ -440,6 +443,16 @@ export default function CalificacionesCursoScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingExcel, setDownloadingExcel] = useState(false);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentPage(1);
+    }, [])
+  );
+
   useEffect(() => {
     getUserData().then(user => setUserId(user?.id_usuario));
   }, []);
@@ -553,7 +566,8 @@ export default function CalificacionesCursoScreen() {
     else if (filtroEstado === 'reprobados') result = result.filter(e => (e.promedio_global || 0) < 7);
 
     setFilteredEstudiantes(result);
-  }, [filtroEstado, estudiantes, searchQuery]);
+    setCurrentPage(1); // Reset page on filter change
+  }, [filtroEstado, estudiantes, searchQuery, moduloActivo]);
 
   const descargarExcel = async () => {
     try {
@@ -646,7 +660,7 @@ export default function CalificacionesCursoScreen() {
       ) : (
         <ScrollView
           style={styles.content}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -684,8 +698,7 @@ export default function CalificacionesCursoScreen() {
                 <Text style={[styles.label, { color: theme.textMuted }]}>Módulo</Text>
                 <CompactPicker
                   items={[
-                    { label: "Todos los módulos", value: "todos" },
-                    { label: "Resumen Global", value: "resumen_global" },
+                    { label: "TODOS", value: "todos" },
                     ...modulosList.map(m => ({ label: m, value: m }))
                   ]}
                   selectedValue={moduloActivo} onValueChange={setModuloActivo} theme={theme}
@@ -722,18 +735,31 @@ export default function CalificacionesCursoScreen() {
           {/* Lista de Estudiantes (Tarjetas) */}
           <View style={styles.listContainer}>
             {filteredEstudiantes.length > 0 ? (
-              filteredEstudiantes.map((est) => (
-                <StudentCard
-                  key={est.id_estudiante}
-                  est={est}
-                  expanded={expandedId === est.id_estudiante}
-                  onPress={() => toggleExpand(est.id_estudiante)}
+              <>
+                {filteredEstudiantes
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((est) => (
+                    <StudentCard
+                      key={est.id_estudiante}
+                      est={est}
+                      expanded={expandedId === est.id_estudiante}
+                      onPress={() => toggleExpand(est.id_estudiante)}
+                      theme={theme}
+                      moduloActivo={moduloActivo}
+                      modulosList={modulosList}
+                      tareas={tareas}
+                    />
+                  ))}
+
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(filteredEstudiantes.length / itemsPerPage)}
+                  totalItems={filteredEstudiantes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).length}
+                  onPageChange={setCurrentPage}
                   theme={theme}
-                  moduloActivo={moduloActivo}
-                  modulosList={modulosList}
-                  tareas={tareas}
+                  itemLabel="estudiantes"
                 />
-              ))
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="search-outline" size={40} color={theme.textMuted} />
@@ -809,7 +835,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 24, backgroundColor: '#e2e8f0' },
 
   // Lista
-  listContainer: { gap: 12, paddingBottom: 100 },
+  listContainer: { gap: 12, paddingBottom: 10 },
   emptyState: { alignItems: 'center', marginTop: 40, padding: 20 },
 
   // Tarjeta Estudiante

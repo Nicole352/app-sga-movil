@@ -123,6 +123,7 @@ export default function AdminEstudiantesScreen() {
 
     useFocusEffect(
         useCallback(() => {
+            setCurrentPage(1); // Reset pagination when screen gains focus
             fetchEstudiantes();
         }, [])
     );
@@ -437,7 +438,7 @@ export default function AdminEstudiantesScreen() {
                     <Pagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        totalItems={filteredEstudiantes.length}
+                        totalItems={paginatedEstudiantes.length}
                         onPageChange={setCurrentPage}
                         theme={theme}
                         itemLabel="estudiantes"

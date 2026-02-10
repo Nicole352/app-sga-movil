@@ -148,7 +148,7 @@ export default function DocenteDashboard() {
   const totalEstudiantes = cursos.reduce((acc, curso) => acc + curso.total_estudiantes, 0);
   const capacidadTotal = cursos.reduce((acc, curso) => acc + curso.capacidad_maxima, 0);
   const promedioOcupacion = capacidadTotal > 0 ? Math.round((totalEstudiantes / capacidadTotal) * 100) : 0;
-  const cursosActivos = cursos.filter(c => (c.estado || 'activo') === 'activo').length;
+  const cursosActivos = cursos.filter(c => (c.estado || 'activo') === 'activo' || c.estado === 'cancelado').length;
 
   const renderStatsCard = (
     title: string,

@@ -257,12 +257,12 @@ export default function MisCursosScreen() {
                       </View>
                       <View style={[
                         styles.cursoEstadoBadge,
-                        { backgroundColor: curso.estado === 'activo' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)' }
+                        { backgroundColor: (curso.estado === 'activo' || curso.estado === 'cancelado') ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)' }
                       ]}>
                         <Text style={[
                           styles.cursoEstadoText,
-                          { color: curso.estado === 'activo' ? theme.accent : '#f59e0b' }
-                        ]}>{curso.estado.toUpperCase()}</Text>
+                          { color: (curso.estado === 'activo' || curso.estado === 'cancelado') ? '#10b981' : '#f59e0b' }
+                        ]}>{curso.estado === 'cancelado' ? 'ACTIVO' : curso.estado.toUpperCase()}</Text>
                       </View>
                     </View>
 
